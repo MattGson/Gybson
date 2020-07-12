@@ -20,7 +20,7 @@
         "prepublish": "npm run build"
     },
     "bin": {
-        "schemats": "src/Generator/index.js"
+        "nodent": "build/src/Generator/index.js"
     },
     "repository": {
         "type": "git",
