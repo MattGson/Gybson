@@ -1,4 +1,4 @@
-import { typescriptOfSchema } from 'schemats';
+import { typescriptOfSchema } from '../Schemats';
 
 export class TypeBuilder {
     private tables: string[];

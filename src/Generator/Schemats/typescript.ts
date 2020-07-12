@@ -12,7 +12,7 @@ function nameIsReservedKeyword(name: string): boolean {
     return reservedKeywords.indexOf(name) !== -1;
 }
 
-function normalizeName(name: string, options: Options): string {
+function normalizeName(name: string, _options: Options): string {
     if (nameIsReservedKeyword(name)) {
         return name + '_';
     } else {

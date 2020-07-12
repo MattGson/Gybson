@@ -57,7 +57,7 @@ export async function upsert<
     //    insert into `coords` (`x`, `y`) values (20, DEFAULT), (DEFAULT, 30), (10, 20)
     // Note that we are passing a custom connection:
     //    This connection MUST be added last to work with the duplicateUpdateExtension
-    const query = knex(table)
+    const query = knex()(table)
         .insert(values)
         .onDuplicateUpdate(...columnsToUpdate)
         .connection(connection);
@@ -85,7 +85,7 @@ export async function insert<Tbl extends keyof DBTables, Row extends Partial<DBT
 ): Promise<number | null> {
     if (values.length < 1) return null;
 
-    let query = knex(table).insert(values);
+    let query = knex()(table).insert(values);
 
     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
     const result = await query.connection(connection);

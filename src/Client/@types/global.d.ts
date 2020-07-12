@@ -5,3 +5,4 @@ declare namespace NodeJS {
 }
 
 declare var _logger: any;
+
