@@ -69,7 +69,7 @@ export class TableClientBuilder {
         // TODO:- dynamic import paths?
         return `
             import DataLoader = require('dataloader');
-            import { byColumnLoader, manyByColumnLoader, allLoader, findManyLoader } from '../../QueryBuilders/Loaders';
+            import { byColumnLoader, manyByColumnLoader, findManyLoader } from '../../QueryBuilders/Loaders';
             import { DBRowTypes, DBTables } from '../index';
 
             export type ${this.rowTypeName} = DBRowTypes.${this.table};
