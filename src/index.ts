@@ -1,13 +1,13 @@
 /**
- * Schemats takes sql database schema and creates corresponding typescript definitions
- * Created by xiamx on 2016-08-10.
+ * Nodent takes sql database schema and creates a corresponding typescript interface
+ * Created by Matt Goodson
  */
 
 import { generateEnumType, generateTableTypes, generateTableInterface } from './typescript'
 import { getDatabase, Database } from './schema'
 import Options, { OptionValues } from './options'
 import { processString, Options as ITFOptions } from 'typescript-formatter'
-const pkgVersion = require('../package.json').version
+const pkgVersion = require('../package.json').version;
 
 function getTime () {
     let padTime = (value: number) => `0${value}`.slice(-2)

@@ -8,7 +8,7 @@ import fs from 'fs-extra';
 import { LoaderBuilder } from './LoaderBuilder';
 import { ColumnDefinition, KeyColumn } from './types';
 import { SchemaIntrospect } from './SchemaIntrospect';
-import { TypeBuilder } from './TypeBuilder';
+import { TypeBuilder } from '../TypeBuilder/TypeBuilder';
 import { CardinalityResolver } from './CardinalityResolver';
 
 // **************************

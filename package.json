@@ -1,12 +1,14 @@
 {
-    "name": "schemats",
-    "version": "3.0.3",
-    "description": "Generate typescript interface definitions from (postgres) SQL database schema",
+    "name": "nodent",
+    "version": "0.1.0",
+    "description": "Generate a type-safe database client from a SQL database",
     "keywords": [
         "postgres",
+        "mysql",
         "schema",
         "typescript",
-        "sql"
+        "sql",
+        "orm"
     ],
     "main": "./src/index.js",
     "types": "./src/index.d.ts",
@@ -25,17 +27,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/sweetiq/schemats.git"
+        "url": "https://github.com/MattGson/Nodent.git"
     },
     "bugs": {
-        "url": "https://github.com/sweetiq/schemats/issues"
+        "url": "https://github.com/MattGson/Nodent/issues"
     },
-    "author": "Mengxuan Xia <xiamx2004@gmail.com>",
-    "contributors": [
-        "Arnaud Benhamdine <arnaud.benhamdine@gmail.com>",
-        "zigomir <zigomir@gmail.com>",
-        "Mark Crisp <macr1324@gmail.com>"
-    ],
+    "author": "Matt Goodson <matt.goodson.business@gmail.com>",
     "license": "MIT",
     "devDependencies": {
         "@types/bluebird": "^3.0.35",
@@ -56,21 +53,27 @@
         "mocha": "^3.2.0",
         "nyc": "^11.0.2",
         "power-assert": "^1.4.2",
-        "prettier": "^2.0.5",
         "proxyquire": "^1.7.11",
         "sinon": "^2.1.0",
         "source-map-support": "^0.4.15",
         "ts-node": "^3.0.4",
         "tslint": "^5.4.2",
-        "tslint-config-standard": "^5.0.2"
+        "tslint-config-standard": "^5.0.2",
+        "eslint": "^5.15.3",
+        "eslint-config-prettier": "^4.1.0",
+        "eslint-plugin-prettier": "^3.0.1",
+        "@typescript-eslint/eslint-plugin": "^1.5.0",
+        "@typescript-eslint/parser": "^1.5.0"
     },
     "dependencies": {
         "bluebird": "^3.5.0",
         "diff": "^3.2.0",
+        "fs-extra": "^9.0.1",
         "lodash": "^4.17.4",
         "mysql": "^2.13.0",
         "mz": "^2.6.0",
         "pg-promise": "^6.3.6",
+        "prettier": "^2.0.5",
         "typescript": "^2.7.1",
         "typescript-formatter": "^7.0.1",
         "yargs": "^8.0.1"
