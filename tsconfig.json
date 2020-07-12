@@ -7,7 +7,10 @@
         "declaration": true,
         "strictNullChecks": true,
         "newLine": "LF",
-        "sourceMap": true
+        "sourceMap": true,
+        "outDir": "build",
+        "noEmitOnError": true,
+        "strict": true
     },
     "exclude": [
         "node_modules",

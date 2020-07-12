@@ -6,7 +6,7 @@ export class CardinalityResolver {
      * True if key column can map to many rows in the table
      */
     public static isToMany(column: string, tableKeys: KeyColumn[]): boolean {
-        const primary = tableKeys.filter(key => key.constraintName === 'PRIMARY');
+        const primary = tableKeys.filter((key) => key.constraintName === 'PRIMARY');
         const primaryMap = _.keyBy(primary, 'columnName');
 
         // column is singular PK so can't map to many rows

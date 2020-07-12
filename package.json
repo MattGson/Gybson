@@ -10,17 +10,14 @@
         "sql",
         "orm"
     ],
-    "main": "./src/index.js",
+    "main": "src/Schemats/index.js",
     "types": "./src/index.d.ts",
     "scripts": {
-        "lint": "tslint --project tsconfig.json --type-check 'src/**/*.ts' 'test/**/*.test.ts' 'bin/**/*.ts' --exclude '**/*.d.ts'",
+        "lint": "eslint ./src",
         "build": "tsc",
         "dependency-check": "dependency-check . --entry bin/schemats.js --missing --no-dev",
-        "test": "npm run lint && npm run build && npm run dependency-check && mocha",
-        "prepublish": "npm run build",
-        "clean": "del-cli node_modules **/*.js",
-        "coverage": "npm run lint && npm run build && npm run dependency-check && nyc mocha",
-        "coverage:ci": "npm run lint && npm run build && npm run dependency-check && nyc mocha && nyc report --reporter=text-lcov | coveralls"
+        "test": "npm run lint",
+        "prepublish": "npm run build"
     },
     "bin": {
         "schemats": "bin/schemats.js"
@@ -47,14 +44,7 @@
         "@types/sinon": "^2.1.2",
         "@types/yargs": "^6.3.3",
         "coveralls": "^2.11.15",
-        "del-cli": "^0.2.0",
         "dependency-check": "^2.6.0",
-        "istanbul": "^0.4.5",
-        "mocha": "^3.2.0",
-        "nyc": "^11.0.2",
-        "power-assert": "^1.4.2",
-        "proxyquire": "^1.7.11",
-        "sinon": "^2.1.0",
         "source-map-support": "^0.4.15",
         "ts-node": "^3.0.4",
         "tslint": "^5.4.2",
@@ -69,7 +59,7 @@
         "bluebird": "^3.5.0",
         "diff": "^3.2.0",
         "fs-extra": "^9.0.1",
-        "lodash": "^4.17.4",
+        "lodash": "^4.17.19",
         "mysql": "^2.13.0",
         "mz": "^2.6.0",
         "pg-promise": "^6.3.6",
@@ -77,17 +67,5 @@
         "typescript": "^2.7.1",
         "typescript-formatter": "^7.0.1",
         "yargs": "^8.0.1"
-    },
-    "nyc": {
-        "extension": [
-            ".ts",
-            ".tsx"
-        ],
-        "exclude": [
-            "**/*.d.ts"
-        ],
-        "require": [
-            "ts-node/register"
-        ]
     }
 }
