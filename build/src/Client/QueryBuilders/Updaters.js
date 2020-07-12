@@ -8,11 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateByConditions = exports.softDeleteByConditions = void 0;
 const index_1 = require("../index");
-const index_2 = require("../index");
-const _logger = index_2.logger();
+const logging_1 = __importDefault(require("../lib/logging"));
 const SOFT_DELETE_COLUMN = 'deleted';
 /**
  * Type-safe soft delete function
@@ -32,7 +34,7 @@ function softDeleteByConditions(connection, table, conditions) {
             .where(conditions)
             .update({ [SOFT_DELETE_COLUMN]: true })
             .connection(connection);
-        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions);
+        logging_1.default.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions);
         return query;
     });
 }
@@ -55,7 +57,7 @@ function updateByConditions(connection, table, values, conditions) {
         if (Object.keys(conditions).length < 1)
             throw new Error('Must have at least one where condition');
         const query = index_1.knex()(table).where(conditions).update(values).connection(connection);
-        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions, values);
+        logging_1.default.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions, values);
         return query;
     });
 }

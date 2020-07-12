@@ -1,10 +1,9 @@
 import Knex = require('knex');
-import { Logger, LogLevel } from './lib/logging';
+import { LogLevel } from './lib/logging';
 export * from './QueryBuilders/Loaders';
 export * from './QueryBuilders/Persistors';
 export * from './QueryBuilders/Updaters';
 export declare const knex: () => Knex<any, unknown[]>;
-export declare const logger: () => Logger;
 export interface NodentConfig {
     logLevel?: LogLevel;
 }

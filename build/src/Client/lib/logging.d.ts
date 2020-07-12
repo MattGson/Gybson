@@ -1,3 +1,4 @@
+declare let logger: Logger;
 export interface Logger {
     debug(...params: any): void;
     info(...params: any): void;
@@ -10,6 +11,7 @@ export declare enum LogLevel {
     error = "error",
     debug = "debug"
 }
-export declare const getLogger: (config: {
+export declare const buildLogger: (config: {
     logLevel: LogLevel;
-}) => Logger;
+}) => void;
+export default logger;

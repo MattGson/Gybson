@@ -96,7 +96,8 @@ const args = yargs_1.usage('Usage: $0 <command> [options]')
     process.exit();
 })
     .catch((e) => {
-    console.warn(e);
+    console.warn(e.message);
+    console.log('Use: "nodent -h" to see help');
     process.exit(1);
 });
 //generateTypes()

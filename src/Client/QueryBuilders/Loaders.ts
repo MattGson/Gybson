@@ -1,8 +1,7 @@
 import _, { Dictionary } from 'lodash';
 import { DBTables } from '../Gen';
 import { knex } from '../index';
-import { logger } from '../index';
-const _logger = logger();
+import _logger from '../lib/logging';
 
 const SOFT_DELETE_COLUMN = 'deleted';
 

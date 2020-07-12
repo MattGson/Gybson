@@ -1,6 +1,6 @@
 import Knex = require('knex');
 import { attachOnDuplicateUpdate } from './lib/knex.duplicate.key';
-import { getLogger, Logger, LogLevel } from './lib/logging';
+import _logger, { buildLogger, Logger, LogLevel } from './lib/logging';
 
 attachOnDuplicateUpdate();
 
@@ -11,19 +11,13 @@ export * from './QueryBuilders/Loaders';
 export * from './QueryBuilders/Persistors';
 export * from './QueryBuilders/Updaters';
 
-const state: { knex: Knex<any, unknown[]> | undefined; logger: Logger | undefined } = {
+const state: { knex: Knex<any, unknown[]> | undefined } = {
     knex: undefined,
-    logger: undefined,
 };
 
 export const knex = () => {
     if (!state.knex) throw new Error('Nodent must be configured with a knex instance');
     return state.knex;
-};
-
-export const logger = () => {
-    if (!state.logger) throw new Error('Nodent must be configured with a log level');
-    return state.logger;
 };
 
 //
@@ -40,8 +34,7 @@ const initialize = (knex: Knex<any, unknown[]>, config: NodentConfig) => {
     };
 
     state.knex = knex;
-    state.logger = getLogger(useConfig);
-    state.logger.info('Initialising Nodent with Knex instance');
+    _logger.info('Initialising Nodent with Knex instance');
 };
 
 export default {

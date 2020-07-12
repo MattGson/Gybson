@@ -15,8 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.findManyLoader = exports.manyByColumnLoader = exports.byColumnLoader = void 0;
 const lodash_1 = __importDefault(require("lodash"));
 const index_1 = require("../index");
-const index_2 = require("../index");
-const _logger = index_2.logger();
+const logging_1 = __importDefault(require("../lib/logging"));
 const SOFT_DELETE_COLUMN = 'deleted';
 /**
  * Bulk loader function
@@ -33,13 +32,13 @@ function byColumnLoader(table, column, keys, filterSoftDelete) {
         let query = index_1.knex()(table).select().whereIn(column, lodash_1.default.uniq(keys));
         if (filterSoftDelete)
             query.where({ [SOFT_DELETE_COLUMN]: false });
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
+        logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
         const rows = yield query;
         const keyed = lodash_1.default.keyBy(rows, column);
         return keys.map((k) => {
             if (keyed[k])
                 return keyed[k];
-            _logger.debug(`Missing row for ${table}:${column} ${k}`);
+            logging_1.default.debug(`Missing row for ${table}:${column} ${k}`);
             return null;
         });
     });
@@ -65,7 +64,7 @@ function manyByColumnLoader(table, column, keys, orderBy, filterSoftDelete) {
             query.orderBy(column, 'asc');
         for (let order of orderBy)
             query.orderBy(order, 'asc');
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
+        logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
         const rows = yield query;
         // map rows back to input keys
         const grouped = lodash_1.default.groupBy(rows, column);
@@ -98,7 +97,7 @@ function findManyLoader(table, options, hasSoftDelete) {
             if (!includeDeleted)
                 query.where({ [SOFT_DELETE_COLUMN]: false });
         }
-        _logger.debug('Executing SQL: %j', query.toSQL().sql);
+        logging_1.default.debug('Executing SQL: %j', query.toSQL().sql);
         return query;
     });
 }

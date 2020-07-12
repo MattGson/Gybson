@@ -8,11 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.insert = exports.upsert = void 0;
 const index_1 = require("../index");
-const index_2 = require("../index");
-const _logger = index_2.logger();
+const logging_1 = __importDefault(require("../lib/logging"));
 const SOFT_DELETE_COLUMN = 'deleted';
 /**
  * Type-safe multi upsert function
@@ -31,11 +33,11 @@ const SOFT_DELETE_COLUMN = 'deleted';
 function upsert(connection, table, values, reinstateSoftDeletedRows, ...updateColumns) {
     return __awaiter(this, void 0, void 0, function* () {
         if (values.length < 1) {
-            _logger.warn('Persistors.upsert: No values passed.');
+            logging_1.default.warn('Persistors.upsert: No values passed.');
             return null;
         }
         if (updateColumns.length < 1 && !reinstateSoftDeletedRows) {
-            _logger.warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
+            logging_1.default.warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
             return null;
         }
         const columnsToUpdate = updateColumns;
@@ -56,7 +58,7 @@ function upsert(connection, table, values, reinstateSoftDeletedRows, ...updateCo
             .insert(values)
             .onDuplicateUpdate(...columnsToUpdate)
             .connection(connection);
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
+        logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
         // knex seems to return 0 for insertId on upsert?
         return (yield query)[0].insertId;
     });
@@ -77,7 +79,7 @@ function insert(connection, table, values) {
         if (values.length < 1)
             return null;
         let query = index_1.knex()(table).insert(values);
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
+        logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
         const result = yield query.connection(connection);
         // seems to return 0 for non-auto-increment inserts
         return result[0];
