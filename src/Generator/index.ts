@@ -7,22 +7,24 @@ import { mysql, prettier, codeGenPreferences } from './config';
 import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder';
+import { Introspection } from './Introspection/IntrospectionTypes';
+import Url from 'url-parse';
 
 // **************************
 // setup
 // **************************
 // const OUT_DIR = process.argv[2];
-const CURRENT = process.cwd();
-
-// const ENT_DIR = path.join(__dirname, '..', '..', 'lib', 'Ent');
-// const ENT_DIR = path.join(CURRENT, OUT_DIR);
-// const GENERATED_DIR = path.join(CURRENT, '..', '..', 'Client', 'Gen');
-const GENERATED_DIR_CLIENTS = path.join(CURRENT, 'src', 'Gen');
-
-const knex = Knex({
-    client: 'mysql',
-    connection: mysql,
-});
+// const CURRENT = process.cwd();
+//
+// // const ENT_DIR = path.join(__dirname, '..', '..', 'lib', 'Ent');
+// // const ENT_DIR = path.join(CURRENT, OUT_DIR);
+// // const GENERATED_DIR = path.join(CURRENT, '..', '..', 'Client', 'Gen');
+// const GENERATED_DIR_CLIENTS = path.join(CURRENT, 'src', 'Gen');
+//
+// const knex = Knex({
+//     client: 'mysql',
+//     connection: mysql,
+// });
 
 /**
  * Write to a typescript file
@@ -55,10 +57,10 @@ async function writeTypescriptFile(content: string, directory: string, filename:
 //     return `mysql://${user}:${password}@${host}:${port}/${database}`;
 // }
 
-async function generateTypes(): Promise<void> {
-    const DB = new MySQLIntrospection(knex, mysql.database);
+async function generateTypes(db: Introspection, _outdir: string): Promise<void> {
+    // const DB = new MySQLIntrospection(knex, mysql.database);
 
-    const tables = await DB.getSchemaTables();
+    const tables = await db.getSchemaTables();
     console.log(tables);
     //
     // const typeBuilder = new TypeBuilder(dbConnectionString(), tables);
@@ -87,14 +89,14 @@ async function generateTypes(): Promise<void> {
 // generate loaders
 // **************************
 
-async function generateLoaders(): Promise<string[]> {
-    const DB = new MySQLIntrospection(knex, mysql.database);
+async function generateLoaders(db: Introspection, outdir: string): Promise<string[]> {
+    // const DB = new MySQLIntrospection(knex, mysql.database);
 
     console.log(`Reading from: mysql://${mysql.user}:${mysql.password}@${mysql.host}:${mysql.port}/${mysql.database}`);
 
     const builders: TableClientBuilder[] = [];
 
-    const tables = await DB.getSchemaTables();
+    const tables = await db.getSchemaTables();
 
     for (let table of tables) {
         const builder = new TableClientBuilder(table, codeGenPreferences);
@@ -125,7 +127,7 @@ async function generateLoaders(): Promise<string[]> {
         // builder.addFindMany(hasSoftDelete);
 
         // append creates files if they don't exist - write overwrites contents
-        await writeTypescriptFile(await builder.build(DB), GENERATED_DIR_CLIENTS, `${builder.className}.ts`);
+        await writeTypescriptFile(await builder.build(db), outdir, `${builder.className}.ts`);
     }
 
     // // build index.ts
@@ -156,17 +158,50 @@ async function generateLoaders(): Promise<string[]> {
     return tables;
 }
 
-// TODO:-  change this for a cli
-generateTypes()
-    .then(() => generateLoaders())
-    .then((tables) => {
-        console.log(`Client generated for ${tables.length} tables.`);
-        return knex.destroy();
-    })
-    .catch((e) => {
-        console.error('Could not gen client', e);
-        process.exit(1);
-    })
-    .finally(() => {
-        process.exit();
-    });
+interface Connection {
+    client: 'mysql' | 'postgres';
+    connection: {
+        host: string;
+        port: number;
+        user: string;
+        password: string;
+        database: string;
+    };
+}
+
+const getConnection = (connection: string): Connection => {
+    const conn: Connection = {
+        client: 'mysql',
+        connection: { host: '127.0.0.1', port: 3306, user: 'root', password: '', database: 'public' },
+    };
+
+    const { host, port, pathname } = new Url(connection);
+
+    console.log('HERE :', host, port, pathname, pathname.substr(1));
+
+    if (/^postgres(ql)?:\/\//i.test(connection)) {
+        conn.client = 'postgres';
+        throw new Error('PostgreSQL is not currently supported');
+    } else if (/^mysql:\/\//i.test(connection)) {
+        conn.client = 'mysql';
+    } else {
+        throw new Error('Invalid connection string. Could not determine DB engine.');
+    }
+    return conn;
+};
+
+export async function generate(conn: string, outdir: string) {
+    const client = getConnection(conn);
+
+    const knex = Knex(client);
+    let DB: Introspection;
+
+    if (client.client === 'mysql') {
+        DB = new MySQLIntrospection(knex, mysql.database);
+    } else throw new Error('PostgreSQL not currently supported');
+
+    await generateTypes(DB, outdir);
+    await generateLoaders(DB, outdir);
+
+    await knex.destroy();
+}
