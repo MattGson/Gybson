@@ -65,7 +65,7 @@ export class MySQLIntrospection implements Introspection {
                     column.tsType = 'Buffer';
                     return column;
                 default:
-                    _logger.info(
+                    console.log(
                         `Type [${column.dbType}] has been mapped to [any] because no specific type has been found.`,
                     );
                     column.tsType = 'any';

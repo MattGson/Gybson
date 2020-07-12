@@ -1,6 +1,8 @@
 import { DBTables } from '../Gen';
 import { PoolConnection } from 'promise-mysql';
 import { knex } from '../index';
+import { logger } from '../index';
+const _logger = logger();
 
 const SOFT_DELETE_COLUMN = 'deleted';
 
