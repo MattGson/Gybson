@@ -1,6 +1,7 @@
-import { DBTables } from './Types';
+import { DBTables } from '../Gen';
 import { PoolConnection } from 'promise-mysql';
-import { knex } from '../db';
+import { knex } from '../index';
+
 
 const SOFT_DELETE_COLUMN = 'deleted';
 
