@@ -15,6 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.findManyLoader = exports.manyByColumnLoader = exports.byColumnLoader = void 0;
 const lodash_1 = __importDefault(require("lodash"));
 const index_1 = require("../index");
+const index_2 = require("../index");
+const _logger = index_2.logger();
 const SOFT_DELETE_COLUMN = 'deleted';
 /**
  * Bulk loader function

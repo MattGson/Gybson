@@ -10,27 +10,37 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.knex = exports.initialize = void 0;
+exports.logger = exports.knex = void 0;
 const knex_duplicate_key_1 = require("./lib/knex.duplicate.key");
+const logging_1 = require("../../build/src/Client/lib/logging");
 knex_duplicate_key_1.attachOnDuplicateUpdate();
-global._logger = {
-    debug: console.log,
-    info: console.log,
-    error: console.error,
-};
+//
+// INTERNAL USE
+//
+__exportStar(require("./QueryBuilders/Loaders"), exports);
+__exportStar(require("./QueryBuilders/Persistors"), exports);
+__exportStar(require("./QueryBuilders/Updaters"), exports);
 const state = {
     knex: undefined,
-};
-exports.initialize = (knex) => {
-    state.knex = knex;
-    _logger.info('Initialising Nodent with Knex instance');
+    logger: undefined,
 };
 exports.knex = () => {
     if (!state.knex)
         throw new Error('Nodent must be configured with a knex instance');
     return state.knex;
 };
-__exportStar(require("./QueryBuilders/Loaders"), exports);
-__exportStar(require("./QueryBuilders/Persistors"), exports);
-__exportStar(require("./QueryBuilders/Updaters"), exports);
+exports.logger = () => {
+    if (!state.logger)
+        throw new Error('Nodent must be configured with a log level');
+    return state.logger;
+};
+const initialize = (knex, config) => {
+    const useConfig = Object.assign({ logLevel: logging_1.LogLevel.info }, config);
+    state.knex = knex;
+    state.logger = logging_1.getLogger(useConfig);
+    state.logger.info('Initialising Nodent with Knex instance');
+};
+exports.default = {
+    initialize,
+};
 //# sourceMappingURL=index.js.map

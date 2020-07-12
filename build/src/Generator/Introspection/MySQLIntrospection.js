@@ -72,7 +72,7 @@ class MySQLIntrospection {
                     column.tsType = 'Buffer';
                     return column;
                 default:
-                    _logger.info(`Type [${column.dbType}] has been mapped to [any] because no specific type has been found.`);
+                    console.log(`Type [${column.dbType}] has been mapped to [any] because no specific type has been found.`);
                     column.tsType = 'any';
                     return column;
             }

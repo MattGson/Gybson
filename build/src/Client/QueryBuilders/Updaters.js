@@ -11,6 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateByConditions = exports.softDeleteByConditions = void 0;
 const index_1 = require("../index");
+const index_2 = require("../index");
+const _logger = index_2.logger();
 const SOFT_DELETE_COLUMN = 'deleted';
 /**
  * Type-safe soft delete function
