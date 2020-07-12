@@ -10,8 +10,8 @@
         "sql",
         "orm"
     ],
-    "main": "build/src/Generator/index.js",
-    "types": "build/src/Generator/index.d.ts",
+    "main": "build/src/Client/index.js",
+    "types": "build/src/Client/index.d.ts",
     "scripts": {
         "lint": "eslint ./src",
         "build": "tsc",

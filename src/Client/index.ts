@@ -8,7 +8,7 @@ global._logger = {
     error: console.error,
 };
 const state: { knex: Knex<any, unknown[]> | undefined } = {
-    knex: undefined
+    knex: undefined,
 };
 
 export const initialize = (knex: Knex) => {
@@ -20,3 +20,7 @@ export const knex = () => {
     if (!state.knex) throw new Error('Nodent must be configured with a knex instance');
     return state.knex;
 };
+
+export * from './QueryBuilders/Loaders';
+export * from './QueryBuilders/Persistors';
+export * from './QueryBuilders/Updaters';
