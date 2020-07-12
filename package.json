@@ -10,8 +10,8 @@
         "sql",
         "orm"
     ],
-    "main": "src/Generator/Schemats/index.js",
-    "types": "./src/index.d.ts",
+    "main": "build/src/Generator/index.js",
+    "types": "build/src/Generator/index.d.ts",
     "scripts": {
         "lint": "eslint ./src",
         "build": "tsc",
@@ -20,7 +20,7 @@
         "prepublish": "npm run build"
     },
     "bin": {
-        "schemats": "src/Generator/cli/schemats.js"
+        "schemats": "src/Generator/index.js"
     },
     "repository": {
         "type": "git",

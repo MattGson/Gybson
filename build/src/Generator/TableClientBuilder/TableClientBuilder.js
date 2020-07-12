@@ -1,71 +1,66 @@
-import _ from 'lodash';
-import { ColumnDefinition } from './types';
-import { Introspection, KeyDefinition } from '../Introspection/IntrospectionTypes';
-import { CardinalityResolver } from './CardinalityResolver';
-
-interface LoaderOptions {
-    rowTypeSuffix: string;
-}
-
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TableClientBuilder = void 0;
+const lodash_1 = __importDefault(require("lodash"));
+const CardinalityResolver_1 = require("./CardinalityResolver");
 /**
  * Builds db client methods for a table
  */
-export class TableClientBuilder {
-    public readonly entityName: string;
-    public readonly rowTypeName: string;
-    public readonly className: string;
-    public readonly table: string;
-    private loaders: string[] = [];
-
-    public constructor(table: string, options: LoaderOptions) {
+class TableClientBuilder {
+    constructor(table, options) {
+        this.loaders = [];
         this.entityName = TableClientBuilder.PascalCase(table);
         this.table = table;
         this.rowTypeName = `${this.entityName}${options.rowTypeSuffix}`;
         this.className = `${this.entityName}`;
     }
-
-    private static PascalCase(name: string) {
-        return _.upperFirst(_.camelCase(name));
+    static PascalCase(name) {
+        return lodash_1.default.upperFirst(lodash_1.default.camelCase(name));
     }
-
     // public compile(): string {
     //     return this.buildTemplate(
     //         this.loaders.join(`
     //     `),
     //     );
     // }
-
-    public async build(introspection: Introspection): Promise<string> {
-        const columns = await introspection.getTableTypes(this.table);
-        const hasSoftDelete = columns['deleted'] != null;
-
-        const tableKeys = await introspection.getTableKeys(this.table);
-        // filter duplicate columns
-        const uniqueKeys = _.keyBy(tableKeys, 'columnName');
-
-        Object.values(uniqueKeys).forEach((key: KeyDefinition) => {
-            const { columnName } = key;
-
-            const column: ColumnDefinition = columns[columnName];
-
-            // for now only accept loaders on string and number column types
-            if (column.tsType !== 'string' && column.tsType !== 'number') return;
-
-            const isMany = CardinalityResolver.isToMany(columnName, tableKeys);
-            if (!isMany) this.addByColumnLoader(column, hasSoftDelete);
-            else this.addManyByColumnLoader(column, hasSoftDelete);
-        });
-
-        this.addFindMany(hasSoftDelete);
-
-        return this.buildTemplate(
-            this.loaders.join(`
+    build(introspection) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const columns = yield introspection.getTableTypes(this.table);
+            const hasSoftDelete = columns['deleted'] != null;
+            const tableKeys = yield introspection.getTableKeys(this.table);
+            // filter duplicate columns
+            const uniqueKeys = lodash_1.default.keyBy(tableKeys, 'columnName');
+            Object.values(uniqueKeys).forEach((key) => {
+                const { columnName } = key;
+                const column = columns[columnName];
+                // for now only accept loaders on string and number column types
+                if (column.tsType !== 'string' && column.tsType !== 'number')
+                    return;
+                const isMany = CardinalityResolver_1.CardinalityResolver.isToMany(columnName, tableKeys);
+                if (!isMany)
+                    this.addByColumnLoader(column, hasSoftDelete);
+                else
+                    this.addManyByColumnLoader(column, hasSoftDelete);
+            });
+            this.addFindMany(hasSoftDelete);
+            return this.buildTemplate(this.loaders.join(`
         
-        `),
-        );
+        `));
+        });
     }
-
-    private buildTemplate(content: string) {
+    buildTemplate(content) {
         // TODO:- dynamic import paths?
         return `
             import DataLoader = require('dataloader');
@@ -79,7 +74,6 @@ export class TableClientBuilder {
             }
             `;
     }
-
     /**
      * Build a public interface for a loader
      * Can optionally include soft delete filtering
@@ -87,34 +81,29 @@ export class TableClientBuilder {
      * @param loaderName
      * @param hasSoftDelete
      */
-    private static loaderPublicMethod(column: ColumnDefinition, loaderName: string, hasSoftDelete: boolean) {
+    static loaderPublicMethod(column, loaderName, hasSoftDelete) {
         const { columnName, tsType } = column;
-
         if (hasSoftDelete)
             return `
-            public async by${TableClientBuilder.PascalCase(
-                columnName,
-            )}(${columnName}: ${tsType}, includeDeleted = false) {
+            public async by${TableClientBuilder.PascalCase(columnName)}(${columnName}: ${tsType}, includeDeleted = false) {
                     const row = await this.${loaderName}.load(${columnName});
                     if (row?.deleted && !includeDeleted) return null;
                     return row;
                 }
         `;
-
         return `
             public by${TableClientBuilder.PascalCase(columnName)}(${columnName}: ${tsType}) {
                     return this.${loaderName}.load(${columnName});
                 }
         `;
     }
-
     /** // TODO:- add compound key loaders i.e. orgMembers.byOrgIdAndUserId()
      * Build a loader to load a single row for each key
      * Gives the caller choice on whether to include soft deleted rows
      * @param column
      * @param hasSoftDelete
      */
-    private addByColumnLoader(column: ColumnDefinition, hasSoftDelete: boolean) {
+    addByColumnLoader(column, hasSoftDelete) {
         const { columnName } = column;
         const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
         this.loaders.push(`
@@ -126,29 +115,24 @@ export class TableClientBuilder {
                 ${TableClientBuilder.loaderPublicMethod(column, loaderName, hasSoftDelete)}
             `);
     }
-
     /**
      * Build a loader to load many rows for each key
      * At the moment, this always filters out soft deleted rows
      * @param column
      * @param hasSoftDelete
      */
-    private addManyByColumnLoader(column: ColumnDefinition, hasSoftDelete: boolean) {
+    addManyByColumnLoader(column, hasSoftDelete) {
         const { columnName } = column;
         const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
-
         this.loaders.push(`
                 private readonly ${loaderName} = new DataLoader<${column.tsType}, ${this.rowTypeName}[]>(ids => {
-                return manyByColumnLoader('${this.table}', '${columnName}', ids, ['${columnName}'], ${
-            hasSoftDelete ? 'true' : 'false'
-        });
+                return manyByColumnLoader('${this.table}', '${columnName}', ids, ['${columnName}'], ${hasSoftDelete ? 'true' : 'false'});
              });
              
             ${TableClientBuilder.loaderPublicMethod(column, loaderName, false)}
 
         `);
     }
-
     /**
      * Build a loader to query rows from a table.
      * Doesn't use batching or caching as this is very hard to support.
@@ -163,7 +147,7 @@ export class TableClientBuilder {
      *      - Split the type outputs by table maybe?)
      * @param hasSoftDelete
      */
-    private addFindMany(hasSoftDelete: boolean) {
+    addFindMany(hasSoftDelete) {
         this.loaders.push(`
             public findMany
             <Column extends Extract<keyof DBTables['${this.table}'],
@@ -178,3 +162,5 @@ export class TableClientBuilder {
         `);
     }
 }
+exports.TableClientBuilder = TableClientBuilder;
+//# sourceMappingURL=TableClientBuilder.js.map

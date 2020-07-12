@@ -12,12 +12,12 @@ import { TableClientBuilder } from './TableClientBuilder';
 // setup
 // **************************
 // const OUT_DIR = process.argv[2];
-// const CURRENT = process.cwd();
+const CURRENT = process.cwd();
 
 // const ENT_DIR = path.join(__dirname, '..', '..', 'lib', 'Ent');
 // const ENT_DIR = path.join(CURRENT, OUT_DIR);
 // const GENERATED_DIR = path.join(CURRENT, '..', '..', 'Client', 'Gen');
-const GENERATED_DIR_CLIENTS = path.join(__dirname, '..', 'Client', 'Gen', 'Tables');
+const GENERATED_DIR_CLIENTS = path.join(CURRENT, 'src', 'Gen');
 
 const knex = Knex({
     client: 'mysql',
