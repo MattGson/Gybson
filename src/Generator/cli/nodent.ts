@@ -86,7 +86,8 @@ const args = usage('Usage: $0 <command> [options]')
         process.exit();
     })
     .catch((e: any) => {
-        console.warn(e);
+        console.warn(e.message);
+        console.log('Use: "nodent -h" to see help');
         process.exit(1);
     });
 
