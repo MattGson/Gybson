@@ -1,6 +1,6 @@
 import Knex = require('knex');
 import { attachOnDuplicateUpdate } from './lib/knex.duplicate.key';
-import { getLogger, Logger, LogLevel } from '../../build/src/Client/lib/logging';
+import { getLogger, Logger, LogLevel } from './lib/logging';
 
 attachOnDuplicateUpdate();
 
@@ -29,7 +29,7 @@ export const logger = () => {
 //
 // EXTERNAL USE
 //
-interface NodentConfig {
+export interface NodentConfig {
     logLevel?: LogLevel;
 }
 

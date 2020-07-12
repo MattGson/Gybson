@@ -12,7 +12,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logger = exports.knex = void 0;
 const knex_duplicate_key_1 = require("./lib/knex.duplicate.key");
-const logging_1 = require("../../build/src/Client/lib/logging");
+const logging_1 = require("./lib/logging");
 knex_duplicate_key_1.attachOnDuplicateUpdate();
 //
 // INTERNAL USE
