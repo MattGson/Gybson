@@ -1,11 +1,11 @@
-import { KeyColumn } from './types';
+import { KeyDefinition } from '../Introspection/IntrospectionTypes';
 import _ from 'lodash';
 
 export class CardinalityResolver {
     /**
      * True if key column can map to many rows in the table
      */
-    public static isToMany(column: string, tableKeys: KeyColumn[]): boolean {
+    public static isToMany(column: string, tableKeys: KeyDefinition[]): boolean {
         const primary = tableKeys.filter((key) => key.constraintName === 'PRIMARY');
         const primaryMap = _.keyBy(primary, 'columnName');
 

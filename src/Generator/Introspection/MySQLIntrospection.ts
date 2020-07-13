@@ -1,5 +1,5 @@
 import { mapValues } from 'lodash';
-import {Introspection, KeyDefinition, TableDefinition} from './IntrospectionTypes';
+import { Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
 import Knex = require('knex');
 
 export class MySQLIntrospection implements Introspection {
@@ -81,12 +81,6 @@ export class MySQLIntrospection implements Introspection {
     private async getTableDefinition(tableName: string) {
         let tableDefinition: TableDefinition = {};
 
-        // const tableColumns = await this.connection.query(
-        //     'SELECT column_name, data_type, is_nullable ' +
-        //         'FROM information_schema.columns ' +
-        //         'WHERE table_name = ? and table_schema = ?',
-        //     [tableName, tableSchema],
-        // );
         const tableColumns = await this.knex('information_schema.columns')
             .select('column_name', 'data_type', 'is_nullable')
             .where({ table_name: tableName, table_schema: this.schemaName });
@@ -111,47 +105,11 @@ export class MySQLIntrospection implements Introspection {
         return this.mapTableDefinitionToType(await this.getTableDefinition(tableName));
     }
 
-    // public async getIndices(): Promise<Indices> {
-    //     const rows = await this.connection.query(
-    //         `
-    //            SELECT table_name, non_unique, index_name, column_name
-    //              FROM information_schema.statistics
-    //              WHERE table_schema = ?
-    //         `,
-    //         [this.schemaName],
-    //     );
-    //     const indices = rows.map(
-    //         (row: {
-    //             table_name: string;
-    //             non_unique: number;
-    //             index_name: string;
-    //             column_name: string;
-    //         }): IndexDefinition => {
-    //             return {
-    //                 unique: !row.non_unique,
-    //                 columnName: row.column_name,
-    //                 indexName: row.index_name,
-    //                 tableName: row.table_name,
-    //             };
-    //         },
-    //     );
-    //     return _.groupBy(indices, 'tableName');
-    // }
-
     public async getTableKeys(tableName: string): Promise<KeyDefinition[]> {
         const rows = await this.knex('information_schema.key_column_usage')
             .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
             .where({ table_name: tableName, table_schema: this.schemaName });
-        // const rows = await this.connection.query(
-        //     `
-        //         SELECT
-        //             table_name,column_name,constraint_name, REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME
-        //         FROM
-        //             INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        //          WHERE table_schema = ?
-        //     `,
-        //     [this.schemaName],
-        // );
+
         return rows.map((row: { table_name: string; constraint_name: string; column_name: string }) => {
             return {
                 columnName: row.column_name,
@@ -170,41 +128,6 @@ export class MySQLIntrospection implements Introspection {
             .where({ table_schema: this.schemaName })
             .groupBy('table_name');
 
-        // const schemaTables = await this.connection.query(
-        //     'SELECT table_name ' +
-        //         'FROM information_schema.columns ' +
-        //         'WHERE table_schema = ? ' +
-        //         'GROUP BY table_name',
-        //     [this.schemaName],
-        // );
         return schemaTables.map((schemaItem: { table_name: string }) => schemaItem.table_name);
     }
-
-    // public async getPrimaryKeys(): Promise<TableKeys> {
-    //     const rows = await this.connection.query(
-    //         `
-    //             SELECT
-    //                 table_name,column_name,constraint_name, REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME
-    //             FROM
-    //                 INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-    //              WHERE table_schema = ? AND constraint_name = 'PRIMARY'
-    //         `,
-    //         [this.schemaName],
-    //     );
-    //     const keys: KeyColumn[] = rows.map(
-    //         (row: { table_name: string; constraint_name: string; column_name: string }) => {
-    //             return {
-    //                 columnName: row.column_name,
-    //                 constraintName: row.constraint_name,
-    //                 tableName: row.table_name,
-    //             };
-    //         },
-    //     );
-    //
-    //     return _.groupBy(keys, 'tableName');
-    // }
-
-    // public getDefaultSchema(): string {
-    //     return this.schemaName;
-    // }
 }

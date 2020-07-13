@@ -1,6 +1,5 @@
 import _ from 'lodash';
-import { ColumnDefinition } from './types';
-import { Introspection, KeyDefinition } from '../Introspection/IntrospectionTypes';
+import { Introspection, KeyDefinition, ColumnDefinition } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 
 interface LoaderOptions {
@@ -27,13 +26,6 @@ export class TableClientBuilder {
     private static PascalCase(name: string) {
         return _.upperFirst(_.camelCase(name));
     }
-
-    // public compile(): string {
-    //     return this.buildTemplate(
-    //         this.loaders.join(`
-    //     `),
-    //     );
-    // }
 
     public async build(introspection: Introspection): Promise<string> {
         const columns = await introspection.getTableTypes(this.table);
@@ -70,7 +62,8 @@ export class TableClientBuilder {
         return `
             import DataLoader = require('dataloader');
             import { byColumnLoader, manyByColumnLoader, findManyLoader } from 'nodent';
-            import { DBRowTypes, DBTables } from '../index';
+            import { DBRowTypes } from './db-schema';
+            import { DBTables } from './db-tables';
 
             export type ${this.rowTypeName} = DBRowTypes.${this.table};
 

@@ -1,30 +1,12 @@
 import path from 'path';
-import _ from 'lodash';
 // @ts-ignore
 import { format } from 'prettier';
 import fs from 'fs-extra';
-import { mysql, prettier, codeGenPreferences } from './config';
+import { prettier, codeGenPreferences } from './config';
 import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder';
 import { Introspection } from './Introspection/IntrospectionTypes';
-import Url from 'url-parse';
-
-// **************************
-// setup
-// **************************
-// const OUT_DIR = process.argv[2];
-// const CURRENT = process.cwd();
-//
-// // const ENT_DIR = path.join(__dirname, '..', '..', 'lib', 'Ent');
-// // const ENT_DIR = path.join(CURRENT, OUT_DIR);
-// // const GENERATED_DIR = path.join(CURRENT, '..', '..', 'Client', 'Gen');
-// const GENERATED_DIR_CLIENTS = path.join(CURRENT, 'src', 'Gen');
-//
-// const knex = Knex({
-//     client: 'mysql',
-//     connection: mysql,
-// });
 
 /**
  * Write to a typescript file
@@ -51,11 +33,6 @@ async function writeTypescriptFile(content: string, directory: string, filename:
 // **************************
 // generate types
 // **************************
-
-// function dbConnectionString(): string {
-//     const { database, user, password, port, host } = my;
-//     return `mysql://${user}:${password}@${host}:${port}/${database}`;
-// }
 
 async function generateTypes(db: Introspection, _outdir: string): Promise<void> {
     // const DB = new MySQLIntrospection(knex, mysql.database);
@@ -90,10 +67,6 @@ async function generateTypes(db: Introspection, _outdir: string): Promise<void> 
 // **************************
 
 async function generateLoaders(db: Introspection, outdir: string): Promise<string[]> {
-    // const DB = new MySQLIntrospection(knex, mysql.database);
-
-    console.log(`Reading from: mysql://${mysql.user}:${mysql.password}@${mysql.host}:${mysql.port}/${mysql.database}`);
-
     const builders: TableClientBuilder[] = [];
 
     const tables = await db.getSchemaTables();
@@ -101,59 +74,8 @@ async function generateLoaders(db: Introspection, outdir: string): Promise<strin
     for (let table of tables) {
         const builder = new TableClientBuilder(table, codeGenPreferences);
         builders.push(builder);
-        // const OUT_LOADER_PATH = path.join(GENERATED_DIR, `${builder.className}.ts`);
-
-        // const columns = await DB.getTableTypes(table);
-        // const hasSoftDelete = columns['deleted'] != null;
-        //
-        // const tableKeys = keys[table];
-        //
-        // // filter duplicate columns
-        // const uniqueKeys = _.keyBy(tableKeys, 'columnName');
-        //
-        // Object.values(uniqueKeys).forEach((key: KeyColumn) => {
-        //     const { columnName } = key;
-        //
-        //     const column: ColumnDefinition = columns[columnName];
-        //
-        //     // for now only accept loaders on string and number column types
-        //     if (column.tsType !== 'string' && column.tsType !== 'number') return;
-        //
-        //     const isMany = CardinalityResolver.isToMany(columnName, tableKeys);
-        //     if (!isMany) builder.addByColumnLoader(column, hasSoftDelete);
-        //     else builder.addManyByColumnLoader(column, hasSoftDelete);
-        // });
-        //
-        // builder.addFindMany(hasSoftDelete);
-
-        // append creates files if they don't exist - write overwrites contents
         await writeTypescriptFile(await builder.build(db), outdir, `${builder.className}.ts`);
     }
-
-    // // build index.ts
-    // let imports = ``;
-    // let loaders = ``;
-    //
-    // builders.map((builder) => {
-    //     imports += `import ${builder.LoaderName}, { ${builder.RowTypeName} } from './Gen/${builder.EntName}';`;
-    //     loaders += `${builder.LoaderName}: new ${builder.LoaderName}(),`;
-    // });
-    // const entLoaders = `
-    //     export const EntLoader = () => {
-    //     return {
-    //         ${loaders}
-    //         }
-    //     }
-    //     export type EntLoader = ReturnType<typeof EntLoader>;
-    // `;
-    // await fs.appendFile(path.join(ENT_DIR, 'index.ts'), '');
-    // await fs.writeFile(
-    //     path.join(ENT_DIR, 'index.ts'),
-    //     format(imports + entLoaders, {
-    //         parser: 'typescript',
-    //         ...prettier_conf,
-    //     }),
-    // );
 
     return tables;
 }
@@ -174,7 +96,7 @@ export async function generate(conn: Connection, outdir: string) {
     let DB: Introspection;
 
     if (conn.client === 'mysql') {
-        DB = new MySQLIntrospection(knex, mysql.database);
+        DB = new MySQLIntrospection(knex, conn.connection.database);
     } else throw new Error('PostgreSQL not currently supported');
 
     await generateTypes(DB, outdir);

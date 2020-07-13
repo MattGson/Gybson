@@ -1,7 +1,7 @@
 export interface Introspection {
-    getTableTypes (table: string): Promise<TableDefinition>;
-    getTableKeys (table: string): Promise<KeyDefinition[]>;
-    getSchemaTables (): Promise<string[]>;
+    getTableTypes(table: string): Promise<TableDefinition>;
+    getTableKeys(table: string): Promise<KeyDefinition[]>;
+    getSchemaTables(): Promise<string[]>;
 }
 
 export interface ColumnDefinition {
@@ -10,21 +10,6 @@ export interface ColumnDefinition {
     tsType?: string;
     columnName: string;
 }
-
-// export interface IndexDefinition {
-//     unique: boolean;
-//     indexName: string;
-//     columnName: string;
-//     tableName: string;
-// }
-//
-// export interface Indices {
-//     [tableName: string]: IndexDefinition[];
-// }
-
-// export interface TableKeys {
-//     [tableName: string]: KeyColumn[];
-// }
 
 export interface KeyDefinition {
     tableName: string;
