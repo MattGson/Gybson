@@ -21,7 +21,6 @@ const config_1 = require("./config");
 const knex_1 = __importDefault(require("knex"));
 const MySQLIntrospection_1 = require("./Introspection/MySQLIntrospection");
 const TableClientBuilder_1 = require("./TableClientBuilder");
-const url_parse_1 = __importDefault(require("url-parse"));
 // **************************
 // setup
 // **************************
@@ -156,31 +155,11 @@ function generateLoaders(db, outdir) {
         return tables;
     });
 }
-const getConnection = (connection) => {
-    const conn = {
-        client: 'mysql',
-        connection: { host: '127.0.0.1', port: 3306, user: 'root', password: '', database: 'public' },
-    };
-    const { host, port, pathname } = new url_parse_1.default(connection);
-    console.log('HERE :', host, port, pathname, pathname.substr(1));
-    if (/^postgres(ql)?:\/\//i.test(connection)) {
-        conn.client = 'postgres';
-        throw new Error('PostgreSQL is not currently supported');
-    }
-    else if (/^mysql:\/\//i.test(connection)) {
-        conn.client = 'mysql';
-    }
-    else {
-        throw new Error('Invalid connection string. Could not determine DB engine.');
-    }
-    return conn;
-};
 function generate(conn, outdir) {
     return __awaiter(this, void 0, void 0, function* () {
-        const client = getConnection(conn);
-        const knex = knex_1.default(client);
+        const knex = knex_1.default(conn);
         let DB;
-        if (client.client === 'mysql') {
+        if (conn.client === 'mysql') {
             DB = new MySQLIntrospection_1.MySQLIntrospection(knex, config_1.mysql.database);
         }
         else

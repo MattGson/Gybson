@@ -20,10 +20,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const yargs_1 = require("yargs");
 const path_1 = __importDefault(require("path"));
 const index_1 = require("../index");
+const clients = ['mysql', 'postgres'];
 const args = yargs_1.usage('Usage: $0 <command> [options]')
     .options({
-    conn: { type: 'string' },
-    outdir: { type: 'string' },
+    host: { type: 'string', default: '127.0.0.1' },
+    port: { type: 'number', default: 3306 },
+    client: { choices: clients, default: clients[0] },
+    user: { type: 'string', default: 'root' },
+    password: { type: 'string', default: '' },
+    database: { type: 'string', default: 'public' },
+    outdir: { type: 'string', default: './gen' },
 })
     .global('config')
     .default('config', 'nodent-config.json')
@@ -66,12 +72,17 @@ const args = yargs_1.usage('Usage: $0 <command> [options]')
 //     .argv;
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const conn = args.conn;
+        const conn = {
+            client: args.client,
+            connection: {
+                host: args.host,
+                port: args.port,
+                user: args.user,
+                password: args.password,
+                database: args.database,
+            },
+        };
         const outdir = args.outdir;
-        if (!conn)
-            throw new Error('Must include a database connection in config');
-        if (!outdir)
-            throw new Error('Must include an output directory');
         const CURRENT = process.cwd();
         const GENERATED_DIR = path_1.default.join(CURRENT, outdir);
         yield index_1.generate(conn, GENERATED_DIR);
