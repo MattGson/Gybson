@@ -7,6 +7,7 @@ import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder';
 import { Introspection } from './Introspection/IntrospectionTypes';
+import { TypeBuilder } from './TypeBuilder/TypeBuilder';
 
 /**
  * Write to a typescript file
@@ -34,13 +35,18 @@ async function writeTypescriptFile(content: string, directory: string, filename:
 // generate types
 // **************************
 
-async function generateTypes(db: Introspection, _outdir: string): Promise<void> {
+async function generateTypes(db: Introspection, outdir: string): Promise<void> {
     // const DB = new MySQLIntrospection(knex, mysql.database);
 
     const tables = await db.getSchemaTables();
-    console.log(tables);
+    const enums = await db.getEnumTypes();
+
+    // const interfacePromises = tables.map((table) => typescriptOfTable(db, table, schema as string, optionsObject));
+    // const interfaces = await Promise.all(interfacePromises).then((tsOfTable) => tsOfTable.join(''));
     //
-    // const typeBuilder = new TypeBuilder(dbConnectionString(), tables);
+    const typeBuilder = new TypeBuilder(tables, enums, codeGenPreferences);
+
+    const types = await typeBuilder.build(db);
     //
     // // write index
     // await fs.writeFile(
@@ -57,16 +63,20 @@ async function generateTypes(db: Introspection, _outdir: string): Promise<void> 
     //
     // const rowTypes = await typeBuilder.generateRowTypes();
     // const tableTypes = await typeBuilder.generateTableTypes();
-    //
-    // await writeTypescriptFile(rowTypes, GENERATED_DIR, 'db-schema.ts');
-    // await writeTypescriptFile(tableTypes, GENERATED_DIR, 'db-tables.ts');
+
+    await writeTypescriptFile(types, outdir, 'db-schema.ts');
 }
 
 // **************************
 // generate loaders
 // **************************
 
-async function generateLoaders(db: Introspection, outdir: string): Promise<string[]> {
+/**
+ * Generate the db clients for each table
+ * @param db
+ * @param outdir
+ */
+async function generateClients(db: Introspection, outdir: string): Promise<string[]> {
     const builders: TableClientBuilder[] = [];
 
     const tables = await db.getSchemaTables();
@@ -100,7 +110,7 @@ export async function generate(conn: Connection, outdir: string) {
     } else throw new Error('PostgreSQL not currently supported');
 
     await generateTypes(DB, outdir);
-    await generateLoaders(DB, outdir);
+    await generateClients(DB, outdir);
 
     await knex.destroy();
 }

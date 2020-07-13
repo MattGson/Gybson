@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { Introspection, KeyDefinition, ColumnDefinition } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 
-interface LoaderOptions {
+interface BuilderOptions {
     rowTypeSuffix: string;
 }
 
@@ -16,7 +16,7 @@ export class TableClientBuilder {
     public readonly table: string;
     private loaders: string[] = [];
 
-    public constructor(table: string, options: LoaderOptions) {
+    public constructor(table: string, options: BuilderOptions) {
         this.entityName = TableClientBuilder.PascalCase(table);
         this.table = table;
         this.rowTypeName = `${this.entityName}${options.rowTypeSuffix}`;

@@ -1,5 +1,5 @@
-import { mapValues } from 'lodash';
-import { Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
+import { mapValues, isEqual } from 'lodash';
+import { EnumDefinitions, Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
 import Knex = require('knex');
 
 export class MySQLIntrospection implements Introspection {
@@ -72,6 +72,72 @@ export class MySQLIntrospection implements Introspection {
                     return column;
             }
         });
+    }
+
+    /**
+     * Get possible values from enum
+     * @param mysqlEnum
+     */
+    private static parseMysqlEnumeration(mysqlEnum: string): string[] {
+        return mysqlEnum.replace(/(^(enum|set)\('|'\)$)/gi, '').split(`','`);
+    }
+
+    /**
+     * Get name of enum
+     * @param tableName
+     * @param dataType
+     * @param columnName
+     */
+    private static getEnumName(tableName: string, dataType: string, columnName: string): string {
+        return `${tableName}_${dataType}_${columnName}`;
+    }
+
+    /**
+     * Get the enum types from the database schema
+     */
+    public async getEnumTypes(): Promise<EnumDefinitions> {
+        let enums: { [enumName: string]: string[] } = {};
+        // let enumSchemaWhereClause: string;
+        // let params: string[];
+        // if (schema) {
+        //         //     enumSchemaWhereClause = `and table_schema = ?`;
+        //         //     params = [schema];
+        //         // } else {
+        //         //     enumSchemaWhereClause = '';
+        //         //     params = [];
+        //         // }
+        //         // const rawEnumRecords = await this.queryAsync(
+        //         //     'SELECT column_name, column_type, data_type ' +
+        //         //         'FROM information_schema.columns ' +
+        //         //         `WHERE data_type IN ('enum', 'set') ${enumSchemaWhereClause}`,
+        //         //     params,
+        //         // );
+
+        const rawEnumRecords = await this.knex('information_schema.columns')
+            .select('table_name', 'column_name', 'column_type', 'data_type')
+            .whereIn('data_type', ['enum', 'set'])
+            .where({ table_schema: this.schemaName });
+
+        rawEnumRecords.forEach(
+            (enumItem: { table_name: string; column_name: string; column_type: string; data_type: string }) => {
+                const enumName = MySQLIntrospection.getEnumName(
+                    enumItem.table_name,
+                    enumItem.data_type,
+                    enumItem.column_name,
+                );
+                const enumValues = MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type);
+
+                // make sure no duplicates
+                if (enums[enumName] && !isEqual(enums[enumName], enumValues)) {
+                    const errorMsg =
+                        `Multiple enums with the same name and contradicting types were found: ` +
+                        `${enumItem.column_name}: ${JSON.stringify(enums[enumName])} and ${JSON.stringify(enumValues)}`;
+                    throw new Error(errorMsg);
+                }
+                enums[enumName] = enumValues;
+            },
+        );
+        return enums;
     }
 
     /**

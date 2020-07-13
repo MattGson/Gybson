@@ -2,6 +2,7 @@ export interface Introspection {
     getTableTypes(table: string): Promise<TableDefinition>;
     getTableKeys(table: string): Promise<KeyDefinition[]>;
     getSchemaTables(): Promise<string[]>;
+    getEnumTypes(): Promise<{ [enumName: string]: string[] }>;
 }
 
 export interface ColumnDefinition {
@@ -19,4 +20,8 @@ export interface KeyDefinition {
 
 export interface TableDefinition {
     [columnName: string]: ColumnDefinition;
+}
+
+export interface EnumDefinitions {
+    [enumName: string]: string[];
 }
