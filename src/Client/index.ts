@@ -7,8 +7,6 @@ attachOnDuplicateUpdate();
 //
 // INTERNAL USE
 //
-// export  from './QueryBuilders/QueryBuilder;
-
 export { QueryBuilder } from './QueryBuilders/QueryBuilder';
 
 const state: { knex: Knex<any, unknown[]> | undefined } = {

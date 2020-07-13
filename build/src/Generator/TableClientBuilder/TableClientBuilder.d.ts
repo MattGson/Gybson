@@ -12,7 +12,6 @@ export declare class TableClientBuilder {
         rowTypeName: string;
         columnTypeName: string;
         valueTypeName: string;
-        partialRowTypeName: string;
     };
     readonly className: string;
     readonly table: string;

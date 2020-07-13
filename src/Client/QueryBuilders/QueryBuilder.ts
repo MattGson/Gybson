@@ -5,7 +5,12 @@ import _, { Dictionary } from 'lodash';
 
 // TODO:- auto connection handling
 
-export abstract class QueryBuilder<TblRow, PartialTblRow, TblColumn extends string, TblKey extends string | number> {
+export abstract class QueryBuilder<
+    TblRow,
+    TblColumn extends string,
+    TblKey extends string | number,
+    PartialTblRow = Partial<TblRow>
+> {
     private tableName: string;
     private softDeleteColumn?: string;
 
@@ -196,17 +201,17 @@ export abstract class QueryBuilder<TblRow, PartialTblRow, TblColumn extends stri
      *      -> UPDATE users SET deleted = true WHERE user_id = 3 AND email = 'steve'
      * @param params
      */
-    public async softDelete(params: { connection: PoolConnection; conditions: PartialTblRow }) {
-        const { conditions, connection } = params;
+    public async softDelete(params: { connection: PoolConnection; where: PartialTblRow }) {
+        const { where, connection } = params;
         if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
-        if (Object.keys(conditions).length < 1) throw new Error('Must have at least one where condition');
+        if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
         const query = knex()(this.tableName)
-            .where(conditions)
+            .where(where)
             .update({ [this.softDeleteColumnString]: true })
             .connection(connection);
 
-        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions);
+        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
 
         return query;
     }
@@ -218,14 +223,14 @@ export abstract class QueryBuilder<TblRow, PartialTblRow, TblColumn extends stri
      *      updateByConditions(conn, 'users', { fname: 'joe' }, { user_id: 3, email: 'steve' }
      *      -> UPDATE users SET fname = 'joe' WHERE user_id = 3 AND email = 'steve'
      */
-    public async update(params: { connection: PoolConnection; values: TblRow; conditions: PartialTblRow }) {
-        const { values, connection, conditions } = params;
+    public async update(params: { connection: PoolConnection; values: PartialTblRow; where: PartialTblRow }) {
+        const { values, connection, where } = params;
         if (Object.keys(values).length < 1) throw new Error('Must have at least one updated column');
-        if (Object.keys(conditions).length < 1) throw new Error('Must have at least one where condition');
+        if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
-        const query = knex()(this.tableName).where(conditions).update(values).connection(connection);
+        const query = knex()(this.tableName).where(where).update(values).connection(connection);
 
-        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions, values);
+        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
 
         return query;
     }

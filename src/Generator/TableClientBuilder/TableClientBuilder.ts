@@ -18,7 +18,6 @@ export class TableClientBuilder {
         rowTypeName: string;
         columnTypeName: string;
         valueTypeName: string;
-        partialRowTypeName: string;
     };
     public readonly className: string;
     public readonly table: string;
@@ -37,7 +36,6 @@ export class TableClientBuilder {
             rowTypeName: `${this.className}${options.rowTypeSuffix || 'Row'}`,
             columnTypeName: `${this.className}Column`,
             valueTypeName: `${this.className}Value`,
-            partialRowTypeName: `${this.className}RowPartial`,
         };
     }
 
@@ -80,7 +78,7 @@ export class TableClientBuilder {
 
     private buildTemplate(content: string) {
         // TODO:- this should be in type gen
-        const { rowTypeName, columnTypeName, valueTypeName, partialRowTypeName } = this.typeNames;
+        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { QueryBuilder } from 'nodent';
@@ -89,11 +87,10 @@ export class TableClientBuilder {
             export type ${rowTypeName} = ${this.table};
             export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
             export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
-            export type  ${partialRowTypeName} = Partial<${rowTypeName}>;
 
              export default class ${
                  this.className
-             } extends QueryBuilder<${rowTypeName}, ${partialRowTypeName}, ${columnTypeName}, ${valueTypeName}> {
+             } extends QueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}> {
                     constructor() {
                         super('${this.table}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }

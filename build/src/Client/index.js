@@ -26,7 +26,6 @@ knex_duplicate_key_1.attachOnDuplicateUpdate();
 //
 // INTERNAL USE
 //
-// export  from './QueryBuilders/QueryBuilder;
 var QueryBuilder_1 = require("./QueryBuilders/QueryBuilder");
 Object.defineProperty(exports, "QueryBuilder", { enumerable: true, get: function () { return QueryBuilder_1.QueryBuilder; } });
 const state = {

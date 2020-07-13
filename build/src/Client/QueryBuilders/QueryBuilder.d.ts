@@ -1,5 +1,5 @@
 import { PoolConnection } from 'promise-mysql';
-export declare abstract class QueryBuilder<TblRow, PartialTblRow, TblColumn extends string, TblKey extends string | number> {
+export declare abstract class QueryBuilder<TblRow, TblColumn extends string, TblKey extends string | number, PartialTblRow = Partial<TblRow>> {
     private tableName;
     private softDeleteColumn?;
     protected constructor(tableName: string, softDeleteColumn: string);
@@ -89,7 +89,7 @@ export declare abstract class QueryBuilder<TblRow, PartialTblRow, TblColumn exte
      */
     softDelete(params: {
         connection: PoolConnection;
-        conditions: PartialTblRow;
+        where: PartialTblRow;
     }): Promise<number>;
     /**
      * Type-safe update function
@@ -100,7 +100,7 @@ export declare abstract class QueryBuilder<TblRow, PartialTblRow, TblColumn exte
      */
     update(params: {
         connection: PoolConnection;
-        values: TblRow;
-        conditions: PartialTblRow;
+        values: PartialTblRow;
+        where: PartialTblRow;
     }): Promise<number>;
 }
