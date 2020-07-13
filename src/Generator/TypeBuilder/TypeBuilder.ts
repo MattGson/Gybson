@@ -59,6 +59,7 @@ export class TypeBuilder {
      * @param tableDefinition
      */
     private generateTableTypes(tableName: string, tableDefinition: TableDefinition) {
+        // TODO:- enum types not working
         let fields = '';
         Object.keys(tableDefinition).forEach((columnName) => {
             let type = tableDefinition[columnName].tsType;
@@ -97,8 +98,7 @@ export class TypeBuilder {
      */
     private static generateEnumType(enumObject: EnumDefinitions) {
         let enumString = '';
-        console.log('Building enums: ', enumObject);
-        for (let enumName in Object.keys(enumObject)) {
+        for (let enumName of Object.keys(enumObject)) {
             enumString += `export type ${enumName} = `;
             enumString += enumObject[enumName].map((v: string) => `'${v}'`).join(' | ');
             enumString += ';\n';
@@ -109,9 +109,9 @@ export class TypeBuilder {
     /**
      * Get list of all tables with types
      */
-    private async generateTableList(): Promise<string> {
+    private generateTableList(): string {
         const tableRows = this.tables.reduce((result: string[], tbl) => {
-            return result.concat(`${tbl}: dbt.${tbl};`);
+            return result.concat(`${tbl}: ${tbl};`);
         }, []);
 
         return `

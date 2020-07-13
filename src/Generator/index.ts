@@ -91,7 +91,7 @@ export async function generate(conn: Connection, outdir: string) {
         DB = new MySQLIntrospection(knex, conn.connection.database);
     } else throw new Error('PostgreSQL not currently supported');
 
-    // await generateTypes(DB, outdir);
+    await generateTypes(DB, outdir);
     await generateClients(DB, outdir);
 
     await knex.destroy();

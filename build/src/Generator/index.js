@@ -84,7 +84,7 @@ function generate(conn, outdir) {
         }
         else
             throw new Error('PostgreSQL not currently supported');
-        // await generateTypes(DB, outdir);
+        yield generateTypes(DB, outdir);
         yield generateClients(DB, outdir);
         yield knex.destroy();
     });
