@@ -8,10 +8,18 @@ import { usage } from 'yargs';
 import path from 'path';
 import { generate } from '../index';
 
+type client = 'mysql' | 'postgres';
+const clients: ReadonlyArray<client> = ['mysql', 'postgres'];
+
 const args = usage('Usage: $0 <command> [options]')
     .options({
-        conn: { type: 'string' },
-        outdir: { type: 'string' },
+        host: { type: 'string', default: '127.0.0.1' },
+        port: { type: 'number', default: 3306 },
+        client: { choices: clients, default: clients[0] },
+        user: { type: 'string', default: 'root' },
+        password: { type: 'string', default: '' },
+        database: { type: 'string', default: 'public' },
+        outdir: { type: 'string', default: './gen' },
     })
     .global('config')
     .default('config', 'nodent-config.json')
@@ -56,11 +64,17 @@ const args = usage('Usage: $0 <command> [options]')
 
 const run = async () => {
     try {
-        const conn = args.conn;
+        const conn = {
+            client: args.client,
+            connection: {
+                host: args.host,
+                port: args.port,
+                user: args.user,
+                password: args.password,
+                database: args.database,
+            },
+        };
         const outdir = args.outdir;
-
-        if (!conn) throw new Error('Must include a database connection in config');
-        if (!outdir) throw new Error('Must include an output directory');
 
         const CURRENT = process.cwd();
         const GENERATED_DIR = path.join(CURRENT, outdir);

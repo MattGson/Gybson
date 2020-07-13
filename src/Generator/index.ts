@@ -169,34 +169,11 @@ interface Connection {
     };
 }
 
-const getConnection = (connection: string): Connection => {
-    const conn: Connection = {
-        client: 'mysql',
-        connection: { host: '127.0.0.1', port: 3306, user: 'root', password: '', database: 'public' },
-    };
-
-    const { host, port, pathname } = new Url(connection);
-
-    console.log('HERE :', host, port, pathname, pathname.substr(1));
-
-    if (/^postgres(ql)?:\/\//i.test(connection)) {
-        conn.client = 'postgres';
-        throw new Error('PostgreSQL is not currently supported');
-    } else if (/^mysql:\/\//i.test(connection)) {
-        conn.client = 'mysql';
-    } else {
-        throw new Error('Invalid connection string. Could not determine DB engine.');
-    }
-    return conn;
-};
-
-export async function generate(conn: string, outdir: string) {
-    const client = getConnection(conn);
-
-    const knex = Knex(client);
+export async function generate(conn: Connection, outdir: string) {
+    const knex = Knex(conn);
     let DB: Introspection;
 
-    if (client.client === 'mysql') {
+    if (conn.client === 'mysql') {
         DB = new MySQLIntrospection(knex, mysql.database);
     } else throw new Error('PostgreSQL not currently supported');
 
