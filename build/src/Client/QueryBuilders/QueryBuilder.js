@@ -183,16 +183,16 @@ class QueryBuilder {
      */
     softDelete(params) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { conditions, connection } = params;
+            const { where, connection } = params;
             if (!this.hasSoftDelete())
                 throw new Error(`Cannot soft delete for table: ${this.tableName}`);
-            if (Object.keys(conditions).length < 1)
+            if (Object.keys(where).length < 1)
                 throw new Error('Must have at least one where condition');
             const query = index_1.knex()(this.tableName)
-                .where(conditions)
+                .where(where)
                 .update({ [this.softDeleteColumnString]: true })
                 .connection(connection);
-            logging_1.default.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions);
+            logging_1.default.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
             return query;
         });
     }
@@ -205,13 +205,13 @@ class QueryBuilder {
      */
     update(params) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { values, connection, conditions } = params;
+            const { values, connection, where } = params;
             if (Object.keys(values).length < 1)
                 throw new Error('Must have at least one updated column');
-            if (Object.keys(conditions).length < 1)
+            if (Object.keys(where).length < 1)
                 throw new Error('Must have at least one where condition');
-            const query = index_1.knex()(this.tableName).where(conditions).update(values).connection(connection);
-            logging_1.default.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions, values);
+            const query = index_1.knex()(this.tableName).where(where).update(values).connection(connection);
+            logging_1.default.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
             return query;
         });
     }
