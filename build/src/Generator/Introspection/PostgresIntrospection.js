@@ -156,4 +156,4 @@
 //         return 'public'
 //     }
 // }
-//# sourceMappingURL=schemaPostgres.js.map
+//# sourceMappingURL=PostgresIntrospection.js.map
