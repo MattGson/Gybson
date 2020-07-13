@@ -1,6 +1,6 @@
 import Knex = require('knex');
 import { attachOnDuplicateUpdate } from './lib/knex.duplicate.key';
-import _logger, { buildLogger, Logger, LogLevel } from './lib/logging';
+import _logger, { buildLogger, LogLevel } from './lib/logging';
 
 attachOnDuplicateUpdate();
 
@@ -32,6 +32,7 @@ const initialize = (knex: Knex<any, unknown[]>, config: NodentConfig) => {
         logLevel: LogLevel.info,
         ...config,
     };
+    buildLogger(useConfig);
 
     state.knex = knex;
     _logger.info('Initialising Nodent with Knex instance');
