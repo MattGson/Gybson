@@ -3,16 +3,23 @@ import { knex } from '../index';
 import _logger from '../lib/logging';
 import _, { Dictionary } from 'lodash';
 
-// TODO:- this and auto connection handling
-const SOFT_DELETE_COLUMN = 'deleted';
+// TODO:- auto connection handling
 
-export abstract class QueryBuilder<PartialTblRow, TblColumn extends string, TblRow, TblKey extends string | number> {
+export abstract class QueryBuilder<TblRow, PartialTblRow, TblColumn extends string, TblKey extends string | number> {
     private tableName: string;
-    private hasSoftDelete: boolean;
+    private softDeleteColumn?: string;
 
-    protected constructor(tableName: string, hasSoftDelete: boolean) {
+    protected constructor(tableName: string, softDeleteColumn: string) {
         this.tableName = tableName;
-        this.hasSoftDelete = hasSoftDelete;
+        this.softDeleteColumn = softDeleteColumn;
+    }
+
+    private hasSoftDelete(): boolean {
+        return this.softDeleteColumn != null;
+    }
+
+    private get softDeleteColumnString(): string {
+        return this.softDeleteColumn as string;
     }
 
     /**
@@ -23,16 +30,10 @@ export abstract class QueryBuilder<PartialTblRow, TblColumn extends string, TblR
      * For example get users [1, 2, 4] returns users [1, 2, 4]
      * @param params
      */
-    public async byColumnLoader(params: {
-        column: TblColumn;
-        keys: readonly TblKey[];
-        filterSoftDelete: boolean;
-    }): Promise<(TblRow | null)[]> {
-        const { column, keys, filterSoftDelete } = params;
+    public async byColumnLoader(params: { column: TblColumn; keys: readonly TblKey[] }): Promise<(TblRow | null)[]> {
+        const { column, keys } = params;
 
         let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
-
-        if (filterSoftDelete) query.where({ [SOFT_DELETE_COLUMN]: false });
 
         _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
         const rows = await query;
@@ -62,7 +63,7 @@ export abstract class QueryBuilder<PartialTblRow, TblColumn extends string, TblR
         const { column, keys, orderBy, filterSoftDelete } = params;
         let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
 
-        if (filterSoftDelete) query.where({ [SOFT_DELETE_COLUMN]: false });
+        if (filterSoftDelete && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
         if (orderBy.length < 1) query.orderBy(column, 'asc');
         for (let order of orderBy) query.orderBy(order, 'asc');
 
@@ -77,6 +78,13 @@ export abstract class QueryBuilder<PartialTblRow, TblColumn extends string, TblR
     /**
      * Complex find rows from a table
      * @param params
+     *      * // TODO:-
+     *              - cursor pagination,
+     *              - ordering - multiple directions and columns?, remove string constants?
+     *              - Joins (join filtering), eager load?
+     *              type defs
+     *               - gen more comprehensive types for each table i.e. SelectionSet
+     *                  - Split the type outputs by table maybe? Alias to more usable names
      */
     public async findMany(params: {
         orderBy?: { columns: TblColumn[]; asc?: boolean; desc?: boolean };
@@ -97,7 +105,7 @@ export abstract class QueryBuilder<PartialTblRow, TblColumn extends string, TblR
             for (let order of columns) query.orderBy(order, direction);
         }
 
-        if (!includeDeleted) query.where({ [SOFT_DELETE_COLUMN]: false });
+        if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
 
         _logger.debug('Executing SQL: %j', query.toSQL().sql);
         return query;
@@ -132,12 +140,12 @@ export abstract class QueryBuilder<PartialTblRow, TblColumn extends string, TblR
 
         const columnsToUpdate: string[] = updateColumns;
         // add deleted column to all records
-        if (reinstateSoftDeletedRows && this.hasSoftDelete) {
-            columnsToUpdate.push(SOFT_DELETE_COLUMN);
+        if (reinstateSoftDeletedRows && this.hasSoftDelete()) {
+            columnsToUpdate.push(this.softDeleteColumnString);
             insertRows = insertRows.map((value) => {
                 return {
                     ...value,
-                    [SOFT_DELETE_COLUMN]: false,
+                    [this.softDeleteColumnString]: false,
                 };
             });
         }
@@ -190,12 +198,12 @@ export abstract class QueryBuilder<PartialTblRow, TblColumn extends string, TblR
      */
     public async softDelete(params: { connection: PoolConnection; conditions: PartialTblRow }) {
         const { conditions, connection } = params;
-        if (!this.hasSoftDelete) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
+        if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(conditions).length < 1) throw new Error('Must have at least one where condition');
 
         const query = knex()(this.tableName)
             .where(conditions)
-            .update({ [SOFT_DELETE_COLUMN]: true })
+            .update({ [this.softDeleteColumnString]: true })
             .connection(connection);
 
         _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions);

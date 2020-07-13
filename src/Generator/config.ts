@@ -8,4 +8,5 @@ export const prettier = {
 
 export const codeGenPreferences = {
     rowTypeSuffix: 'DTO',
+    softDeleteColumn: 'deleted',
 };
