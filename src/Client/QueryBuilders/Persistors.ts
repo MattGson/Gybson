@@ -1,4 +1,3 @@
-import { DBTables } from '../Gen';
 import { PoolConnection } from 'promise-mysql';
 import { knex } from '../index';
 import _logger from '../lib/logging';
@@ -13,24 +12,19 @@ const SOFT_DELETE_COLUMN = 'deleted';
  *     * This should be set to false if the table does not support soft deletes
  * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
  * Will take the superset of all columns in the insert values
- * @param connection
- * @param table
- * @param values
- * @param updateColumns
- * @param reinstateSoftDeletedRows, set true to reinstate any soft deleted rows
+ * @param params
  */
-export async function upsert<
-    Tbl extends keyof DBTables,
-    Row extends Partial<DBTables[Tbl]>,
-    Column extends Extract<keyof DBTables[Tbl], string>
->(
-    connection: PoolConnection,
-    table: Tbl,
-    values: Row[],
-    reinstateSoftDeletedRows: boolean,
-    ...updateColumns: Column[]
-): Promise<number | null> {
-    if (values.length < 1) {
+export async function upsert<TblRow, TblColumn extends string>(params: {
+    connection: PoolConnection;
+    tableName: string;
+    values: Partial<TblRow>[];
+    reinstateSoftDeletedRows: boolean;
+    updateColumns: TblColumn[];
+}): Promise<number | null> {
+    const { tableName, values, connection, reinstateSoftDeletedRows, updateColumns } = params;
+
+    let insertRows = values;
+    if (insertRows.length < 1) {
         _logger.warn('Persistors.upsert: No values passed.');
         return null;
     }
@@ -43,7 +37,7 @@ export async function upsert<
     // add deleted column to all records
     if (reinstateSoftDeletedRows) {
         columnsToUpdate.push(SOFT_DELETE_COLUMN);
-        values = values.map(value => {
+        insertRows = insertRows.map((value) => {
             return {
                 ...value,
                 [SOFT_DELETE_COLUMN]: false,
@@ -57,12 +51,12 @@ export async function upsert<
     //    insert into `coords` (`x`, `y`) values (20, DEFAULT), (DEFAULT, 30), (10, 20)
     // Note that we are passing a custom connection:
     //    This connection MUST be added last to work with the duplicateUpdateExtension
-    const query = knex()(table)
-        .insert(values)
+    const query = knex()(tableName)
+        .insert(insertRows)
         .onDuplicateUpdate(...columnsToUpdate)
         .connection(connection);
 
-    _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
+    _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
 
     // knex seems to return 0 for insertId on upsert?
     return (await query)[0].insertId;
@@ -74,18 +68,17 @@ export async function upsert<
  *     * use upsert if you wish to ignore duplicate rows
  * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
  * Will take the superset of all columns in the insert values
- * @param connection
- * @param table
- * @param values
+ * @param params
  */
-export async function insert<Tbl extends keyof DBTables, Row extends Partial<DBTables[Tbl]>>(
-    connection: PoolConnection,
-    table: Tbl,
-    values: Row[],
-): Promise<number | null> {
+export async function insert<TblRow>(params: {
+    connection: PoolConnection;
+    tableName: string;
+    values: TblRow[];
+}): Promise<number | null> {
+    const { values, tableName, connection } = params;
     if (values.length < 1) return null;
 
-    let query = knex()(table).insert(values);
+    let query = knex()(tableName).insert(values);
 
     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
     const result = await query.connection(connection);

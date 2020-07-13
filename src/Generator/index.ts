@@ -1,5 +1,5 @@
 import path from 'path';
-// @ts-ignore
+// @ts-ignore - no types for prettier
 import { format } from 'prettier';
 import fs from 'fs-extra';
 import { prettier, codeGenPreferences } from './config';
@@ -54,8 +54,30 @@ async function generateTypes(db: Introspection, outdir: string): Promise<void> {
 }
 
 // **************************
-// generate loaders
+// generate client libs
 // **************************
+
+/**
+ * Build an entry point file
+ * @param builders
+ * @param outdir
+ */
+async function generateClientIndex(builders: TableClientBuilder[], outdir: string) {
+    let index = ``;
+    let clients = ``;
+    for (let builder of builders) {
+        index += `import ${builder.className} from './${builder.className}';`;
+        clients += `${builder.className}: new ${builder.className}(),`;
+    }
+    index += `
+        const Nodent = () => {
+        return {${clients}};
+        };
+        export default Nodent;
+    `;
+
+    await writeTypescriptFile(index, outdir, 'index.ts');
+}
 
 /**
  * Generate the db clients for each table
@@ -64,8 +86,6 @@ async function generateTypes(db: Introspection, outdir: string): Promise<void> {
  */
 async function generateClients(db: Introspection, outdir: string): Promise<string[]> {
     const builders: TableClientBuilder[] = [];
-    // TODO:- index?
-
     const tables = await db.getSchemaTables();
     const enums = await db.getEnumTypes();
 
@@ -75,8 +95,15 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
         await writeTypescriptFile(await builder.build(db), outdir, `${builder.className}.ts`);
     }
 
+    // BUILD ENTRY POINT
+    await generateClientIndex(builders, outdir);
+
     return tables;
 }
+
+// ****************************
+// Entry point
+// ****************************
 
 interface Connection {
     client: 'mysql' | 'postgres';
@@ -100,7 +127,8 @@ export async function generate(conn: Connection, outdir: string) {
     } else throw new Error('PostgreSQL not currently supported');
 
     await generateTypes(DB, outdir);
-    await generateClients(DB, outdir);
+    const tables = await generateClients(DB, outdir);
 
+    console.log(`Generated for ${tables.length} tables in ${outdir}`);
     await knex.destroy();
 }

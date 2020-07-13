@@ -1,4 +1,4 @@
-const { createLogger, format, transports } = require('winston');
+const { createLogger, format } = require('winston');
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 
 let logger: Logger;

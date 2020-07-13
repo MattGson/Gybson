@@ -27,8 +27,6 @@ class MySQLIntrospection {
      * @param customTypes - enum and set types
      */
     static getTsTypeForColumn(tableName, columnName, dbType, customTypes) {
-        if (dbType === 'enum')
-            console.log('ENUM: ', columnName, dbType);
         switch (dbType) {
             case 'char':
             case 'varchar':
@@ -70,8 +68,6 @@ class MySQLIntrospection {
                 return 'Buffer';
             default:
                 const possibleEnum = MySQLIntrospection.getEnumName(tableName, columnName);
-                console.log(possibleEnum);
-                console.log(customTypes);
                 if (customTypes[possibleEnum]) {
                     return possibleEnum;
                 }
@@ -142,8 +138,6 @@ class MySQLIntrospection {
                     tsType: MySQLIntrospection.getTsTypeForColumn(tableName, columnName, dbType, enumTypes),
                 };
             });
-            if (tableName === 'plan_user_roles')
-                console.log(tableDefinition);
             return tableDefinition;
         });
     }

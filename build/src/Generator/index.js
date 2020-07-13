@@ -69,7 +69,6 @@ function generateTypes(db, outdir) {
 function generateClients(db, outdir) {
     return __awaiter(this, void 0, void 0, function* () {
         const builders = [];
-        // TODO:- index?
         const tables = yield db.getSchemaTables();
         const enums = yield db.getEnumTypes();
         for (let table of tables) {
@@ -77,6 +76,20 @@ function generateClients(db, outdir) {
             builders.push(builder);
             yield writeTypescriptFile(yield builder.build(db), outdir, `${builder.className}.ts`);
         }
+        // BUILD ENTRY POINT
+        let index = ``;
+        let clients = ``;
+        for (let builder of builders) {
+            index += `import ${builder.className} from './${builder.className}';`;
+            clients += `${builder.className}: new ${builder.className}(),`;
+        }
+        index += `
+        const Nodent = () => {
+        return {${clients}};
+        };
+        export default Nodent;
+    `;
+        yield writeTypescriptFile(index, outdir, 'index.ts');
         return tables;
     });
 }
@@ -91,7 +104,8 @@ function generate(conn, outdir) {
         else
             throw new Error('PostgreSQL not currently supported');
         yield generateTypes(DB, outdir);
-        yield generateClients(DB, outdir);
+        const tables = yield generateClients(DB, outdir);
+        console.log(`Generated for ${tables.length} tables in ${outdir}`);
         yield knex.destroy();
     });
 }

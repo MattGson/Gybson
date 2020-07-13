@@ -1,4 +1,3 @@
-import { DBTables } from '../Gen';
 import { PoolConnection } from 'promise-mysql';
 import { knex } from '../index';
 import _logger from '../lib/logging';
@@ -11,18 +10,17 @@ const SOFT_DELETE_COLUMN = 'deleted';
  * Usage:
  *      softDeleteByConditions(conn, 'users', { user_id: 3, email: 'steve' }
  *      -> UPDATE users SET deleted = true WHERE user_id = 3 AND email = 'steve'
- * @param connection
- * @param table
- * @param conditions
+ * @param params
  */
-export async function softDeleteByConditions<Tbl extends keyof DBTables, Condition extends Partial<DBTables[Tbl]>>(
-    connection: PoolConnection,
-    table: Tbl,
-    conditions: Condition,
-) {
+export async function softDeleteByConditions<TblRow, Conditions = Partial<TblRow>>(params: {
+    connection: PoolConnection;
+    tableName: string;
+    conditions: Conditions;
+}) {
+    const { tableName, conditions, connection } = params;
     if (Object.keys(conditions).length < 1) throw new Error('Must have at least one where condition');
 
-    const query = knex()(table)
+    const query = knex()(tableName)
         .where(conditions)
         .update({ [SOFT_DELETE_COLUMN]: true })
         .connection(connection);
@@ -44,8 +42,7 @@ export async function softDeleteByConditions<Tbl extends keyof DBTables, Conditi
  * @param conditions
  */
 export async function updateByConditions<
-    Tbl extends keyof DBTables,
-    Row extends Partial<DBTables[Tbl]>,
+TblRow, TblColumn extends string,
     Condition extends Partial<DBTables[Tbl]>
 >(connection: PoolConnection, table: Tbl, values: Row, conditions: Condition) {
     if (Object.keys(values).length < 1) throw new Error('Must have at least one updated column');

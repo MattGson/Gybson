@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import {Introspection, KeyDefinition, ColumnDefinition, EnumDefinitions} from '../Introspection/IntrospectionTypes';
+import { Introspection, KeyDefinition, ColumnDefinition, EnumDefinitions } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 
 interface BuilderOptions {
@@ -11,7 +11,11 @@ interface BuilderOptions {
  */
 export class TableClientBuilder {
     public readonly entityName: string;
-    public readonly rowTypeName: string;
+    public readonly typeNames: {
+        rowTypeName: string;
+        columnTypeName: string;
+        valueTypeName: string;
+    };
     public readonly className: string;
     public readonly table: string;
     private readonly enums: EnumDefinitions;
@@ -21,8 +25,12 @@ export class TableClientBuilder {
         this.entityName = TableClientBuilder.PascalCase(table);
         this.table = table;
         this.enums = enums;
-        this.rowTypeName = `${this.entityName}${options.rowTypeSuffix}`;
         this.className = `${this.entityName}`;
+        this.typeNames = {
+            rowTypeName: `${this.entityName}${options.rowTypeSuffix}`,
+            columnTypeName: `${this.className}Column`,
+            valueTypeName: `${this.className}Value`,
+        };
     }
 
     private static PascalCase(name: string) {
@@ -60,12 +68,16 @@ export class TableClientBuilder {
     }
 
     private buildTemplate(content: string) {
+        // TODO:- this should be in type gen
+        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { byColumnLoader, manyByColumnLoader, findManyLoader } from 'nodent';
             import { DBTables, ${this.table} } from './db-schema';
 
-            export type ${this.rowTypeName} = ${this.table};
+            export type ${rowTypeName} = ${this.table};
+            export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
+            export type  ${valueTypeName}Value = Extract<${rowTypeName}[${columnTypeName}], string | number>;
 
              export default class ${this.className} {
                 ${content}
@@ -108,12 +120,17 @@ export class TableClientBuilder {
      * @param hasSoftDelete
      */
     private addByColumnLoader(column: ColumnDefinition, hasSoftDelete: boolean) {
+        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
+
         const { columnName } = column;
         const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
+
         this.loaders.push(`
               /* Notice that byColumn loader might return null for some keys */
-                 private readonly ${loaderName} = new DataLoader<${column.tsType}, ${this.rowTypeName} | null>(ids => {
-                    return byColumnLoader('${this.table}', '${columnName}', ids, false);
+                 private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
+                    return byColumnLoader<${rowTypeName}, ${columnTypeName} ${valueTypeName}>('${
+            this.table
+        }', '${columnName}', ids, false);
                 });
                 
                 ${TableClientBuilder.loaderPublicMethod(column, loaderName, hasSoftDelete)}
@@ -131,7 +148,9 @@ export class TableClientBuilder {
         const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
 
         this.loaders.push(`
-                private readonly ${loaderName} = new DataLoader<${column.tsType}, ${this.rowTypeName}[]>(ids => {
+                private readonly ${loaderName} = new DataLoader<${column.tsType}, ${
+            this.typeNames.rowTypeName
+        }[]>(ids => {
                 return manyByColumnLoader('${this.table}', '${columnName}', ids, ['${columnName}'], ${
             hasSoftDelete ? 'true' : 'false'
         });
@@ -156,15 +175,15 @@ export class TableClientBuilder {
      * @param hasSoftDelete
      */
     private addFindMany(hasSoftDelete: boolean) {
+        const { columnTypeName, rowTypeName } = this.typeNames;
         this.loaders.push(`
             public findMany
-            <Column extends Extract<keyof DBTables['${this.table}'],
-             string>, Conditions extends Partial<DBTables['${this.table}']>>
+            <${columnTypeName}, Conditions = Partial<${rowTypeName}>>
              (options: {
             orderBy?: { columns: Column[]; asc?: boolean; desc?: boolean; };
             where?: Conditions;
             ${hasSoftDelete ? 'includeDeleted?: boolean' : 'includeDeleted?: false'}
-            }): Promise<${this.rowTypeName}[]> {
+            }): Promise<${rowTypeName}[]> {
                     return findManyLoader('${this.table}', options, ${hasSoftDelete ? 'true' : 'false'});
                 }
         `);
