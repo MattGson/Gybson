@@ -79,18 +79,67 @@ class MySQLIntrospection {
         });
     }
     /**
+     * Get possible values from enum
+     * @param mysqlEnum
+     */
+    static parseMysqlEnumeration(mysqlEnum) {
+        return mysqlEnum.replace(/(^(enum|set)\('|'\)$)/gi, '').split(`','`);
+    }
+    /**
+     * Get name of enum
+     * @param tableName
+     * @param dataType
+     * @param columnName
+     */
+    static getEnumName(tableName, dataType, columnName) {
+        return `${tableName}_${dataType}_${columnName}`;
+    }
+    /**
+     * Get the enum types from the database schema
+     */
+    getEnumTypes() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let enums = {};
+            // let enumSchemaWhereClause: string;
+            // let params: string[];
+            // if (schema) {
+            //         //     enumSchemaWhereClause = `and table_schema = ?`;
+            //         //     params = [schema];
+            //         // } else {
+            //         //     enumSchemaWhereClause = '';
+            //         //     params = [];
+            //         // }
+            //         // const rawEnumRecords = await this.queryAsync(
+            //         //     'SELECT column_name, column_type, data_type ' +
+            //         //         'FROM information_schema.columns ' +
+            //         //         `WHERE data_type IN ('enum', 'set') ${enumSchemaWhereClause}`,
+            //         //     params,
+            //         // );
+            const rawEnumRecords = yield this.knex('information_schema.columns')
+                .select('table_name', 'column_name', 'column_type', 'data_type')
+                .whereIn('data_type', ['enum', 'set'])
+                .where({ table_schema: this.schemaName });
+            rawEnumRecords.forEach((enumItem) => {
+                const enumName = MySQLIntrospection.getEnumName(enumItem.table_name, enumItem.data_type, enumItem.column_name);
+                const enumValues = MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type);
+                // make sure no duplicates
+                if (enums[enumName] && !lodash_1.isEqual(enums[enumName], enumValues)) {
+                    const errorMsg = `Multiple enums with the same name and contradicting types were found: ` +
+                        `${enumItem.column_name}: ${JSON.stringify(enums[enumName])} and ${JSON.stringify(enumValues)}`;
+                    throw new Error(errorMsg);
+                }
+                enums[enumName] = enumValues;
+            });
+            return enums;
+        });
+    }
+    /**
      * Load the schema for a table
      * @param tableName
      */
     getTableDefinition(tableName) {
         return __awaiter(this, void 0, void 0, function* () {
             let tableDefinition = {};
-            // const tableColumns = await this.connection.query(
-            //     'SELECT column_name, data_type, is_nullable ' +
-            //         'FROM information_schema.columns ' +
-            //         'WHERE table_name = ? and table_schema = ?',
-            //     [tableName, tableSchema],
-            // );
             const tableColumns = yield this.knex('information_schema.columns')
                 .select('column_name', 'data_type', 'is_nullable')
                 .where({ table_name: tableName, table_schema: this.schemaName });
@@ -115,47 +164,11 @@ class MySQLIntrospection {
             return this.mapTableDefinitionToType(yield this.getTableDefinition(tableName));
         });
     }
-    // public async getIndices(): Promise<Indices> {
-    //     const rows = await this.connection.query(
-    //         `
-    //            SELECT table_name, non_unique, index_name, column_name
-    //              FROM information_schema.statistics
-    //              WHERE table_schema = ?
-    //         `,
-    //         [this.schemaName],
-    //     );
-    //     const indices = rows.map(
-    //         (row: {
-    //             table_name: string;
-    //             non_unique: number;
-    //             index_name: string;
-    //             column_name: string;
-    //         }): IndexDefinition => {
-    //             return {
-    //                 unique: !row.non_unique,
-    //                 columnName: row.column_name,
-    //                 indexName: row.index_name,
-    //                 tableName: row.table_name,
-    //             };
-    //         },
-    //     );
-    //     return _.groupBy(indices, 'tableName');
-    // }
     getTableKeys(tableName) {
         return __awaiter(this, void 0, void 0, function* () {
             const rows = yield this.knex('information_schema.key_column_usage')
                 .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
                 .where({ table_name: tableName, table_schema: this.schemaName });
-            // const rows = await this.connection.query(
-            //     `
-            //         SELECT
-            //             table_name,column_name,constraint_name, REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME
-            //         FROM
-            //             INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-            //          WHERE table_schema = ?
-            //     `,
-            //     [this.schemaName],
-            // );
             return rows.map((row) => {
                 return {
                     columnName: row.column_name,
@@ -174,13 +187,6 @@ class MySQLIntrospection {
                 .select('table_name')
                 .where({ table_schema: this.schemaName })
                 .groupBy('table_name');
-            // const schemaTables = await this.connection.query(
-            //     'SELECT table_name ' +
-            //         'FROM information_schema.columns ' +
-            //         'WHERE table_schema = ? ' +
-            //         'GROUP BY table_name',
-            //     [this.schemaName],
-            // );
             return schemaTables.map((schemaItem) => schemaItem.table_name);
         });
     }

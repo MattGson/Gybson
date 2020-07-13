@@ -1,5 +1,5 @@
 import { Introspection } from '../Introspection/IntrospectionTypes';
-interface LoaderOptions {
+interface BuilderOptions {
     rowTypeSuffix: string;
 }
 /**
@@ -11,7 +11,7 @@ export declare class TableClientBuilder {
     readonly className: string;
     readonly table: string;
     private loaders;
-    constructor(table: string, options: LoaderOptions);
+    constructor(table: string, options: BuilderOptions);
     private static PascalCase;
     build(introspection: Introspection): Promise<string>;
     private buildTemplate;

@@ -29,12 +29,6 @@ class TableClientBuilder {
     static PascalCase(name) {
         return lodash_1.default.upperFirst(lodash_1.default.camelCase(name));
     }
-    // public compile(): string {
-    //     return this.buildTemplate(
-    //         this.loaders.join(`
-    //     `),
-    //     );
-    // }
     build(introspection) {
         return __awaiter(this, void 0, void 0, function* () {
             const columns = yield introspection.getTableTypes(this.table);
@@ -65,7 +59,8 @@ class TableClientBuilder {
         return `
             import DataLoader = require('dataloader');
             import { byColumnLoader, manyByColumnLoader, findManyLoader } from 'nodent';
-            import { DBRowTypes, DBTables } from '../index';
+            import { DBRowTypes } from './db-schema';
+            import { DBTables } from './db-tables';
 
             export type ${this.rowTypeName} = DBRowTypes.${this.table};
 

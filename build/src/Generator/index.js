@@ -21,21 +21,7 @@ const config_1 = require("./config");
 const knex_1 = __importDefault(require("knex"));
 const MySQLIntrospection_1 = require("./Introspection/MySQLIntrospection");
 const TableClientBuilder_1 = require("./TableClientBuilder");
-// **************************
-// setup
-// **************************
-// const OUT_DIR = process.argv[2];
-// const CURRENT = process.cwd();
-//
-// // const ENT_DIR = path.join(__dirname, '..', '..', 'lib', 'Ent');
-// // const ENT_DIR = path.join(CURRENT, OUT_DIR);
-// // const GENERATED_DIR = path.join(CURRENT, '..', '..', 'Client', 'Gen');
-// const GENERATED_DIR_CLIENTS = path.join(CURRENT, 'src', 'Gen');
-//
-// const knex = Knex({
-//     client: 'mysql',
-//     connection: mysql,
-// });
+const TypeBuilder_1 = require("./TypeBuilder/TypeBuilder");
 /**
  * Write to a typescript file
  * @param content
@@ -58,17 +44,16 @@ function writeTypescriptFile(content, directory, filename) {
 // **************************
 // generate types
 // **************************
-// function dbConnectionString(): string {
-//     const { database, user, password, port, host } = my;
-//     return `mysql://${user}:${password}@${host}:${port}/${database}`;
-// }
-function generateTypes(db, _outdir) {
+function generateTypes(db, outdir) {
     return __awaiter(this, void 0, void 0, function* () {
         // const DB = new MySQLIntrospection(knex, mysql.database);
         const tables = yield db.getSchemaTables();
-        console.log(tables);
+        const enums = yield db.getEnumTypes();
+        // const interfacePromises = tables.map((table) => typescriptOfTable(db, table, schema as string, optionsObject));
+        // const interfaces = await Promise.all(interfacePromises).then((tsOfTable) => tsOfTable.join(''));
         //
-        // const typeBuilder = new TypeBuilder(dbConnectionString(), tables);
+        const typeBuilder = new TypeBuilder_1.TypeBuilder(tables, enums, config_1.codeGenPreferences);
+        const types = yield typeBuilder.build(db);
         //
         // // write index
         // await fs.writeFile(
@@ -85,73 +70,26 @@ function generateTypes(db, _outdir) {
         //
         // const rowTypes = await typeBuilder.generateRowTypes();
         // const tableTypes = await typeBuilder.generateTableTypes();
-        //
-        // await writeTypescriptFile(rowTypes, GENERATED_DIR, 'db-schema.ts');
-        // await writeTypescriptFile(tableTypes, GENERATED_DIR, 'db-tables.ts');
+        yield writeTypescriptFile(types, outdir, 'db-schema.ts');
     });
 }
 // **************************
 // generate loaders
 // **************************
-function generateLoaders(db, outdir) {
+/**
+ * Generate the db clients for each table
+ * @param db
+ * @param outdir
+ */
+function generateClients(db, outdir) {
     return __awaiter(this, void 0, void 0, function* () {
-        // const DB = new MySQLIntrospection(knex, mysql.database);
-        console.log(`Reading from: mysql://${config_1.mysql.user}:${config_1.mysql.password}@${config_1.mysql.host}:${config_1.mysql.port}/${config_1.mysql.database}`);
         const builders = [];
         const tables = yield db.getSchemaTables();
         for (let table of tables) {
             const builder = new TableClientBuilder_1.TableClientBuilder(table, config_1.codeGenPreferences);
             builders.push(builder);
-            // const OUT_LOADER_PATH = path.join(GENERATED_DIR, `${builder.className}.ts`);
-            // const columns = await DB.getTableTypes(table);
-            // const hasSoftDelete = columns['deleted'] != null;
-            //
-            // const tableKeys = keys[table];
-            //
-            // // filter duplicate columns
-            // const uniqueKeys = _.keyBy(tableKeys, 'columnName');
-            //
-            // Object.values(uniqueKeys).forEach((key: KeyColumn) => {
-            //     const { columnName } = key;
-            //
-            //     const column: ColumnDefinition = columns[columnName];
-            //
-            //     // for now only accept loaders on string and number column types
-            //     if (column.tsType !== 'string' && column.tsType !== 'number') return;
-            //
-            //     const isMany = CardinalityResolver.isToMany(columnName, tableKeys);
-            //     if (!isMany) builder.addByColumnLoader(column, hasSoftDelete);
-            //     else builder.addManyByColumnLoader(column, hasSoftDelete);
-            // });
-            //
-            // builder.addFindMany(hasSoftDelete);
-            // append creates files if they don't exist - write overwrites contents
             yield writeTypescriptFile(yield builder.build(db), outdir, `${builder.className}.ts`);
         }
-        // // build index.ts
-        // let imports = ``;
-        // let loaders = ``;
-        //
-        // builders.map((builder) => {
-        //     imports += `import ${builder.LoaderName}, { ${builder.RowTypeName} } from './Gen/${builder.EntName}';`;
-        //     loaders += `${builder.LoaderName}: new ${builder.LoaderName}(),`;
-        // });
-        // const entLoaders = `
-        //     export const EntLoader = () => {
-        //     return {
-        //         ${loaders}
-        //         }
-        //     }
-        //     export type EntLoader = ReturnType<typeof EntLoader>;
-        // `;
-        // await fs.appendFile(path.join(ENT_DIR, 'index.ts'), '');
-        // await fs.writeFile(
-        //     path.join(ENT_DIR, 'index.ts'),
-        //     format(imports + entLoaders, {
-        //         parser: 'typescript',
-        //         ...prettier_conf,
-        //     }),
-        // );
         return tables;
     });
 }
@@ -160,12 +98,12 @@ function generate(conn, outdir) {
         const knex = knex_1.default(conn);
         let DB;
         if (conn.client === 'mysql') {
-            DB = new MySQLIntrospection_1.MySQLIntrospection(knex, config_1.mysql.database);
+            DB = new MySQLIntrospection_1.MySQLIntrospection(knex, conn.connection.database);
         }
         else
             throw new Error('PostgreSQL not currently supported');
         yield generateTypes(DB, outdir);
-        yield generateLoaders(DB, outdir);
+        yield generateClients(DB, outdir);
         yield knex.destroy();
     });
 }
