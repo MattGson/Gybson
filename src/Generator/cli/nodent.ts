@@ -6,6 +6,7 @@
 
 import { usage } from 'yargs';
 import path from 'path';
+import { generate } from '../index';
 
 const args = usage('Usage: $0 <command> [options]')
     .options({
@@ -53,7 +54,7 @@ const args = usage('Usage: $0 <command> [options]')
 //     .alias('h', 'help')
 //     .argv;
 
-(async () => {
+const run = async () => {
     try {
         const conn = args.conn;
         const outdir = args.outdir;
@@ -63,6 +64,8 @@ const args = usage('Usage: $0 <command> [options]')
 
         const CURRENT = process.cwd();
         const GENERATED_DIR = path.join(CURRENT, outdir);
+
+        await generate(conn, GENERATED_DIR);
 
         // if (!Array.isArray(argv.table)) {
         //     if (!argv.table) {
@@ -82,7 +85,9 @@ const args = usage('Usage: $0 <command> [options]')
         console.log('Use: "nodent -h" to see help');
         process.exit(1);
     }
-})()
+};
+
+run()
     .then(() => {
         process.exit();
     })

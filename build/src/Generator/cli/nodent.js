@@ -19,6 +19,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const yargs_1 = require("yargs");
 const path_1 = __importDefault(require("path"));
+const index_1 = require("../index");
 const args = yargs_1.usage('Usage: $0 <command> [options]')
     .options({
     conn: { type: 'string' },
@@ -63,7 +64,7 @@ const args = yargs_1.usage('Usage: $0 <command> [options]')
 //     .help('h')
 //     .alias('h', 'help')
 //     .argv;
-(() => __awaiter(void 0, void 0, void 0, function* () {
+const run = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const conn = args.conn;
         const outdir = args.outdir;
@@ -73,6 +74,7 @@ const args = yargs_1.usage('Usage: $0 <command> [options]')
             throw new Error('Must include an output directory');
         const CURRENT = process.cwd();
         const GENERATED_DIR = path_1.default.join(CURRENT, outdir);
+        yield index_1.generate(conn, GENERATED_DIR);
         // if (!Array.isArray(argv.table)) {
         //     if (!argv.table) {
         //         argv.table = [];
@@ -88,10 +90,12 @@ const args = yargs_1.usage('Usage: $0 <command> [options]')
         // fs.writeFileSync(argv.output, formattedOutput);
     }
     catch (e) {
-        console.error(e);
+        console.error(e.message);
+        console.log('Use: "nodent -h" to see help');
         process.exit(1);
     }
-}))()
+});
+run()
     .then(() => {
     process.exit();
 })

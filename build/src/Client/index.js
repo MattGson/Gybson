@@ -42,6 +42,7 @@ exports.knex = () => {
 };
 const initialize = (knex, config) => {
     const useConfig = Object.assign({ logLevel: logging_1.LogLevel.info }, config);
+    logging_1.buildLogger(useConfig);
     state.knex = knex;
     logging_1.default.info('Initialising Nodent with Knex instance');
 };
