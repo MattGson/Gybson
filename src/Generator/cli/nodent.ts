@@ -78,7 +78,8 @@ const args = usage('Usage: $0 <command> [options]')
         // });
         // fs.writeFileSync(argv.output, formattedOutput);
     } catch (e) {
-        console.error(e);
+        console.error(e.message);
+        console.log('Use: "nodent -h" to see help');
         process.exit(1);
     }
 })()
