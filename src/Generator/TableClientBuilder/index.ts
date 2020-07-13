@@ -1,1 +1,0 @@
-export { TableClientBuilder } from './TableClientBuilder';

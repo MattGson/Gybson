@@ -56,14 +56,12 @@ class TableClientBuilder {
         });
     }
     buildTemplate(content) {
-        // TODO:- dynamic import paths?
         return `
             import DataLoader = require('dataloader');
             import { byColumnLoader, manyByColumnLoader, findManyLoader } from 'nodent';
-            import { DBRowTypes } from './db-schema';
-            import { DBTables } from './db-tables';
+            import { DBTables, ${this.table} } from './db-schema';
 
-            export type ${this.rowTypeName} = DBRowTypes.${this.table};
+            export type ${this.rowTypeName} = ${this.table};
 
              export default class ${this.className} {
                 ${content}
@@ -138,9 +136,8 @@ class TableClientBuilder {
      *     - ordering - multiple directions and columns?, remove string constants?
      *     - Joins (join filtering), eager load?
      *     type defs
-     *      - import schemats project
      *      - gen more comprehensive types for each table i.e. SelectionSet
-     *      - Split the type outputs by table maybe?)
+     *      - Split the type outputs by table maybe? Alias to more usable names
      * @param hasSoftDelete
      */
     addFindMany(hasSoftDelete) {

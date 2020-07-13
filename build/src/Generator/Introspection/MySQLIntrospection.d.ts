@@ -6,10 +6,12 @@ export declare class MySQLIntrospection implements Introspection {
     constructor(knex: Knex, schemaName?: string);
     /**
      * Map the MySQL schema to a typescript schema
-     * @param tableDefinition
+     * @param tableName
+     * @param columnName
+     * @param dbType
      * @param customTypes - enum and set types
      */
-    private mapTableDefinitionToType;
+    private static getTsTypeForColumn;
     /**
      * Get possible values from enum
      * @param mysqlEnum
@@ -18,17 +20,18 @@ export declare class MySQLIntrospection implements Introspection {
     /**
      * Get name of enum
      * @param tableName
-     * @param dataType
      * @param columnName
      */
     private static getEnumName;
     /**
      * Get the enum types from the database schema
+     * Note: - SET type is supported as well as ENUM but should rarely be used
      */
     getEnumTypes(): Promise<EnumDefinitions>;
     /**
      * Load the schema for a table
      * @param tableName
+     * @param enumTypes
      */
     private getTableDefinition;
     /**

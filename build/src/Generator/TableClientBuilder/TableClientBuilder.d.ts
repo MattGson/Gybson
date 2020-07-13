@@ -47,9 +47,8 @@ export declare class TableClientBuilder {
      *     - ordering - multiple directions and columns?, remove string constants?
      *     - Joins (join filtering), eager load?
      *     type defs
-     *      - import schemats project
      *      - gen more comprehensive types for each table i.e. SelectionSet
-     *      - Split the type outputs by table maybe?)
+     *      - Split the type outputs by table maybe? Alias to more usable names
      * @param hasSoftDelete
      */
     private addFindMany;

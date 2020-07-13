@@ -21,69 +21,65 @@ class MySQLIntrospection {
     }
     /**
      * Map the MySQL schema to a typescript schema
-     * @param tableDefinition
+     * @param tableName
+     * @param columnName
+     * @param dbType
      * @param customTypes - enum and set types
      */
-    mapTableDefinitionToType(tableDefinition, customTypes) {
-        return lodash_1.mapValues(tableDefinition, (column) => {
-            switch (column.dbType) {
-                case 'char':
-                case 'varchar':
-                case 'text':
-                case 'tinytext':
-                case 'mediumtext':
-                case 'longtext':
-                case 'time':
-                case 'geometry':
-                case 'set':
-                case 'enum':
-                    // keep set and enum defaulted to string if custom type not mapped
-                    column.tsType = 'string';
-                    return column;
-                case 'integer':
-                case 'int':
-                case 'smallint':
-                case 'mediumint':
-                case 'bigint':
-                case 'double':
-                case 'decimal':
-                case 'numeric':
-                case 'float':
-                case 'year':
-                    column.tsType = 'number';
-                    return column;
-                case 'tinyint':
-                    column.tsType = 'boolean';
-                    return column;
-                case 'json':
-                    column.tsType = 'Object';
-                    return column;
-                case 'date':
-                case 'datetime':
-                case 'timestamp':
-                    column.tsType = 'Date';
-                    return column;
-                case 'tinyblob':
-                case 'mediumblob':
-                case 'longblob':
-                case 'blob':
-                case 'binary':
-                case 'varbinary':
-                case 'bit':
-                    column.tsType = 'Buffer';
-                    return column;
-                default:
-                    if (customTypes.indexOf(column.columnName) !== -1) {
-                        column.tsType = column.columnName;
-                        return column;
-                    }
-                    else {
-                        console.log(`Type [${column.columnName}] has been mapped to [any] because no specific type has been found.`);
-                        column.tsType = 'any';
-                        return column;
-                    }
-            }
-        });
+    static getTsTypeForColumn(tableName, columnName, dbType, customTypes) {
+        if (dbType === 'enum')
+            console.log('ENUM: ', columnName, dbType);
+        switch (dbType) {
+            case 'char':
+            case 'varchar':
+            case 'text':
+            case 'tinytext':
+            case 'mediumtext':
+            case 'longtext':
+            case 'time':
+            case 'geometry':
+                // case 'set':
+                // case 'enum': - these are handled in the default case
+                return 'string';
+            case 'integer':
+            case 'int':
+            case 'smallint':
+            case 'mediumint':
+            case 'bigint':
+            case 'double':
+            case 'decimal':
+            case 'numeric':
+            case 'float':
+            case 'year':
+                return 'number';
+            case 'tinyint':
+                return 'boolean';
+            case 'json':
+                return 'Object';
+            case 'date':
+            case 'datetime':
+            case 'timestamp':
+                return 'Date';
+            case 'tinyblob':
+            case 'mediumblob':
+            case 'longblob':
+            case 'blob':
+            case 'binary':
+            case 'varbinary':
+            case 'bit':
+                return 'Buffer';
+            default:
+                const possibleEnum = MySQLIntrospection.getEnumName(tableName, columnName);
+                console.log(possibleEnum);
+                console.log(customTypes);
+                if (customTypes[possibleEnum]) {
+                    return possibleEnum;
+                }
+                else {
+                    console.log(`Type [${columnName}] has been mapped to [any] because no specific type has been found.`);
+                    return 'any';
+                }
+        }
     }
     /**
      * Get possible values from enum
@@ -95,39 +91,24 @@ class MySQLIntrospection {
     /**
      * Get name of enum
      * @param tableName
-     * @param dataType
      * @param columnName
      */
-    static getEnumName(tableName, dataType, columnName) {
-        return `${tableName}_${dataType}_${columnName}`;
+    static getEnumName(tableName, columnName) {
+        return `${tableName}_${columnName}`;
     }
     /**
      * Get the enum types from the database schema
+     * Note: - SET type is supported as well as ENUM but should rarely be used
      */
     getEnumTypes() {
         return __awaiter(this, void 0, void 0, function* () {
             let enums = {};
-            // let enumSchemaWhereClause: string;
-            // let params: string[];
-            // if (schema) {
-            //         //     enumSchemaWhereClause = `and table_schema = ?`;
-            //         //     params = [schema];
-            //         // } else {
-            //         //     enumSchemaWhereClause = '';
-            //         //     params = [];
-            //         // }
-            //         // const rawEnumRecords = await this.queryAsync(
-            //         //     'SELECT column_name, column_type, data_type ' +
-            //         //         'FROM information_schema.columns ' +
-            //         //         `WHERE data_type IN ('enum', 'set') ${enumSchemaWhereClause}`,
-            //         //     params,
-            //         // );
             const rawEnumRecords = yield this.knex('information_schema.columns')
-                .select('table_name', 'column_name', 'column_type', 'data_type')
+                .select('table_name', 'column_name', 'column_type')
                 .whereIn('data_type', ['enum', 'set'])
                 .where({ table_schema: this.schemaName });
             rawEnumRecords.forEach((enumItem) => {
-                const enumName = MySQLIntrospection.getEnumName(enumItem.table_name, enumItem.data_type, enumItem.column_name);
+                const enumName = MySQLIntrospection.getEnumName(enumItem.table_name, enumItem.column_name);
                 const enumValues = MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type);
                 // make sure no duplicates
                 if (enums[enumName] && !lodash_1.isEqual(enums[enumName], enumValues)) {
@@ -143,8 +124,9 @@ class MySQLIntrospection {
     /**
      * Load the schema for a table
      * @param tableName
+     * @param enumTypes
      */
-    getTableDefinition(tableName) {
+    getTableDefinition(tableName, enumTypes) {
         return __awaiter(this, void 0, void 0, function* () {
             let tableDefinition = {};
             const tableColumns = yield this.knex('information_schema.columns')
@@ -152,13 +134,16 @@ class MySQLIntrospection {
                 .where({ table_name: tableName, table_schema: this.schemaName });
             tableColumns.map((schemaItem) => {
                 const columnName = schemaItem.column_name;
-                const dataType = schemaItem.data_type;
+                const dbType = schemaItem.data_type;
                 tableDefinition[columnName] = {
-                    dbType: dataType,
+                    dbType,
                     nullable: schemaItem.is_nullable === 'YES',
                     columnName,
+                    tsType: MySQLIntrospection.getTsTypeForColumn(tableName, columnName, dbType, enumTypes),
                 };
             });
+            if (tableName === 'plan_user_roles')
+                console.log(tableDefinition);
             return tableDefinition;
         });
     }
@@ -169,8 +154,7 @@ class MySQLIntrospection {
      */
     getTableTypes(tableName, enumTypes) {
         return __awaiter(this, void 0, void 0, function* () {
-            let customTypes = Object.keys(enumTypes);
-            return this.mapTableDefinitionToType(yield this.getTableDefinition(tableName), customTypes);
+            return yield this.getTableDefinition(tableName, enumTypes);
         });
     }
     getTableKeys(tableName) {
