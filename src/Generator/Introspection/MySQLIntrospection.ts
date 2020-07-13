@@ -15,8 +15,9 @@ export class MySQLIntrospection implements Introspection {
     /**
      * Map the MySQL schema to a typescript schema
      * @param tableDefinition
+     * @param customTypes - enum and set types
      */
-    private mapTableDefinitionToType(tableDefinition: TableDefinition): TableDefinition {
+    private mapTableDefinitionToType(tableDefinition: TableDefinition, customTypes: string[]): TableDefinition {
         return mapValues(tableDefinition, (column) => {
             switch (column.dbType) {
                 case 'char':
@@ -65,11 +66,16 @@ export class MySQLIntrospection implements Introspection {
                     column.tsType = 'Buffer';
                     return column;
                 default:
-                    console.log(
-                        `Type [${column.dbType}] has been mapped to [any] because no specific type has been found.`,
-                    );
-                    column.tsType = 'any';
-                    return column;
+                    if (customTypes.indexOf(column.columnName) !== -1) {
+                        column.tsType = column.columnName;
+                        return column;
+                    } else {
+                        console.log(
+                            `Type [${column.columnName}] has been mapped to [any] because no specific type has been found.`,
+                        );
+                        column.tsType = 'any';
+                        return column;
+                    }
             }
         });
     }
@@ -166,9 +172,11 @@ export class MySQLIntrospection implements Introspection {
     /**
      * Get the type definition for a table
      * @param tableName
+     * @param enumTypes
      */
-    public async getTableTypes(tableName: string): Promise<TableDefinition> {
-        return this.mapTableDefinitionToType(await this.getTableDefinition(tableName));
+    public async getTableTypes(tableName: string, enumTypes: EnumDefinitions): Promise<TableDefinition> {
+        let customTypes = Object.keys(enumTypes);
+        return this.mapTableDefinitionToType(await this.getTableDefinition(tableName), customTypes);
     }
 
     public async getTableKeys(tableName: string): Promise<KeyDefinition[]> {

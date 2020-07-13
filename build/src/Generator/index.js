@@ -46,30 +46,10 @@ function writeTypescriptFile(content, directory, filename) {
 // **************************
 function generateTypes(db, outdir) {
     return __awaiter(this, void 0, void 0, function* () {
-        // const DB = new MySQLIntrospection(knex, mysql.database);
         const tables = yield db.getSchemaTables();
         const enums = yield db.getEnumTypes();
-        // const interfacePromises = tables.map((table) => typescriptOfTable(db, table, schema as string, optionsObject));
-        // const interfaces = await Promise.all(interfacePromises).then((tsOfTable) => tsOfTable.join(''));
-        //
         const typeBuilder = new TypeBuilder_1.TypeBuilder(tables, enums, config_1.codeGenPreferences);
         const types = yield typeBuilder.build(db);
-        //
-        // // write index
-        // await fs.writeFile(
-        //     path.join(GENERATED_DIR, 'index.ts'),
-        //     format(
-        //         `
-        //            import * as DBRowTypes from './db-schema';
-        //            import { DBTables, DBTableName } from './db-tables';
-        //            export { DBRowTypes, DBTableName, DBTables };
-        //     `,
-        //         { parser: 'typescript', ...prettier_conf },
-        //     ),
-        // );
-        //
-        // const rowTypes = await typeBuilder.generateRowTypes();
-        // const tableTypes = await typeBuilder.generateTableTypes();
         yield writeTypescriptFile(types, outdir, 'db-schema.ts');
     });
 }
@@ -85,8 +65,9 @@ function generateClients(db, outdir) {
     return __awaiter(this, void 0, void 0, function* () {
         const builders = [];
         const tables = yield db.getSchemaTables();
+        const enums = yield db.getEnumTypes();
         for (let table of tables) {
-            const builder = new TableClientBuilder_1.TableClientBuilder(table, config_1.codeGenPreferences);
+            const builder = new TableClientBuilder_1.TableClientBuilder(table, enums, config_1.codeGenPreferences);
             builders.push(builder);
             yield writeTypescriptFile(yield builder.build(db), outdir, `${builder.className}.ts`);
         }
@@ -95,6 +76,7 @@ function generateClients(db, outdir) {
 }
 function generate(conn, outdir) {
     return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Generating client for schema: ${conn.connection.database}`);
         const knex = knex_1.default(conn);
         let DB;
         if (conn.client === 'mysql') {
@@ -102,7 +84,7 @@ function generate(conn, outdir) {
         }
         else
             throw new Error('PostgreSQL not currently supported');
-        yield generateTypes(DB, outdir);
+        // await generateTypes(DB, outdir);
         yield generateClients(DB, outdir);
         yield knex.destroy();
     });

@@ -7,6 +7,7 @@ export declare class MySQLIntrospection implements Introspection {
     /**
      * Map the MySQL schema to a typescript schema
      * @param tableDefinition
+     * @param customTypes - enum and set types
      */
     private mapTableDefinitionToType;
     /**
@@ -33,8 +34,9 @@ export declare class MySQLIntrospection implements Introspection {
     /**
      * Get the type definition for a table
      * @param tableName
+     * @param enumTypes
      */
-    getTableTypes(tableName: string): Promise<TableDefinition>;
+    getTableTypes(tableName: string, enumTypes: EnumDefinitions): Promise<TableDefinition>;
     getTableKeys(tableName: string): Promise<KeyDefinition[]>;
     /**
      * Get a list of all table names in schema

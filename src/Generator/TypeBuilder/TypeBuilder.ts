@@ -26,7 +26,7 @@ export class TypeBuilder {
         content += TypeBuilder.generateEnumType(this.enums);
 
         for (let table of this.tables) {
-            const columns = await introspection.getTableTypes(table);
+            const columns = await introspection.getTableTypes(table, this.enums);
             const tableTypes = await this.generateTableTypes(table, columns);
             const tableRow = await this.generateTableInterface(table, columns);
 
@@ -97,6 +97,7 @@ export class TypeBuilder {
      */
     private static generateEnumType(enumObject: EnumDefinitions) {
         let enumString = '';
+        console.log('Building enums: ', enumObject);
         for (let enumName in Object.keys(enumObject)) {
             enumString += `export type ${enumName} = `;
             enumString += enumObject[enumName].map((v: string) => `'${v}'`).join(' | ');

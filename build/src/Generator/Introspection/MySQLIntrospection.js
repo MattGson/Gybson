@@ -22,8 +22,9 @@ class MySQLIntrospection {
     /**
      * Map the MySQL schema to a typescript schema
      * @param tableDefinition
+     * @param customTypes - enum and set types
      */
-    mapTableDefinitionToType(tableDefinition) {
+    mapTableDefinitionToType(tableDefinition, customTypes) {
         return lodash_1.mapValues(tableDefinition, (column) => {
             switch (column.dbType) {
                 case 'char':
@@ -72,9 +73,15 @@ class MySQLIntrospection {
                     column.tsType = 'Buffer';
                     return column;
                 default:
-                    console.log(`Type [${column.dbType}] has been mapped to [any] because no specific type has been found.`);
-                    column.tsType = 'any';
-                    return column;
+                    if (customTypes.indexOf(column.columnName) !== -1) {
+                        column.tsType = column.columnName;
+                        return column;
+                    }
+                    else {
+                        console.log(`Type [${column.columnName}] has been mapped to [any] because no specific type has been found.`);
+                        column.tsType = 'any';
+                        return column;
+                    }
             }
         });
     }
@@ -158,10 +165,12 @@ class MySQLIntrospection {
     /**
      * Get the type definition for a table
      * @param tableName
+     * @param enumTypes
      */
-    getTableTypes(tableName) {
+    getTableTypes(tableName, enumTypes) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.mapTableDefinitionToType(yield this.getTableDefinition(tableName));
+            let customTypes = Object.keys(enumTypes);
+            return this.mapTableDefinitionToType(yield this.getTableDefinition(tableName), customTypes);
         });
     }
     getTableKeys(tableName) {

@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { Introspection, KeyDefinition, ColumnDefinition } from '../Introspection/IntrospectionTypes';
+import {Introspection, KeyDefinition, ColumnDefinition, EnumDefinitions} from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 
 interface BuilderOptions {
@@ -14,11 +14,13 @@ export class TableClientBuilder {
     public readonly rowTypeName: string;
     public readonly className: string;
     public readonly table: string;
+    private readonly enums: EnumDefinitions;
     private loaders: string[] = [];
 
-    public constructor(table: string, options: BuilderOptions) {
+    public constructor(table: string, enums: EnumDefinitions, options: BuilderOptions) {
         this.entityName = TableClientBuilder.PascalCase(table);
         this.table = table;
+        this.enums = enums;
         this.rowTypeName = `${this.entityName}${options.rowTypeSuffix}`;
         this.className = `${this.entityName}`;
     }
@@ -28,7 +30,7 @@ export class TableClientBuilder {
     }
 
     public async build(introspection: Introspection): Promise<string> {
-        const columns = await introspection.getTableTypes(this.table);
+        const columns = await introspection.getTableTypes(this.table, this.enums);
         const hasSoftDelete = columns['deleted'] != null;
 
         const tableKeys = await introspection.getTableKeys(this.table);

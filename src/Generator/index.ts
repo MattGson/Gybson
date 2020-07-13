@@ -36,33 +36,12 @@ async function writeTypescriptFile(content: string, directory: string, filename:
 // **************************
 
 async function generateTypes(db: Introspection, outdir: string): Promise<void> {
-    // const DB = new MySQLIntrospection(knex, mysql.database);
-
     const tables = await db.getSchemaTables();
     const enums = await db.getEnumTypes();
 
-    // const interfacePromises = tables.map((table) => typescriptOfTable(db, table, schema as string, optionsObject));
-    // const interfaces = await Promise.all(interfacePromises).then((tsOfTable) => tsOfTable.join(''));
-    //
     const typeBuilder = new TypeBuilder(tables, enums, codeGenPreferences);
 
     const types = await typeBuilder.build(db);
-    //
-    // // write index
-    // await fs.writeFile(
-    //     path.join(GENERATED_DIR, 'index.ts'),
-    //     format(
-    //         `
-    //            import * as DBRowTypes from './db-schema';
-    //            import { DBTables, DBTableName } from './db-tables';
-    //            export { DBRowTypes, DBTableName, DBTables };
-    //     `,
-    //         { parser: 'typescript', ...prettier_conf },
-    //     ),
-    // );
-    //
-    // const rowTypes = await typeBuilder.generateRowTypes();
-    // const tableTypes = await typeBuilder.generateTableTypes();
 
     await writeTypescriptFile(types, outdir, 'db-schema.ts');
 }
@@ -80,9 +59,10 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
     const builders: TableClientBuilder[] = [];
 
     const tables = await db.getSchemaTables();
+    const enums = await db.getEnumTypes();
 
     for (let table of tables) {
-        const builder = new TableClientBuilder(table, codeGenPreferences);
+        const builder = new TableClientBuilder(table, enums, codeGenPreferences);
         builders.push(builder);
         await writeTypescriptFile(await builder.build(db), outdir, `${builder.className}.ts`);
     }
@@ -102,6 +82,8 @@ interface Connection {
 }
 
 export async function generate(conn: Connection, outdir: string) {
+    console.log(`Generating client for schema: ${conn.connection.database}`);
+
     const knex = Knex(conn);
     let DB: Introspection;
 
@@ -109,7 +91,7 @@ export async function generate(conn: Connection, outdir: string) {
         DB = new MySQLIntrospection(knex, conn.connection.database);
     } else throw new Error('PostgreSQL not currently supported');
 
-    await generateTypes(DB, outdir);
+    // await generateTypes(DB, outdir);
     await generateClients(DB, outdir);
 
     await knex.destroy();

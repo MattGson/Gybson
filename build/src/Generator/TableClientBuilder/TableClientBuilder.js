@@ -19,10 +19,11 @@ const CardinalityResolver_1 = require("./CardinalityResolver");
  * Builds db client methods for a table
  */
 class TableClientBuilder {
-    constructor(table, options) {
+    constructor(table, enums, options) {
         this.loaders = [];
         this.entityName = TableClientBuilder.PascalCase(table);
         this.table = table;
+        this.enums = enums;
         this.rowTypeName = `${this.entityName}${options.rowTypeSuffix}`;
         this.className = `${this.entityName}`;
     }
@@ -31,7 +32,7 @@ class TableClientBuilder {
     }
     build(introspection) {
         return __awaiter(this, void 0, void 0, function* () {
-            const columns = yield introspection.getTableTypes(this.table);
+            const columns = yield introspection.getTableTypes(this.table, this.enums);
             const hasSoftDelete = columns['deleted'] != null;
             const tableKeys = yield introspection.getTableKeys(this.table);
             // filter duplicate columns

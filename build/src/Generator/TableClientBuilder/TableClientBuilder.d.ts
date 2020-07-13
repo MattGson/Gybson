@@ -1,4 +1,4 @@
-import { Introspection } from '../Introspection/IntrospectionTypes';
+import { Introspection, EnumDefinitions } from '../Introspection/IntrospectionTypes';
 interface BuilderOptions {
     rowTypeSuffix: string;
 }
@@ -10,8 +10,9 @@ export declare class TableClientBuilder {
     readonly rowTypeName: string;
     readonly className: string;
     readonly table: string;
+    private readonly enums;
     private loaders;
-    constructor(table: string, options: BuilderOptions);
+    constructor(table: string, enums: EnumDefinitions, options: BuilderOptions);
     private static PascalCase;
     build(introspection: Introspection): Promise<string>;
     private buildTemplate;
