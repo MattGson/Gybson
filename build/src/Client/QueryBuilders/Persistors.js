@@ -24,15 +24,13 @@ const SOFT_DELETE_COLUMN = 'deleted';
  *     * This should be set to false if the table does not support soft deletes
  * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
  * Will take the superset of all columns in the insert values
- * @param connection
- * @param table
- * @param values
- * @param updateColumns
- * @param reinstateSoftDeletedRows, set true to reinstate any soft deleted rows
+ * @param params
  */
-function upsert(connection, table, values, reinstateSoftDeletedRows, ...updateColumns) {
+function upsert(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (values.length < 1) {
+        const { tableName, values, connection, reinstateSoftDeletedRows, updateColumns } = params;
+        let insertRows = values;
+        if (insertRows.length < 1) {
             logging_1.default.warn('Persistors.upsert: No values passed.');
             return null;
         }
@@ -44,7 +42,7 @@ function upsert(connection, table, values, reinstateSoftDeletedRows, ...updateCo
         // add deleted column to all records
         if (reinstateSoftDeletedRows) {
             columnsToUpdate.push(SOFT_DELETE_COLUMN);
-            values = values.map(value => {
+            insertRows = insertRows.map((value) => {
                 return Object.assign(Object.assign({}, value), { [SOFT_DELETE_COLUMN]: false });
             });
         }
@@ -54,11 +52,11 @@ function upsert(connection, table, values, reinstateSoftDeletedRows, ...updateCo
         //    insert into `coords` (`x`, `y`) values (20, DEFAULT), (DEFAULT, 30), (10, 20)
         // Note that we are passing a custom connection:
         //    This connection MUST be added last to work with the duplicateUpdateExtension
-        const query = index_1.knex()(table)
-            .insert(values)
+        const query = index_1.knex()(tableName)
+            .insert(insertRows)
             .onDuplicateUpdate(...columnsToUpdate)
             .connection(connection);
-        logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
+        logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
         // knex seems to return 0 for insertId on upsert?
         return (yield query)[0].insertId;
     });
@@ -70,15 +68,14 @@ exports.upsert = upsert;
  *     * use upsert if you wish to ignore duplicate rows
  * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
  * Will take the superset of all columns in the insert values
- * @param connection
- * @param table
- * @param values
+ * @param params
  */
-function insert(connection, table, values) {
+function insert(params) {
     return __awaiter(this, void 0, void 0, function* () {
+        const { values, tableName, connection } = params;
         if (values.length < 1)
             return null;
-        let query = index_1.knex()(table).insert(values);
+        let query = index_1.knex()(tableName).insert(values);
         logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
         const result = yield query.connection(connection);
         // seems to return 0 for non-auto-increment inserts

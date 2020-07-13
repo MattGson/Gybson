@@ -12,10 +12,10 @@ const SOFT_DELETE_COLUMN = 'deleted';
  *      -> UPDATE users SET deleted = true WHERE user_id = 3 AND email = 'steve'
  * @param params
  */
-export async function softDeleteByConditions<TblRow, Conditions = Partial<TblRow>>(params: {
+export async function softDeleteByConditions<PartialTblRow>(params: {
     connection: PoolConnection;
     tableName: string;
-    conditions: Conditions;
+    conditions: PartialTblRow;
 }) {
     const { tableName, conditions, connection } = params;
     if (Object.keys(conditions).length < 1) throw new Error('Must have at least one where condition');
@@ -36,19 +36,18 @@ export async function softDeleteByConditions<TblRow, Conditions = Partial<TblRow
  * Usage:
  *      updateByConditions(conn, 'users', { fname: 'joe' }, { user_id: 3, email: 'steve' }
  *      -> UPDATE users SET fname = 'joe' WHERE user_id = 3 AND email = 'steve'
- * @param connection
- * @param table
- * @param values
- * @param conditions
  */
-export async function updateByConditions<
-TblRow, TblColumn extends string,
-    Condition extends Partial<DBTables[Tbl]>
->(connection: PoolConnection, table: Tbl, values: Row, conditions: Condition) {
+export async function updateByConditions<TblRow, PartialTblRow>(params: {
+    connection: PoolConnection;
+    tableName: string;
+    values: TblRow;
+    conditions: PartialTblRow;
+}) {
+    const { values, tableName, connection, conditions } = params;
     if (Object.keys(values).length < 1) throw new Error('Must have at least one updated column');
     if (Object.keys(conditions).length < 1) throw new Error('Must have at least one where condition');
 
-    const query = knex()(table).where(conditions).update(values).connection(connection);
+    const query = knex()(tableName).where(conditions).update(values).connection(connection);
 
     _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions, values);
 

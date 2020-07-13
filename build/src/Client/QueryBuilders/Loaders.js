@@ -16,20 +16,20 @@ exports.findManyLoader = exports.manyByColumnLoader = exports.byColumnLoader = v
 const lodash_1 = __importDefault(require("lodash"));
 const index_1 = require("../index");
 const logging_1 = __importDefault(require("../lib/logging"));
+// TODO:- configurable?
 const SOFT_DELETE_COLUMN = 'deleted';
 /**
  * Bulk loader function
+ * Types arguments against the table schema for safety
  * Loads one row per input key
  * Ensures order is preserved
  * For example get users [1, 2, 4] returns users [1, 2, 4]
- * @param table
- * @param column
- * @param keys
- * @param filterSoftDelete
+ * @param params
  */
-function byColumnLoader(table, column, keys, filterSoftDelete) {
+function byColumnLoader(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        let query = index_1.knex()(table).select().whereIn(column, lodash_1.default.uniq(keys));
+        const { tableName, column, keys, filterSoftDelete } = params;
+        let query = index_1.knex()(tableName).select().whereIn(column, lodash_1.default.uniq(keys));
         if (filterSoftDelete)
             query.where({ [SOFT_DELETE_COLUMN]: false });
         logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
@@ -38,7 +38,7 @@ function byColumnLoader(table, column, keys, filterSoftDelete) {
         return keys.map((k) => {
             if (keyed[k])
                 return keyed[k];
-            logging_1.default.debug(`Missing row for ${table}:${column} ${k}`);
+            logging_1.default.debug(`Missing row for ${tableName}:${column} ${k}`);
             return null;
         });
     });
@@ -46,18 +46,16 @@ function byColumnLoader(table, column, keys, filterSoftDelete) {
 exports.byColumnLoader = byColumnLoader;
 /**
  * Bulk loader function
+ * Uses table schema for typing
  * Loads multiple rows per input key
  * Ensures order is preserved
  * For example get team_members for users [1, 2, 4] returns team_members for each user [[3,4], [4,5], [4]]
- * @param table
- * @param column
- * @param keys
- * @param orderBy - default order is by 'column'. Pass [] for default order.
- * @param filterSoftDelete
+ * @param params
  */
-function manyByColumnLoader(table, column, keys, orderBy, filterSoftDelete) {
+function manyByColumnLoader(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        let query = index_1.knex()(table).select().whereIn(column, lodash_1.default.uniq(keys));
+        const { tableName, column, keys, orderBy, filterSoftDelete } = params;
+        let query = index_1.knex()(tableName).select().whereIn(column, lodash_1.default.uniq(keys));
         if (filterSoftDelete)
             query.where({ [SOFT_DELETE_COLUMN]: false });
         if (orderBy.length < 1)
@@ -74,14 +72,13 @@ function manyByColumnLoader(table, column, keys, orderBy, filterSoftDelete) {
 exports.manyByColumnLoader = manyByColumnLoader;
 /**
  * Complex find rows from a table
- * @param table
- * @param options - should specify order by to ensure deterministic pagination etc
- * @param hasSoftDelete
+ * @param params
  */
-function findManyLoader(table, options, hasSoftDelete) {
+function findManyLoader(params) {
     return __awaiter(this, void 0, void 0, function* () {
+        const { tableName, options, hasSoftDelete } = params;
         const { orderBy, where, includeDeleted } = options;
-        let query = index_1.knex()(table).select();
+        let query = index_1.knex()(tableName).select();
         if (where) {
             query.where(where);
         }

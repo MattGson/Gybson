@@ -1,4 +1,3 @@
-import { DBTables } from '../Gen';
 import { PoolConnection } from 'promise-mysql';
 /**
  * Type-safe multi upsert function
@@ -8,21 +7,25 @@ import { PoolConnection } from 'promise-mysql';
  *     * This should be set to false if the table does not support soft deletes
  * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
  * Will take the superset of all columns in the insert values
- * @param connection
- * @param table
- * @param values
- * @param updateColumns
- * @param reinstateSoftDeletedRows, set true to reinstate any soft deleted rows
+ * @param params
  */
-export declare function upsert<Tbl extends keyof DBTables, Row extends Partial<DBTables[Tbl]>, Column extends Extract<keyof DBTables[Tbl], string>>(connection: PoolConnection, table: Tbl, values: Row[], reinstateSoftDeletedRows: boolean, ...updateColumns: Column[]): Promise<number | null>;
+export declare function upsert<TblRow, TblColumn extends string>(params: {
+    connection: PoolConnection;
+    tableName: string;
+    values: Partial<TblRow>[];
+    reinstateSoftDeletedRows: boolean;
+    updateColumns: TblColumn[];
+}): Promise<number | null>;
 /**
  * Type-safe multi insert function
  * Inserts all rows. Fails on duplicate key error
  *     * use upsert if you wish to ignore duplicate rows
  * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
  * Will take the superset of all columns in the insert values
- * @param connection
- * @param table
- * @param values
+ * @param params
  */
-export declare function insert<Tbl extends keyof DBTables, Row extends Partial<DBTables[Tbl]>>(connection: PoolConnection, table: Tbl, values: Row[]): Promise<number | null>;
+export declare function insert<TblRow>(params: {
+    connection: PoolConnection;
+    tableName: string;
+    values: TblRow[];
+}): Promise<number | null>;

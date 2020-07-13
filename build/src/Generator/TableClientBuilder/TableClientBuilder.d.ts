@@ -7,7 +7,12 @@ interface BuilderOptions {
  */
 export declare class TableClientBuilder {
     readonly entityName: string;
-    readonly rowTypeName: string;
+    readonly typeNames: {
+        rowTypeName: string;
+        columnTypeName: string;
+        valueTypeName: string;
+        partialRowTypeName: string;
+    };
     readonly className: string;
     readonly table: string;
     private readonly enums;

@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generate = void 0;
 const path_1 = __importDefault(require("path"));
-// @ts-ignore
+// @ts-ignore - no types for prettier
 const prettier_1 = require("prettier");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const config_1 = require("./config");
@@ -59,8 +59,30 @@ function generateTypes(db, outdir) {
     });
 }
 // **************************
-// generate loaders
+// generate client libs
 // **************************
+/**
+ * Build an entry point file
+ * @param builders
+ * @param outdir
+ */
+function generateClientIndex(builders, outdir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let index = ``;
+        let clients = ``;
+        for (let builder of builders) {
+            index += `import ${builder.className} from './${builder.className}';`;
+            clients += `${builder.className}: new ${builder.className}(),`;
+        }
+        index += `
+        const Nodent = () => {
+        return {${clients}};
+        };
+        export default Nodent;
+    `;
+        yield writeTypescriptFile(index, outdir, 'index.ts');
+    });
+}
 /**
  * Generate the db clients for each table
  * @param db
@@ -77,19 +99,7 @@ function generateClients(db, outdir) {
             yield writeTypescriptFile(yield builder.build(db), outdir, `${builder.className}.ts`);
         }
         // BUILD ENTRY POINT
-        let index = ``;
-        let clients = ``;
-        for (let builder of builders) {
-            index += `import ${builder.className} from './${builder.className}';`;
-            clients += `${builder.className}: new ${builder.className}(),`;
-        }
-        index += `
-        const Nodent = () => {
-        return {${clients}};
-        };
-        export default Nodent;
-    `;
-        yield writeTypescriptFile(index, outdir, 'index.ts');
+        yield generateClientIndex(builders, outdir);
         return tables;
     });
 }

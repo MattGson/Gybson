@@ -24,8 +24,13 @@ class TableClientBuilder {
         this.entityName = TableClientBuilder.PascalCase(table);
         this.table = table;
         this.enums = enums;
-        this.rowTypeName = `${this.entityName}${options.rowTypeSuffix}`;
         this.className = `${this.entityName}`;
+        this.typeNames = {
+            rowTypeName: `${this.className}${options.rowTypeSuffix || 'Row'}`,
+            columnTypeName: `${this.className}Column`,
+            valueTypeName: `${this.className}Value`,
+            partialRowTypeName: `${this.className}RowPartial`,
+        };
     }
     static PascalCase(name) {
         return lodash_1.default.upperFirst(lodash_1.default.camelCase(name));
@@ -56,12 +61,17 @@ class TableClientBuilder {
         });
     }
     buildTemplate(content) {
+        // TODO:- this should be in type gen
+        const { rowTypeName, columnTypeName, valueTypeName, partialRowTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { byColumnLoader, manyByColumnLoader, findManyLoader } from 'nodent';
-            import { DBTables, ${this.table} } from './db-schema';
+            import { ${this.table} } from './db-schema';
 
-            export type ${this.rowTypeName} = ${this.table};
+            export type ${rowTypeName} = ${this.table};
+            export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
+            export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
+            export type  ${partialRowTypeName} = Partial<${rowTypeName}>;
 
              export default class ${this.className} {
                 ${content}
@@ -98,12 +108,13 @@ class TableClientBuilder {
      * @param hasSoftDelete
      */
     addByColumnLoader(column, hasSoftDelete) {
+        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
         const { columnName } = column;
         const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
         this.loaders.push(`
               /* Notice that byColumn loader might return null for some keys */
-                 private readonly ${loaderName} = new DataLoader<${column.tsType}, ${this.rowTypeName} | null>(ids => {
-                    return byColumnLoader('${this.table}', '${columnName}', ids, false);
+                 private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
+                    return byColumnLoader<${rowTypeName}, ${columnTypeName}, ${valueTypeName}>('${this.table}', '${columnName}', ids, false);
                 });
                 
                 ${TableClientBuilder.loaderPublicMethod(column, loaderName, hasSoftDelete)}
@@ -116,11 +127,12 @@ class TableClientBuilder {
      * @param hasSoftDelete
      */
     addManyByColumnLoader(column, hasSoftDelete) {
+        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
         const { columnName } = column;
         const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
         this.loaders.push(`
-                private readonly ${loaderName} = new DataLoader<${column.tsType}, ${this.rowTypeName}[]>(ids => {
-                return manyByColumnLoader('${this.table}', '${columnName}', ids, ['${columnName}'], ${hasSoftDelete ? 'true' : 'false'});
+                private readonly ${loaderName} = new DataLoader<${column.tsType}, ${this.typeNames.rowTypeName}[]>(ids => {
+                return manyByColumnLoader<${rowTypeName}, ${columnTypeName}, ${valueTypeName}>('${this.table}', '${columnName}', ids, ['${columnName}'], ${hasSoftDelete ? 'true' : 'false'});
              });
              
             ${TableClientBuilder.loaderPublicMethod(column, loaderName, false)}
@@ -141,16 +153,16 @@ class TableClientBuilder {
      * @param hasSoftDelete
      */
     addFindMany(hasSoftDelete) {
+        const { columnTypeName, rowTypeName, partialRowTypeName } = this.typeNames;
         this.loaders.push(`
             public findMany
-            <Column extends Extract<keyof DBTables['${this.table}'],
-             string>, Conditions extends Partial<DBTables['${this.table}']>>
+            <${columnTypeName}, ${partialRowTypeName}>
              (options: {
-            orderBy?: { columns: Column[]; asc?: boolean; desc?: boolean; };
-            where?: Conditions;
+            orderBy?: { columns: ${columnTypeName}[]; asc?: boolean; desc?: boolean; };
+            where?: ${partialRowTypeName};
             ${hasSoftDelete ? 'includeDeleted?: boolean' : 'includeDeleted?: false'}
-            }): Promise<${this.rowTypeName}[]> {
-                    return findManyLoader('${this.table}', options, ${hasSoftDelete ? 'true' : 'false'});
+            }): Promise<${rowTypeName}[]> {
+                    return findManyLoader({ tableName: '${this.table}', options, hasSoftDelete: ${hasSoftDelete ? 'true' : 'false'}});
                 }
         `);
     }

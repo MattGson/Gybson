@@ -22,15 +22,14 @@ const SOFT_DELETE_COLUMN = 'deleted';
  * Usage:
  *      softDeleteByConditions(conn, 'users', { user_id: 3, email: 'steve' }
  *      -> UPDATE users SET deleted = true WHERE user_id = 3 AND email = 'steve'
- * @param connection
- * @param table
- * @param conditions
+ * @param params
  */
-function softDeleteByConditions(connection, table, conditions) {
+function softDeleteByConditions(params) {
     return __awaiter(this, void 0, void 0, function* () {
+        const { tableName, conditions, connection } = params;
         if (Object.keys(conditions).length < 1)
             throw new Error('Must have at least one where condition');
-        const query = index_1.knex()(table)
+        const query = index_1.knex()(tableName)
             .where(conditions)
             .update({ [SOFT_DELETE_COLUMN]: true })
             .connection(connection);
@@ -45,18 +44,15 @@ exports.softDeleteByConditions = softDeleteByConditions;
  * Usage:
  *      updateByConditions(conn, 'users', { fname: 'joe' }, { user_id: 3, email: 'steve' }
  *      -> UPDATE users SET fname = 'joe' WHERE user_id = 3 AND email = 'steve'
- * @param connection
- * @param table
- * @param values
- * @param conditions
  */
-function updateByConditions(connection, table, values, conditions) {
+function updateByConditions(params) {
     return __awaiter(this, void 0, void 0, function* () {
+        const { values, tableName, connection, conditions } = params;
         if (Object.keys(values).length < 1)
             throw new Error('Must have at least one updated column');
         if (Object.keys(conditions).length < 1)
             throw new Error('Must have at least one where condition');
-        const query = index_1.knex()(table).where(conditions).update(values).connection(connection);
+        const query = index_1.knex()(tableName).where(conditions).update(values).connection(connection);
         logging_1.default.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, conditions, values);
         return query;
     });

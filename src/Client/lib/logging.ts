@@ -1,3 +1,5 @@
+import Nodent from '../../../Gen';
+
 const { createLogger, format } = require('winston');
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 
@@ -18,6 +20,10 @@ export enum LogLevel {
 }
 
 export const buildLogger = (config: { logLevel: LogLevel }) => {
+    const a = Nodent();
+
+    await a.Invites.insert({ values: [{ fname: '' }] });
+
     const consoleTransport = {
         format: combine(
             colorize(),
