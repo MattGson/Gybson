@@ -15,7 +15,7 @@
     "scripts": {
         "lint": "eslint ./src",
         "build": "tsc",
-        "dependency-check": "dependency-check . --entry src/Generator/cli/schemats.js --missing --no-dev",
+        "dependency-check": "dependency-check . --entry src/Generator/cli/nodent.js --missing --no-dev",
         "test": "npm run lint",
         "prepublish": "npm run build"
     },
