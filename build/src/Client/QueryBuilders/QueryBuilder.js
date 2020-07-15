@@ -154,6 +154,24 @@ class QueryBuilder {
         });
     }
     /**
+     * Type-safe insert function
+     * Inserts row. Fails on duplicate key error
+     *     * use upsert if you wish to ignore duplicate rows
+     * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
+     * Will take the superset of all columns in the insert values
+     * @param params
+     */
+    insertOne(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { value, connection } = params;
+            let query = index_1.knex()(this.tableName).insert(value);
+            logging_1.default.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
+            const result = yield query.connection(connection);
+            // seems to return 0 for non-auto-increment inserts
+            return result[0];
+        });
+    }
+    /**
      * Type-safe multi insert function
      * Inserts all rows. Fails on duplicate key error
      *     * use upsert if you wish to ignore duplicate rows
@@ -161,7 +179,7 @@ class QueryBuilder {
      * Will take the superset of all columns in the insert values
      * @param params
      */
-    insert(params) {
+    insertMany(params) {
         return __awaiter(this, void 0, void 0, function* () {
             const { values, connection } = params;
             if (values.length < 1)
