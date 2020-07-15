@@ -68,6 +68,18 @@ export declare abstract class QueryBuilder<TblRow, TblColumn extends string, Tbl
         updateColumns: TblColumn[];
     }): Promise<number | null>;
     /**
+     * Type-safe insert function
+     * Inserts row. Fails on duplicate key error
+     *     * use upsert if you wish to ignore duplicate rows
+     * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
+     * Will take the superset of all columns in the insert values
+     * @param params
+     */
+    insertOne(params: {
+        connection?: PoolConnection;
+        value: PartialTblRow;
+    }): Promise<number | null>;
+    /**
      * Type-safe multi insert function
      * Inserts all rows. Fails on duplicate key error
      *     * use upsert if you wish to ignore duplicate rows
@@ -75,7 +87,7 @@ export declare abstract class QueryBuilder<TblRow, TblColumn extends string, Tbl
      * Will take the superset of all columns in the insert values
      * @param params
      */
-    insert(params: {
+    insertMany(params: {
         connection?: PoolConnection;
         values: PartialTblRow[];
     }): Promise<number | null>;
