@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/SweetIQ/schemats/badge.svg?branch=coverage)](https://coveralls.io/github/SweetIQ/schemats?branch=coverage)
 
 Nodent is a type-safe, auto-generated query client for SQL databases (MySQL and PostgreSQL).
-Nodent is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps.
+Nodent is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps using Typescript.
 
 ### Why Nodent?
 
@@ -40,16 +40,15 @@ CREATE TABLE users (
 You can query:
 
 ```typescript
-
 // this insert is type checked against the db schema
-const id = await nodent.users.insert({ 
+const id = await nodent.users.insert({
     values: {
         user_id: 300,
         username: 'name',
         password: 'secret',
         last_logon: new Date(),
-    } 
-})
+    },
+});
 
 // load methods are generated for all keys fields
 const user = await nodent.users.byUserId(300);
@@ -71,69 +70,123 @@ interface users {
 npm i nodent
 ```
 
-### Generating the type definition from schema
+### Generating the client from your schema
 
-```
-schemats generate -c postgres://postgres@localhost/osm -t users -o osm.ts
-schemats generate -c mysql://mysql@localhost/osm -t users -o osm.ts
-```
-
-The above commands will generate typescript interfaces for [`osm`](test/osm_schema.sql) database
-with table [`users`](test/osm_schema.sql#L18). The resulting file is stored as [`osm.ts`](test/example/osm.ts).
-
-### Generating the type definition for all the tables in a postgres schema
-
-To generate all type definitions for all the tables within the schema 'public':
-
-_Note: MySQL does not have a default public schema, but should it have a schema named public, this will still work._
-
-```
-schemats generate -c postgres://postgres@localhost/osm -s public -o osm.ts
-schemats generate -c mysql://mysql@localhost/osm -s public -o osm.ts
-```
-
-If neither the table parameter nor the schema parameter is provided, all tables in schema 'public' will be generated, so the command above is equivalent to:
-
-```
-schemats generate -c postgres://postgres@localhost/osm -o osm.ts
-schemats generate -c mysql://mysql@localhost/osm -o osm.ts
-```
-
-### Using schemats.json config file
-
-Schemats supports reading configuration from a json config file (defaults to `schemats.json`). Instead of passing configuration via commandline parameter like done above, it is also possible to supply the configuration through a config file. The config file supports the same parameters as the commandline arguments.
-
-For example, if a `schemats.json` exists in the current working directory with the following content:
+Define a config file `nodent-config.json` to point to your database and output for generated files.
 
 ```json
 {
-    "conn": "postgres://postgres@localhost/osm",
-    "table": ["users"]
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": "users",
+    "outdir": "./generated"
 }
 ```
 
-Running `schemats generate` here is equivalent to running `schemats generate -c postgres://postgres@localhost/osm -t users -o osm.ts`.
+Run:
 
-### Writing code with typed schema
+```
+nodent generate
+```
 
-We can import `osm.ts` directly
+The above commands will generate the client for `users` database.
+The resulting files are stored in `./generated`.
+
+### Using with GraphQL
+
+Add a new Nodent instance to your context for each request.
+
+i.e with Apollo
 
 ```typescript
-// imports the _osm_ namespace from ./osm.ts
-
-import * as osm from './osm';
-
-// Now query with pg-promise and have a completely typed return value
-
-let usersCreatedAfter2013: Array<osm.users> = await db.query("SELECT * FROM users WHERE creation_time >= '2013-01-01'");
-
-// We can decide to only get selected fields
-
-let emailOfUsersCreatedAfter2013: Array<{
-    email: osm.users['email'];
-    creation_time: osm.users['creation_time'];
-}> = await db.query("SELECT (email, creation_time) FROM users WHERE creation_time >= '2013-01-01'");
+new ApolloServer({
+    context: async () => {
+        return {
+            nodent: Nodent(),
+        };
+    },
+});
 ```
+
+Then in your resolvers:
+
+```typescript
+// resolve a user query
+
+Query: {
+    user(parent, args, context, info) {
+        return context.nodent.Users.byUserId(args.id);
+    }
+}
+```
+
+#### Resolving a nested query example:
+
+```graphql
+{
+    me {
+        name
+        friends(first: 5) {
+            name
+            bestFriend {
+                name
+            }
+        }
+    }
+}
+```
+
+If we just naively query for each object then we could execute potentially 12 database requests:
+
+```sql
+/* Get me and my friends list */
+SELECT * FROM users WHERE user_id = ME;
+SELECT * FROM friends WHERE from_id = ME;
+
+/* Need to resolve each of the five friends */
+SELECT * FROM users WHERE user_id = FRIEND1;
+SELECT * FROM users WHERE user_id = FRIEND2;
+SELECT * FROM users WHERE user_id = FRIEND3;
+SELECT * FROM users WHERE user_id = FRIEND4;
+SELECT * FROM users WHERE user_id = FRIEND5;
+
+/* Need to get the best friend for each friend */
+SELECT * FROM users WHERE best_friend_id = FRIEND1.bestfriend;
+SELECT * FROM users WHERE best_friend_id = FRIEND2.bestfriend;
+SELECT * FROM users WHERE best_friend_id = FRIEND3.bestfriend;
+SELECT * FROM users WHERE best_friend_id = FRIEND4.bestfriend;
+SELECT * FROM users WHERE best_friend_id = FRIEND5.bestfriend;
+
+```
+
+Nodent uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch database requests and cache returned data.
+Executing the same GraphQL query with Nodent can be done like:
+
+```typescript
+
+// Note this is pseudo code approximating graphql resolvers
+
+(me) => nodent.Users.byUserId(me.id);
+
+(friends) => {
+    const friends_list = await nodent.Friends.byFromId(me.id);
+    return friends_list.map((row) => nodent.Users.byUserId(row.toId));
+};
+
+(best_friend) => nodent.Users.byUserId(user.best_friend_id);
+```
+
+This results in the following SQL:
+
+```SQL
+SELECT * FROM users WHERE user_id IN (ME);
+SELECT * FROM friends WHERE from_id IN (ME);
+
+SELECT * FROM users WHERE user_id IN (FRIEND1, FRIEND2, FRIEND3, FRIEND4, FRIEND5);
+SELECT * FROM users WHERE user_id IN (FRIEND1.best_friend_id, FRIEND2.best_friend_id, ...);
+```
+
+We've cut down the number of queries to just 4. This effect amplifies greatly as the depth of the query tree increases.
 
 With generated type definition for our database schema, we can write code with autocompletion and static type checks.
 
@@ -143,51 +196,3 @@ With generated type definition for our database schema, we can write code with a
 <p align="center">
 <img align="center" src="https://github.com/SweetIQ/schemats/raw/master/demo2.gif" width="100%" alt="demo 2"/>
 </p>
-
-### Using schemats as a library
-
-Schemats exposes two high-level functions for generating typescript definition from a database schema. They can be used by a build tool such as grunt and gulp.
-
-### Upgrading to v1.0
-
-#### Deprecation of Namespace
-
-Version 1.0 deprecates generating schema typescript files with namespace.
-
-Instead of generating schema typescript files with
-
-```bash
-schemats generate -c postgres://postgres@localhost/db -n yournamespace -o db.ts
-```
-
-and import them with
-
-```typescript
-import { yournamespace } from './db';
-```
-
-It is now encouraged to generate without namespace
-
-```bash
-schemats generate -c postgres://postgres@localhost/db -o db.ts
-```
-
-and import them with
-
-```typescript
-import * as yournamespace from './db';
-// or
-import { table_a, table_b } from './db';
-```
-
-As [TypeScript's documentation](https://www.typescriptlang.org/docs/handbook/namespaces-and-modules.html) describes,
-having a top level namespace is needless. This was discussed in [#25](https://github.com/SweetIQ/schemats/issues/25).
-
-Generating schema typescript files with namespace still works in v1.0, but it is discouraged and subjected to
-removal in the future.
-
-#### Support Strict Null-Checking
-
-Version 1.0 [supports](https://github.com/SweetIQ/schemats/issues/19)
-[strict null-checking](https://github.com/Microsoft/TypeScript/pull/7140)
-and reflects the _NOT NULL_ constraint defined in PostgreSQL schema.
