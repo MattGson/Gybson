@@ -3,6 +3,7 @@ import { Enumerable, knex, NumberWhere, OrderByBase, WhereBase } from '../index'
 import _logger from '../lib/logging';
 import _, { Dictionary } from 'lodash';
 import { QueryBuilder } from 'knex';
+import { UsersDTO } from '../../Gen/Users';
 
 // TODO:- auto connection handling
 
@@ -62,7 +63,7 @@ export abstract class SQLQueryBuilder<
      * For example get team_members for users [1, 2, 4] returns team_members for each user [[3,4], [4,5], [4]]
      * @param params
      */
-    public async manyByColumnLoader<TblRow, TblColumn extends string, TblKey extends string | number>(params: {
+    public async manyByColumnLoader(params: {
         column: TblColumn;
         keys: readonly TblKey[];
         orderBy: TblColumn[];
@@ -81,6 +82,62 @@ export abstract class SQLQueryBuilder<
         // map rows back to input keys
         const grouped = _.groupBy(rows, column);
         return keys.map((id) => grouped[id] || []);
+    }
+
+    /**
+     * Load a single row for each input compound key
+     * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
+     * @param keys - the load key i.e. { user_id: 3, post_id: 5 }[]
+     */
+    private async byCompoundColumnLoader(keys: readonly PartialTblRow[]): Promise<(TblRow | null)[]> {
+        // const columns = Object.keys(keys);
+        // const values = Object.values(keys);
+
+        // Need to make sure order of keys matches columns in WHERE
+        const columns = Object.keys(keys[0]);
+
+        const values: (string | number)[][] = [];
+        for (let row of keys) {
+            let vals = [];
+            for (let column of columns) {
+                // @ts-ignore
+                vals.push(row[column]);
+            }
+        }
+
+        let query = knex()(this.tableName)
+            .select()
+            .whereIn(
+                Object.keys(keys),
+                values,
+            );
+
+        _logger.debug('SQL executing loading: %s', query.toSQL().sql);
+
+        const rows = await query;
+
+        // TODO:- work this out
+        // join multiple keys into a unique string to allow mapping to dictionary
+        const sortKeys = ids.map((id) => [id.user_id, id.post_id].join(':'));
+        // map rows to dictionary against the same key strings
+        const keyed = _.keyBy(rows, (row) => [row.user_id, row.post_id].join(':'));
+
+        return sortKeys.map((k) => {
+            if (keyed[k]) return keyed[k];
+            _logger.debug(`Missing row for feedback: ${k}`);
+            return null;
+        });
+    }
+
+    private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
+        { user_id: number; post_id: number },
+        FeedbackDTO | null
+    >((ids) => {
+        return this.loadFeedback(ids);
+    });
+
+    public feedbackByPostIdAndUserId(post_id: number, user_id: number) {
+        return this.FeedbackByPostIdAndUserIdLoader.load({ user_id, post_id });
     }
 
     /**
@@ -361,6 +418,7 @@ export abstract class SQLQueryBuilder<
         return query;
     }
 
+    // TODO: generalise where builder
     /**
      * Type-safe update function
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;

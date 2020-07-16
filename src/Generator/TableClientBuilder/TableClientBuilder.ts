@@ -188,6 +188,7 @@ export class TableClientBuilder {
     }
 
     /** // TODO:- add compound key loaders i.e. orgMembers.byOrgIdAndUserId()
+     * //  TODO  - Localise public methods
      * Build a loader to load a single row for each key
      * Gives the caller choice on whether to include soft deleted rows
      * @param column
