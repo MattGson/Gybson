@@ -48,18 +48,8 @@ class TableClientBuilder {
             // TODO:- work out where this goes
             this.types = this.buildQueryTypes(columns);
             const tableKeys = yield introspection.getTableKeys(this.table);
-            // const primaryKeys = _.keyBy(
-            //     tableKeys.filter((k) => k.constraintName === 'PRIMARY'),
-            //     (key) => key.columnName,
-            // );
             const unique = CardinalityResolver_1.CardinalityResolver.getUniqueKeys(tableKeys);
             const nonUnique = CardinalityResolver_1.CardinalityResolver.getNonUniqueKey(tableKeys);
-            if (this.table === 'wellness_surveys') {
-                console.log('TABLE: ', this.table);
-                console.log('UNI: ', unique);
-                console.log('NON UNI: ', nonUnique);
-                console.log('***********************');
-            }
             unique.forEach((key) => {
                 // for now only accept loaders on string and number column types
                 const keyColumns = key.map((k) => columns[k.columnName]);
@@ -68,6 +58,15 @@ class TableClientBuilder {
                         return;
                 }
                 this.addCompoundByColumnLoader(keyColumns);
+            });
+            nonUnique.forEach((key) => {
+                // for now only accept loaders on string and number column types
+                const keyColumns = key.map((k) => columns[k.columnName]);
+                for (let col of keyColumns) {
+                    if (col.tsType !== 'string' && col.tsType !== 'number')
+                        return;
+                }
+                this.addCompoundManyByColumnLoader(keyColumns);
             });
             // filter duplicate columns
             // const uniqueKeys = _.keyBy(tableKeys, (key) => key.columnName);
@@ -91,7 +90,7 @@ class TableClientBuilder {
     }
     buildTemplate(content) {
         // TODO:- this should be in type gen
-        const { rowTypeName, columnTypeName, valueTypeName, whereTypeName, orderByTypeName } = this.typeNames;
+        const { rowTypeName, columnTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { SQLQueryBuilder } from 'nodent';
@@ -99,7 +98,7 @@ class TableClientBuilder {
             
             ${this.types}
 
-             export default class ${this.className} extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}, ${whereTypeName}, ${orderByTypeName}> {
+             export default class ${this.className} extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${whereTypeName}, ${orderByTypeName}> {
                     constructor() {
                         super('${this.table}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }
@@ -178,28 +177,27 @@ class TableClientBuilder {
                 }
         `;
     }
-    /** // TODO:- add compound key loaders i.e. orgMembers.byOrgIdAndUserId()
+    /**
      *   // TODO:- compound loader is a more general case so maybe don't need this?
      * //  TODO  - Localise public methods
      * Build a loader to load a single row for each key
      * Gives the caller choice on whether to include soft deleted rows
      * @param column
      */
-    addByColumnLoader(column) {
-        const { rowTypeName } = this.typeNames;
-        const { columnName } = column;
-        const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
-        this.loaders.push(`
-                 private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
-                    return this.byColumnLoader({ column: '${columnName}', keys: ids });
-                });
-                
-                ${this.loaderPublicMethod(column, loaderName, true)}
-            `);
-    }
-    // take list of unique keys
-    // take all permutations of keys
-    // remove those which contain a unique key
+    // private addByColumnLoader(column: ColumnDefinition) {
+    //     const { rowTypeName } = this.typeNames;
+    //
+    //     const { columnName } = column;
+    //     const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
+    //
+    //     this.loaders.push(`
+    //              private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
+    //                 return this.byColumnLoader({ column: '${columnName}', keys: ids });
+    //             });
+    //
+    //             ${this.loaderPublicMethod(column, loaderName, true)}
+    //         `);
+    // }
     /**
      * Build a loader to load a single row for a compound key
      * Gives the caller choice on whether to include soft deleted rows
@@ -207,50 +205,52 @@ class TableClientBuilder {
      */
     addCompoundByColumnLoader(columns) {
         const { rowTypeName } = this.typeNames;
-        const colNames = columns.map((col) => TableClientBuilder.PascalCase(col.columnName));
+        const colNames = columns.map((col) => col.columnName);
         const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)} }`;
-        const loaderName = `${this.entityName}By${colNames.join('And')}Loader`;
+        const paramType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; ${this.softDeleteColumn ? 'includeDeleted?: boolean' : ''} }`;
+        const paramNames = `{ ${colNames.join(',')} ${this.softDeleteColumn ? ', includeDeleted' : ''} }`;
+        const loadKeyName = colNames.map((name) => TableClientBuilder.PascalCase(name)).join('And');
+        const loaderName = `${this.entityName}By${loadKeyName}Loader`;
         this.loaders.push(`
-
-                type
                  private readonly ${loaderName} = new DataLoader<${keyType}, ${rowTypeName} | null>(keys => {
                     return this.byCompoundColumnLoader({ keys });
                 });
                 
+                 public async by${loadKeyName}(${paramNames}: ${paramType}) {
+                    const row = await this.${loaderName}.load({ ${colNames.join(',')} });
+                    ${this.softDeleteColumn ? `if (row?.${this.softDeleteColumn} && !includeDeleted) return null;` : ''}
+                    return row;
+                }
+                
             `);
-        // private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
-        //     { user_id: number; post_id: number },
-        //     FeedbackDTO | null
-        // >((ids) => {
-        //     return this.loadFeedback(ids);
-        // });
-        // if (softDeleteFilter && this.softDeleteColumn)
-        //     return `
-        //     public async by${TableClientBuilder.PascalCase(
-        //         columnName,
-        //     )}(${columnName}: ${tsType}, includeDeleted = false) {
-        //             const row = await this.${loaderName}.load(${columnName});
-        //             if (row?.${this.softDeleteColumn} && !includeDeleted) return null;
-        //             return row;
-        //         }
-        // `;
     }
     /**
-     * Build a loader to load many rows for each key
-     * At the moment, this always filters out soft deleted rows
-     * @param column
+     * Build a loader to load a single row for a compound key
+     * Gives the caller choice on whether to include soft deleted rows
+     * @param columns
      */
-    addManyByColumnLoader(column) {
-        const { columnName } = column;
-        const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
+    addCompoundManyByColumnLoader(columns) {
+        const { rowTypeName } = this.typeNames;
+        const colNames = columns.map((col) => col.columnName);
+        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; orderBy: ${this.typeNames.orderByTypeName}; }`;
+        const paramType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; orderBy: ${this.typeNames.orderByTypeName}; ${this.softDeleteColumn ? 'includeDeleted?: boolean' : ''} }`;
+        const loadKeyName = colNames.map((name) => TableClientBuilder.PascalCase(name)).join('And');
+        const loaderName = `${this.entityName}By${loadKeyName}Loader`;
         this.loaders.push(`
-                private readonly ${loaderName} = new DataLoader<${column.tsType}, ${this.typeNames.rowTypeName}[]>(ids => {
-                return this.manyByColumnLoader({ column: '${columnName}', keys: ids, orderBy: ['${columnName}'], filterSoftDelete: ${this.softDeleteColumn ? 'true' : 'false'} });
-             });
-             
-            ${this.loaderPublicMethod(column, loaderName, false)}
-
-        `);
+                 private readonly ${loaderName} = new DataLoader<${keyType}, ${rowTypeName}[]>(keys => {
+                    const [first] = keys;
+                    // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
+                    return this.manyByCompoundColumnLoader({ keys, orderBy: first.orderBy });
+                }, {
+                    // ignore order for cache equivalency TODO - re-assess
+                    cacheKeyFn: (k => ({...k, orderBy: {}}))
+                });
+                
+                 public async by${loadKeyName}({ ${colNames.join(',')}, orderBy }: ${paramType}) {
+                    return this.${loaderName}.load({ ${colNames.join(',')}, orderBy });
+                }
+                
+            `);
     }
 }
 exports.TableClientBuilder = TableClientBuilder;

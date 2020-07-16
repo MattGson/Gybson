@@ -77,6 +77,16 @@ export class TableClientBuilder {
 
             this.addCompoundByColumnLoader(keyColumns);
         });
+
+        nonUnique.forEach((key) => {
+            // for now only accept loaders on string and number column types
+            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
+            for (let col of keyColumns) {
+                if (col.tsType !== 'string' && col.tsType !== 'number') return;
+            }
+
+            this.addCompoundManyByColumnLoader(keyColumns);
+        });
         // filter duplicate columns
         // const uniqueKeys = _.keyBy(tableKeys, (key) => key.columnName);
         //
@@ -102,7 +112,7 @@ export class TableClientBuilder {
 
     private buildTemplate(content: string) {
         // TODO:- this should be in type gen
-        const { rowTypeName, columnTypeName, valueTypeName, whereTypeName, orderByTypeName } = this.typeNames;
+        const { rowTypeName, columnTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { SQLQueryBuilder } from 'nodent';
@@ -112,7 +122,7 @@ export class TableClientBuilder {
 
              export default class ${
                  this.className
-             } extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}, ${whereTypeName}, ${orderByTypeName}> {
+             } extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${whereTypeName}, ${orderByTypeName}> {
                     constructor() {
                         super('${this.table}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }
@@ -206,23 +216,20 @@ export class TableClientBuilder {
      * Gives the caller choice on whether to include soft deleted rows
      * @param column
      */
-    private addByColumnLoader(column: ColumnDefinition) {
-        const { rowTypeName } = this.typeNames;
-
-        const { columnName } = column;
-        const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
-
-        this.loaders.push(`
-                 private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
-                    return this.byColumnLoader({ column: '${columnName}', keys: ids });
-                });
-                
-                ${this.loaderPublicMethod(column, loaderName, true)}
-            `);
-    }
-    // take list of unique keys
-    // take all permutations of keys
-    // remove those which contain a unique key
+    // private addByColumnLoader(column: ColumnDefinition) {
+    //     const { rowTypeName } = this.typeNames;
+    //
+    //     const { columnName } = column;
+    //     const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
+    //
+    //     this.loaders.push(`
+    //              private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
+    //                 return this.byColumnLoader({ column: '${columnName}', keys: ids });
+    //             });
+    //
+    //             ${this.loaderPublicMethod(column, loaderName, true)}
+    //         `);
+    // }
 
     /**
      * Build a loader to load a single row for a compound key
@@ -232,35 +239,64 @@ export class TableClientBuilder {
     private addCompoundByColumnLoader(columns: ColumnDefinition[]) {
         const { rowTypeName } = this.typeNames;
 
-        const colNames = columns.map((col) => TableClientBuilder.PascalCase(col.columnName));
+        const colNames = columns.map((col) => col.columnName);
         const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)} }`;
+        const paramType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; ${
+            this.softDeleteColumn ? 'includeDeleted?: boolean' : ''
+        } }`;
+        const paramNames = `{ ${colNames.join(',')} ${this.softDeleteColumn ? ', includeDeleted' : ''} }`;
 
-        const loaderName = `${this.entityName}By${colNames.join('And')}Loader`;
+        const loadKeyName = colNames.map((name) => TableClientBuilder.PascalCase(name)).join('And');
+        const loaderName = `${this.entityName}By${loadKeyName}Loader`;
 
         this.loaders.push(`
                  private readonly ${loaderName} = new DataLoader<${keyType}, ${rowTypeName} | null>(keys => {
                     return this.byCompoundColumnLoader({ keys });
                 });
                 
+                 public async by${loadKeyName}(${paramNames}: ${paramType}) {
+                    const row = await this.${loaderName}.load({ ${colNames.join(',')} });
+                    ${this.softDeleteColumn ? `if (row?.${this.softDeleteColumn} && !includeDeleted) return null;` : ''}
+                    return row;
+                }
+                
             `);
+    }
 
-        // private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
-        //     { user_id: number; post_id: number },
-        //     FeedbackDTO | null
-        // >((ids) => {
-        //     return this.loadFeedback(ids);
-        // });
+    /**
+     * Build a loader to load a single row for a compound key
+     * Gives the caller choice on whether to include soft deleted rows
+     * @param columns
+     */
+    private addCompoundManyByColumnLoader(columns: ColumnDefinition[]) {
+        const { rowTypeName } = this.typeNames;
 
-        // if (softDeleteFilter && this.softDeleteColumn)
-        //     return `
-        //     public async by${TableClientBuilder.PascalCase(
-        //         columnName,
-        //     )}(${columnName}: ${tsType}, includeDeleted = false) {
-        //             const row = await this.${loaderName}.load(${columnName});
-        //             if (row?.${this.softDeleteColumn} && !includeDeleted) return null;
-        //             return row;
-        //         }
-        // `;
+        const colNames = columns.map((col) => col.columnName);
+        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; orderBy: ${
+            this.typeNames.orderByTypeName
+        }; }`;
+        const paramType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; orderBy: ${
+            this.typeNames.orderByTypeName
+        }; ${this.softDeleteColumn ? 'includeDeleted?: boolean' : ''} }`;
+
+        const loadKeyName = colNames.map((name) => TableClientBuilder.PascalCase(name)).join('And');
+        const loaderName = `${this.entityName}By${loadKeyName}Loader`;
+
+        this.loaders.push(`
+                 private readonly ${loaderName} = new DataLoader<${keyType}, ${rowTypeName}[]>(keys => {
+                    const [first] = keys;
+                    // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
+                    return this.manyByCompoundColumnLoader({ keys, orderBy: first.orderBy });
+                }, {
+                    // ignore order for cache equivalency TODO - re-assess
+                    cacheKeyFn: (k => ({...k, orderBy: {}}))
+                });
+                
+                 public async by${loadKeyName}({ ${colNames.join(',')}, orderBy }: ${paramType}) {
+                    return this.${loaderName}.load({ ${colNames.join(',')}, orderBy });
+                }
+                
+            `);
     }
 
     /** TODO:- this should allow ordering on response - may need to change data loader to execute multiple times for each ordering specified
@@ -268,21 +304,21 @@ export class TableClientBuilder {
      * At the moment, this always filters out soft deleted rows
      * @param column
      */
-    private addManyByColumnLoader(column: ColumnDefinition) {
-        const { columnName } = column;
-        const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
-
-        this.loaders.push(`
-                private readonly ${loaderName} = new DataLoader<${column.tsType}, ${
-            this.typeNames.rowTypeName
-        }[]>(ids => {
-                return this.manyByColumnLoader({ column: '${columnName}', keys: ids, orderBy: ['${columnName}'], filterSoftDelete: ${
-            this.softDeleteColumn ? 'true' : 'false'
-        } });
-             });
-             
-            ${this.loaderPublicMethod(column, loaderName, false)}
-
-        `);
-    }
+    // private addManyByColumnLoader(column: ColumnDefinition) {
+    //     const { columnName } = column;
+    //     const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
+    //
+    //     this.loaders.push(`
+    //             private readonly ${loaderName} = new DataLoader<${column.tsType}, ${
+    //         this.typeNames.rowTypeName
+    //     }[]>(ids => {
+    //             return this.manyByColumnLoader({ column: '${columnName}', keys: ids, orderBy: ['${columnName}'], filterSoftDelete: ${
+    //         this.softDeleteColumn ? 'true' : 'false'
+    //     } });
+    //          });
+    //
+    //         ${this.loaderPublicMethod(column, loaderName, false)}
+    //
+    //     `);
+    // }
 }

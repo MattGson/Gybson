@@ -9,7 +9,6 @@ import { QueryBuilder } from 'knex';
 export abstract class SQLQueryBuilder<
     TblRow,
     TblColumn extends string,
-    TblKey extends string | number,
     TblWhere extends WhereBase,
     TblOrderBy extends OrderByBase,
     PartialTblRow = Partial<TblRow>
@@ -39,21 +38,21 @@ export abstract class SQLQueryBuilder<
      * @param params
      * @deprecated compound loader is a more general case
      */
-    public async byColumnLoader(params: { column: TblColumn; keys: readonly TblKey[] }): Promise<(TblRow | null)[]> {
-        const { column, keys } = params;
-
-        let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
-
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
-        const rows = await query;
-
-        const keyed: Dictionary<TblRow | null> = _.keyBy(rows, column);
-        return keys.map((k) => {
-            if (keyed[k]) return keyed[k];
-            _logger.debug(`Missing row for ${this.tableName}:${column} ${k}`);
-            return null;
-        });
-    }
+    // public async byColumnLoader(params: { column: TblColumn; keys: readonly TblKey[] }): Promise<(TblRow | null)[]> {
+    //     const { column, keys } = params;
+    //
+    //     let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
+    //
+    //     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
+    //     const rows = await query;
+    //
+    //     const keyed: Dictionary<TblRow | null> = _.keyBy(rows, column);
+    //     return keys.map((k) => {
+    //         if (keyed[k]) return keyed[k];
+    //         _logger.debug(`Missing row for ${this.tableName}:${column} ${k}`);
+    //         return null;
+    //     });
+    // }
 
     /**
      * Bulk loader function
@@ -61,27 +60,72 @@ export abstract class SQLQueryBuilder<
      * Loads multiple rows per input key
      * Ensures order is preserved
      * For example get team_members for users [1, 2, 4] returns team_members for each user [[3,4], [4,5], [4]]
-     * @param params
+    //  * @param params
+    //  */
+    // public async manyByColumnLoader(params: {
+    //     column: TblColumn;
+    //     keys: readonly TblKey[];
+    //     orderBy: TblColumn[];
+    //     filterSoftDelete?: boolean;
+    // }): Promise<TblRow[][]> {
+    //     const { column, keys, orderBy, filterSoftDelete } = params;
+    //     let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
+    //
+    //     if (filterSoftDelete && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
+    //     if (orderBy.length < 1) query.orderBy(column, 'asc');
+    //     for (let order of orderBy) query.orderBy(order, 'asc');
+    //
+    //     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
+    //     const rows = await query;
+    //
+    //     // map rows back to input keys
+    //     const grouped = _.groupBy(rows, column);
+    //     return keys.map((id) => grouped[id] || []);
+    // }
+
+    /**
+     * Load multiple rows for each input compound key
+     * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
+     * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    public async manyByColumnLoader(params: {
-        column: TblColumn;
-        keys: readonly TblKey[];
-        orderBy: TblColumn[];
-        filterSoftDelete?: boolean;
+    public async manyByCompoundColumnLoader(params: {
+        keys: readonly PartialTblRow[];
+        includeSoftDeleted?: boolean;
+        orderBy: TblOrderBy;
     }): Promise<TblRow[][]> {
-        const { column, keys, orderBy, filterSoftDelete } = params;
-        let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
+        const { keys, includeSoftDeleted, orderBy } = params;
 
-        if (filterSoftDelete && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
-        if (orderBy.length < 1) query.orderBy(column, 'asc');
-        for (let order of orderBy) query.orderBy(order, 'asc');
+        // get the key columns to load on
+        const columns = Object.keys(keys[0]);
 
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
+        // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [user_id, post_id], [3, 5]
+        const loadValues = keys.map<(string | number)[]>((k) => {
+            // @ts-ignore
+            return columns.map((col) => k[col]);
+        });
+
+        // build query
+        let query = knex()(this.tableName).select().whereIn(columns, loadValues);
+        if (!includeSoftDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
+
+        if (orderBy) {
+            for (let [column, direction] of Object.entries(orderBy)) {
+                query.orderBy(column, direction);
+            }
+        }
+
+        _logger.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+
         const rows = await query;
 
-        // map rows back to input keys
-        const grouped = _.groupBy(rows, column);
-        return keys.map((id) => grouped[id] || []);
+        // join multiple keys into a unique string to allow mapping to dictionary
+        // again map columns to make sure order is preserved
+        // @ts-ignore
+        const sortKeys = keys.map((k) => columns.map((col) => k[col]).join(':'));
+
+        // map rows back to input keys ensuring order is preserved
+        const grouped = _.groupBy(rows, (row) => columns.map((col) => row[col]).join(':'));
+        return sortKeys.map((key) => grouped[key] || []);
     }
 
     /**
@@ -91,8 +135,6 @@ export abstract class SQLQueryBuilder<
      */
     public async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
         const { keys } = params;
-        // const columns = Object.keys(keys);
-        // const values = Object.values(keys);
 
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
