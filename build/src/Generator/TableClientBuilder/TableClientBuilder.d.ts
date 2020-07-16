@@ -36,11 +36,19 @@ export declare class TableClientBuilder {
      */
     private loaderPublicMethod;
     /** // TODO:- add compound key loaders i.e. orgMembers.byOrgIdAndUserId()
+     *   // TODO:- compound loader is a more general case so maybe don't need this?
+     * //  TODO  - Localise public methods
      * Build a loader to load a single row for each key
      * Gives the caller choice on whether to include soft deleted rows
      * @param column
      */
     private addByColumnLoader;
+    /**
+     * Build a loader to load a single row for a compound key
+     * Gives the caller choice on whether to include soft deleted rows
+     * @param columns
+     */
+    private addCompoundByColumnLoader;
     /**
      * Build a loader to load many rows for each key
      * At the moment, this always filters out soft deleted rows

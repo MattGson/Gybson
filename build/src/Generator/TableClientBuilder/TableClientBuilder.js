@@ -157,6 +157,8 @@ class TableClientBuilder {
         `;
     }
     /** // TODO:- add compound key loaders i.e. orgMembers.byOrgIdAndUserId()
+     *   // TODO:- compound loader is a more general case so maybe don't need this?
+     * //  TODO  - Localise public methods
      * Build a loader to load a single row for each key
      * Gives the caller choice on whether to include soft deleted rows
      * @param column
@@ -166,13 +168,48 @@ class TableClientBuilder {
         const { columnName } = column;
         const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
         this.loaders.push(`
-              /* Notice that byColumn loader might return null for some keys */
                  private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
                     return this.byColumnLoader({ column: '${columnName}', keys: ids });
                 });
                 
                 ${this.loaderPublicMethod(column, loaderName, true)}
             `);
+    }
+    // take list of unique keys
+    // take all permutations of keys
+    // remove those which contain a unique key
+    /**
+     * Build a loader to load a single row for a compound key
+     * Gives the caller choice on whether to include soft deleted rows
+     * @param columns
+     */
+    addCompoundByColumnLoader(columns) {
+        const { rowTypeName } = this.typeNames;
+        const colNames = columns.map((col) => TableClientBuilder.PascalCase(col.columnName));
+        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType};`)} }`;
+        const loaderName = `${this.entityName}By${colNames.join('And')}Loader`;
+        this.loaders.push(`
+                 private readonly ${loaderName} = new DataLoader<${keyType}, ${rowTypeName} | null>(keys => {
+                    return this.byCompoundColumnLoader({ keys });
+                });
+                
+            `);
+        // private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
+        //     { user_id: number; post_id: number },
+        //     FeedbackDTO | null
+        // >((ids) => {
+        //     return this.loadFeedback(ids);
+        // });
+        // if (softDeleteFilter && this.softDeleteColumn)
+        //     return `
+        //     public async by${TableClientBuilder.PascalCase(
+        //         columnName,
+        //     )}(${columnName}: ${tsType}, includeDeleted = false) {
+        //             const row = await this.${loaderName}.load(${columnName});
+        //             if (row?.${this.softDeleteColumn} && !includeDeleted) return null;
+        //             return row;
+        //         }
+        // `;
     }
     /**
      * Build a loader to load many rows for each key

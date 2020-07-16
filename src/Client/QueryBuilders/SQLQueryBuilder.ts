@@ -38,6 +38,7 @@ export abstract class SQLQueryBuilder<
      * Ensures order is preserved
      * For example get users [1, 2, 4] returns users [1, 2, 4]
      * @param params
+     * @deprecated compound loader is a more general case
      */
     public async byColumnLoader(params: { column: TblColumn; keys: readonly TblKey[] }): Promise<(TblRow | null)[]> {
         const { column, keys } = params;
@@ -87,41 +88,36 @@ export abstract class SQLQueryBuilder<
     /**
      * Load a single row for each input compound key
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
-     * @param keys - the load key i.e. { user_id: 3, post_id: 5 }[]
+     * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    private async byCompoundColumnLoader(keys: readonly PartialTblRow[]): Promise<(TblRow | null)[]> {
+    private async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
+        const { keys } = params;
         // const columns = Object.keys(keys);
         // const values = Object.values(keys);
 
-        // Need to make sure order of keys matches columns in WHERE
+        // get the key columns to load on
         const columns = Object.keys(keys[0]);
 
-        const values: (string | number)[][] = [];
-        for (let row of keys) {
-            let vals = [];
-            for (let column of columns) {
-                // @ts-ignore
-                vals.push(row[column]);
-            }
-        }
+        // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [user_id, post_id], [3, 5]
+        const loadValues = keys.map<(string | number)[]>((k) => {
+            // @ts-ignore
+            return columns.map((col) => k[col]);
+        });
 
-        let query = knex()(this.tableName)
-            .select()
-            .whereIn(
-                Object.keys(keys),
-                values,
-            );
+        let query = knex()(this.tableName).select().whereIn(columns, loadValues);
 
-        _logger.debug('SQL executing loading: %s', query.toSQL().sql);
+        _logger.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 
-        // TODO:- work this out
         // join multiple keys into a unique string to allow mapping to dictionary
-        const sortKeys = ids.map((id) => [id.user_id, id.post_id].join(':'));
-        // map rows to dictionary against the same key strings
-        const keyed = _.keyBy(rows, (row) => [row.user_id, row.post_id].join(':'));
+        // again map columns to make sure order is preserved
+        // @ts-ignore
+        const sortKeys = keys.map((k) => columns.map((col) => k[col]).join(':'));
+        // map rows to dictionary against the same key strings - again preserving key order
+        const keyed = _.keyBy(rows, (row) => columns.map((col) => row[col]).join(':'));
 
+        // map rows back to key order
         return sortKeys.map((k) => {
             if (keyed[k]) return keyed[k];
             _logger.debug(`Missing row for feedback: ${k}`);
@@ -129,16 +125,16 @@ export abstract class SQLQueryBuilder<
         });
     }
 
-    private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
-        { user_id: number; post_id: number },
-        FeedbackDTO | null
-    >((ids) => {
-        return this.loadFeedback(ids);
-    });
-
-    public feedbackByPostIdAndUserId(post_id: number, user_id: number) {
-        return this.FeedbackByPostIdAndUserIdLoader.load({ user_id, post_id });
-    }
+    // private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
+    //     { user_id: number; post_id: number },
+    //     FeedbackDTO | null
+    // >((ids) => {
+    //     return this.loadFeedback(ids);
+    // });
+    //
+    // public feedbackByPostIdAndUserId(post_id: number, user_id: number) {
+    //     return this.FeedbackByPostIdAndUserIdLoader.load({ user_id, post_id });
+    // }
 
     /**
      * Complex find rows from a table
@@ -237,7 +233,7 @@ export abstract class SQLQueryBuilder<
 
         // resolve each where clause
         // can be either a where block or a combiner
-        // recurses tree
+        // recurse the where tree
         const resolveWhere = (subQuery: any, builder: QueryBuilder) => {
             for (let [column, value] of Object.entries(subQuery)) {
                 // @ts-ignore
