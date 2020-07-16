@@ -195,7 +195,7 @@ export abstract class SQLQueryBuilder<
         orderBy?: TblOrderBy;
         includeDeleted?: boolean;
     }): Promise<TblRow[]> {
-        const { orderBy, where, includeDeleted } = params;
+        const { orderBy, first, where, includeDeleted } = params;
         let query = knex()(this.tableName).select();
 
         enum operators {
@@ -343,6 +343,9 @@ export abstract class SQLQueryBuilder<
             for (let [column, direction] of Object.entries(orderBy)) {
                 query.orderBy(column, direction);
             }
+        }
+        if (first) {
+            query.limit(first);
         }
 
         if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });

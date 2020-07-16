@@ -170,7 +170,7 @@ class SQLQueryBuilder {
      */
     findMany(params) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { orderBy, where, includeDeleted } = params;
+            const { orderBy, first, where, includeDeleted } = params;
             let query = index_1.knex()(this.tableName).select();
             let operators;
             (function (operators) {
@@ -313,6 +313,9 @@ class SQLQueryBuilder {
                 for (let [column, direction] of Object.entries(orderBy)) {
                     query.orderBy(column, direction);
                 }
+            }
+            if (first) {
+                query.limit(first);
             }
             if (!includeDeleted && this.hasSoftDelete())
                 query.where({ [this.softDeleteColumnString]: false });

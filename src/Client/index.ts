@@ -8,7 +8,7 @@ attachOnDuplicateUpdate();
 // INTERNAL USE
 //
 export { SQLQueryBuilder } from './QueryBuilders/SQLQueryBuilder';
-export  * from './QueryBuilders/QueryTypes';
+export * from './QueryBuilders/QueryTypes';
 
 const state: { knex: Knex<any, unknown[]> | undefined } = {
     knex: undefined,
@@ -26,14 +26,14 @@ export interface NodentConfig {
     logLevel?: LogLevel;
 }
 
-const initialize = (knex: Knex<any, unknown[]>, config: NodentConfig) => {
+const initialize = (_knex?: Knex<any, unknown[]>, config?: NodentConfig, connection?: any) => {
     const useConfig = {
         logLevel: LogLevel.info,
         ...config,
     };
     buildLogger(useConfig);
 
-    state.knex = knex;
+    state.knex = Knex(connection);
     _logger.info('Initialising Nodent with Knex instance');
 };
 

@@ -7,6 +7,6 @@ export interface NodentConfig {
     logLevel?: LogLevel;
 }
 declare const _default: {
-    initialize: (knex: Knex<any, unknown[]>, config: NodentConfig) => void;
+    initialize: (_knex?: Knex<any, unknown[]> | undefined, config?: NodentConfig | undefined, connection?: any) => void;
 };
 export default _default;

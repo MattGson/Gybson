@@ -23,6 +23,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.knex = void 0;
+const Knex = require("knex");
 const knex_duplicate_key_1 = require("./lib/knex.duplicate.key");
 const logging_1 = __importStar(require("./lib/logging"));
 knex_duplicate_key_1.attachOnDuplicateUpdate();
@@ -40,10 +41,10 @@ exports.knex = () => {
         throw new Error('Nodent must be configured with a knex instance');
     return state.knex;
 };
-const initialize = (knex, config) => {
+const initialize = (_knex, config, connection) => {
     const useConfig = Object.assign({ logLevel: logging_1.LogLevel.info }, config);
     logging_1.buildLogger(useConfig);
-    state.knex = knex;
+    state.knex = Knex(connection);
     logging_1.default.info('Initialising Nodent with Knex instance');
 };
 exports.default = {
