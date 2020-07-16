@@ -41,13 +41,13 @@ exports.knex = () => {
         throw new Error('Nodent must be configured with a knex instance');
     return state.knex;
 };
-const initialize = (_knex, config, connection) => {
+const init = (connection, config) => {
     const useConfig = Object.assign({ logLevel: logging_1.LogLevel.info }, config);
     logging_1.buildLogger(useConfig);
     state.knex = Knex(connection);
-    logging_1.default.info('Initialising Nodent with Knex instance');
+    logging_1.default.info('Initialising Nodent...');
 };
 exports.default = {
-    initialize,
+    init,
 };
 //# sourceMappingURL=index.js.map

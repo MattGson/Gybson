@@ -1,7 +1,8 @@
-const { createLogger, format, transports } = require('winston');
+import { createLogger, format, transports } from 'winston';
+import * as winston from "winston";
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 
-let logger: Logger;
+let logger: winston.Logger;
 
 export interface Logger {
     debug(...params: any): void;
@@ -18,7 +19,7 @@ export enum LogLevel {
 }
 
 export const buildLogger = (config: { logLevel: LogLevel }) => {
-    const consoleTransport = {
+    const console = {
         format: combine(
             colorize(),
             splat(),
@@ -38,14 +39,11 @@ export const buildLogger = (config: { logLevel: LogLevel }) => {
         ),
         level: config.logLevel,
         defaultMeta: { service: 'Nodent' },
-        transports: [new transports.Console(consoleTransport)],
+        transports: [],
     });
+    logger.add(new transports.Console(console));
+    logger.exceptions.handle(new transports.Console(console));
 };
 
 // @ts-ignore
-export default {
-    info: console.log,
-    debug: console.log,
-    warn: console.log,
-    error: console.log,
-}
+export default logger;
