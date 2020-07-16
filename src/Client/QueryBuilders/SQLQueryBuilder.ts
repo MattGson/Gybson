@@ -178,20 +178,11 @@ export abstract class SQLQueryBuilder<
             }
         };
 
-        //query.where(function() {
-        //
-        //                 this.where('post_messages.message', 'like', search)
-        //                     .orWhere('users.fname', 'like', sargableSearch)
-        //                     .orWhere('users.lname', 'like', sargableSearch);
-        //             });
-
         // resolve each where clause
         // can be either a where block or a combiner
+        // recurses tree
         const resolveWhere = (subQuery: any, builder: QueryBuilder) => {
-            console.log(subQuery);
             for (let [column, value] of Object.entries(subQuery)) {
-                console.log('CLAUSE: ', column, value);
-
                 // @ts-ignore
                 if (!combiners[column]) {
                     // resolve leaf node
@@ -204,8 +195,27 @@ export abstract class SQLQueryBuilder<
                         builder.where(function () {
                             // @ts-ignore
                             for (let clause of value) {
-                                console.log('CLAUSE: ', clause);
                                 resolveWhere(clause, this);
+                            }
+                        });
+                        break;
+                    case combiners.OR:
+                        builder.where(function () {
+                            // @ts-ignore
+                            for (let clause of value) {
+                                this.orWhere(function () {
+                                    resolveWhere(clause, this);
+                                });
+                            }
+                        });
+                        break;
+                    case combiners.NOT:
+                        builder.where(function () {
+                            // @ts-ignore
+                            for (let clause of value) {
+                                this.andWhereNot(function () {
+                                    resolveWhere(clause, this);
+                                });
                             }
                         });
                         break;
@@ -214,12 +224,6 @@ export abstract class SQLQueryBuilder<
                 }
             }
         };
-
-        // const buildWhere = (key: keyof WhereBase, value: any) => {
-        //     if (typeof value === 'string') {
-        //         query.andWhere;
-        //     }
-        // };
 
         if (where) {
             resolveWhere(where, query);
