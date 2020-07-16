@@ -1,13 +1,17 @@
 import _ from 'lodash';
-import { Introspection, KeyDefinition, ColumnDefinition, EnumDefinitions } from '../Introspection/IntrospectionTypes';
+import {
+    Introspection,
+    KeyDefinition,
+    ColumnDefinition,
+    EnumDefinitions,
+    TableDefinition,
+} from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 
 interface BuilderOptions {
     rowTypeSuffix: string;
     softDeleteColumn?: string;
 }
-
-const SOFT_DELETE_COLUMN = 'deleted';
 
 /**
  * Builds db client methods for a table
@@ -25,6 +29,7 @@ export class TableClientBuilder {
     private readonly options: BuilderOptions;
     private softDeleteColumn?: string;
     private loaders: string[] = [];
+    private types?: string;
 
     public constructor(table: string, enums: EnumDefinitions, options: BuilderOptions) {
         this.entityName = TableClientBuilder.PascalCase(table);
@@ -51,6 +56,9 @@ export class TableClientBuilder {
             this.options.softDeleteColumn && columns[this.options.softDeleteColumn]
                 ? this.options.softDeleteColumn
                 : undefined;
+
+        // TODO:- work out where this goes
+        this.types = this.buildQueryTypes(columns);
 
         const tableKeys = await introspection.getTableKeys(this.table);
         // filter duplicate columns
@@ -81,12 +89,14 @@ export class TableClientBuilder {
         const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
-            import { QueryBuilder } from 'nodent';
+            import { QueryBuilder, Order } from 'nodent';
             import { ${this.table} } from './db-schema';
 
             export type ${rowTypeName} = ${this.table};
             export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
             export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
+            
+            ${this.types}
 
              export default class ${
                  this.className
@@ -97,6 +107,49 @@ export class TableClientBuilder {
                 ${content}
             }
             `;
+    }
+
+    private buildQueryTypes(table: TableDefinition) {
+        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
+        const WhereName = `${this.entityName}Where`;
+
+        const whereTypeForColumn = (col: ColumnDefinition) => {
+            if (!col.tsType) return '';
+            return `${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}}`;
+        };
+
+        return `
+                
+                import { Order, NumberWhere, NumberWhereNullable, StringWhere, StringWhereNullable, BooleanWhere, DateWhere, DateWhereNullable } from 'nodent';
+               
+                export type ${rowTypeName} = ${this.table};
+                export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
+                export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
+                
+                export type ${WhereName} = {
+                    ${Object.values(table).map((col) => {
+                        return `${col.columnName}?: ${col.tsType} | ${whereTypeForColumn(col)};`;
+                    }).join(' ')}
+                    AND?: ${WhereName} | null;
+                    OR?: ${WhereName} | null;
+                    NOT?: ${WhereName} | null;
+                };
+                
+                
+                export type ${this.table}OrderByInput = {
+                    ${Object.values(table).map((col) => {
+                        return `${col.columnName}?: Order;`;
+                    }).join(' ')}
+                };
+                
+                export type ${this.table}FindManyArgs = {
+                    where?: ${WhereName};
+                    first?: number;
+                    after?: ${columnTypeName};
+                    orderBy?: ${this.table}OrderByInput;
+                };
+   
+        `;
     }
 
     /**

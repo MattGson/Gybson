@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TableClientBuilder = void 0;
 const lodash_1 = __importDefault(require("lodash"));
 const CardinalityResolver_1 = require("./CardinalityResolver");
-const SOFT_DELETE_COLUMN = 'deleted';
 /**
  * Builds db client methods for a table
  */
@@ -44,6 +43,8 @@ class TableClientBuilder {
                 this.options.softDeleteColumn && columns[this.options.softDeleteColumn]
                     ? this.options.softDeleteColumn
                     : undefined;
+            // TODO:- work out where this goes
+            this.types = this.buildQueryTypes(columns);
             const tableKeys = yield introspection.getTableKeys(this.table);
             // filter duplicate columns
             const uniqueKeys = lodash_1.default.keyBy(tableKeys, 'columnName');
@@ -69,12 +70,14 @@ class TableClientBuilder {
         const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
-            import { QueryBuilder } from 'nodent';
+            import { QueryBuilder, Order } from 'nodent';
             import { ${this.table} } from './db-schema';
 
             export type ${rowTypeName} = ${this.table};
             export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
             export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
+            
+            ${this.types}
 
              export default class ${this.className} extends QueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}> {
                     constructor() {
@@ -83,6 +86,47 @@ class TableClientBuilder {
                 ${content}
             }
             `;
+    }
+    buildQueryTypes(table) {
+        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
+        const WhereName = `${this.entityName}Where`;
+        const whereTypeForColumn = (col) => {
+            if (!col.tsType)
+                return '';
+            return `${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}}`;
+        };
+        return `
+                
+                import { Order, NumberWhere, NumberWhereNullable, StringWhere, StringWhereNullable, BooleanWhere, DateWhere, DateWhereNullable } from 'nodent';
+               
+                export type ${rowTypeName} = ${this.table};
+                export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
+                export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
+                
+                export type ${WhereName} = {
+                    ${Object.values(table).map((col) => {
+            return `${col.columnName}?: ${col.tsType} | ${whereTypeForColumn(col)};`;
+        }).join(' ')}
+                    AND?: ${WhereName} | null;
+                    OR?: ${WhereName} | null;
+                    NOT?: ${WhereName} | null;
+                };
+                
+                
+                export type ${this.table}OrderByInput = {
+                    ${Object.values(table).map((col) => {
+            return `${col.columnName}?: Order;`;
+        }).join(' ')}
+                };
+                
+                export type ${this.table}FindManyArgs = {
+                    where?: ${WhereName};
+                    first?: number;
+                    after?: ${columnTypeName};
+                    orderBy?: ${this.table}OrderByInput;
+                };
+   
+        `;
     }
     /**
      * Build a public interface for a loader

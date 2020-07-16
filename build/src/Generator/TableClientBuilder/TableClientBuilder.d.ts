@@ -19,10 +19,12 @@ export declare class TableClientBuilder {
     private readonly options;
     private softDeleteColumn?;
     private loaders;
+    private types?;
     constructor(table: string, enums: EnumDefinitions, options: BuilderOptions);
     private static PascalCase;
     build(introspection: Introspection): Promise<string>;
     private buildTemplate;
+    private buildQueryTypes;
     /**
      * Build a public interface for a loader
      * Can optionally include soft delete filtering

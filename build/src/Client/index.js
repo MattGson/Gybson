@@ -18,6 +18,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.knex = void 0;
 const knex_duplicate_key_1 = require("./lib/knex.duplicate.key");
@@ -28,6 +31,7 @@ knex_duplicate_key_1.attachOnDuplicateUpdate();
 //
 var QueryBuilder_1 = require("./QueryBuilders/QueryBuilder");
 Object.defineProperty(exports, "QueryBuilder", { enumerable: true, get: function () { return QueryBuilder_1.QueryBuilder; } });
+__exportStar(require("./QueryBuilders/QueryTypes"), exports);
 const state = {
     knex: undefined,
 };
