@@ -9,6 +9,7 @@ import { QueryBuilder } from 'knex';
 export abstract class SQLQueryBuilder<
     TblRow,
     TblColumn extends string,
+    TblColumnMap,
     TblWhere extends WhereBase,
     TblOrderBy extends OrderByBase,
     PartialTblRow = Partial<TblRow>
@@ -362,22 +363,26 @@ export abstract class SQLQueryBuilder<
     public async upsert(params: {
         connection?: PoolConnection;
         values: PartialTblRow[];
-        reinstateSoftDeletedRows: boolean;
-        updateColumns: TblColumn[];
+        reinstateSoftDeletedRows?: boolean;
+        updateColumns: Partial<TblColumnMap>;
     }): Promise<number | null> {
         const { values, connection, reinstateSoftDeletedRows, updateColumns } = params;
+
+        const columnsToUpdate: string[] = [];
+        for (let [column, update] of Object.entries(updateColumns)) {
+            if (update) columnsToUpdate.push(column);
+        }
 
         let insertRows = values;
         if (insertRows.length < 1) {
             _logger.warn('Persistors.upsert: No values passed.');
             return null;
         }
-        if (updateColumns.length < 1 && !reinstateSoftDeletedRows) {
+        if (columnsToUpdate.length < 1 && !reinstateSoftDeletedRows) {
             _logger.warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
             return null;
         }
 
-        const columnsToUpdate: string[] = updateColumns;
         // add deleted column to all records
         if (reinstateSoftDeletedRows && this.hasSoftDelete()) {
             columnsToUpdate.push(this.softDeleteColumnString);

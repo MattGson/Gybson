@@ -10,6 +10,7 @@ export declare class TableClientBuilder {
     readonly entityName: string;
     readonly typeNames: {
         rowTypeName: string;
+        columnMapTypeName: string;
         columnTypeName: string;
         valueTypeName: string;
         whereTypeName: string;

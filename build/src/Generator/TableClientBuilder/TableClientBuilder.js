@@ -29,6 +29,7 @@ class TableClientBuilder {
         this.typeNames = {
             rowTypeName: `${this.className}${options.rowTypeSuffix || 'Row'}`,
             columnTypeName: `${this.className}Column`,
+            columnMapTypeName: `${this.className}ColumnMap`,
             valueTypeName: `${this.className}Value`,
             whereTypeName: `${this.className}Where`,
             orderByTypeName: `${this.className}OrderBy`,
@@ -74,7 +75,7 @@ class TableClientBuilder {
         });
     }
     buildTemplate(content) {
-        const { rowTypeName, columnTypeName, whereTypeName, orderByTypeName } = this.typeNames;
+        const { rowTypeName, columnTypeName, columnMapTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { SQLQueryBuilder } from 'nodent';
@@ -82,7 +83,7 @@ class TableClientBuilder {
             
             ${this.types}
 
-             export default class ${this.className} extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${whereTypeName}, ${orderByTypeName}> {
+             export default class ${this.className} extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}> {
                     constructor() {
                         super('${this.table}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }
@@ -92,7 +93,7 @@ class TableClientBuilder {
     }
     // TODO:- where should this go?
     buildQueryTypes(table) {
-        const { rowTypeName, columnTypeName, valueTypeName, whereTypeName, orderByTypeName } = this.typeNames;
+        const { rowTypeName, columnTypeName, columnMapTypeName, valueTypeName, whereTypeName, orderByTypeName, } = this.typeNames;
         const primitives = {
             string: true,
             number: true,
@@ -124,6 +125,14 @@ class TableClientBuilder {
                 export type ${rowTypeName} = ${this.table};
                 export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
                 export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
+                
+                export type ${columnMapTypeName} = {
+                    ${Object.values(table)
+            .map((col) => {
+            return `${col.columnName}: boolean;`;
+        })
+            .join(' ')}
+                }
                 
                 export type ${whereTypeName} = {
                     ${Object.values(table)

@@ -333,16 +333,20 @@ class SQLQueryBuilder {
     upsert(params) {
         return __awaiter(this, void 0, void 0, function* () {
             const { values, connection, reinstateSoftDeletedRows, updateColumns } = params;
+            const columnsToUpdate = [];
+            for (let [column, update] of Object.entries(updateColumns)) {
+                if (update)
+                    columnsToUpdate.push(column);
+            }
             let insertRows = values;
             if (insertRows.length < 1) {
                 logging_1.default.warn('Persistors.upsert: No values passed.');
                 return null;
             }
-            if (updateColumns.length < 1 && !reinstateSoftDeletedRows) {
+            if (columnsToUpdate.length < 1 && !reinstateSoftDeletedRows) {
                 logging_1.default.warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
                 return null;
             }
-            const columnsToUpdate = updateColumns;
             // add deleted column to all records
             if (reinstateSoftDeletedRows && this.hasSoftDelete()) {
                 columnsToUpdate.push(this.softDeleteColumnString);
