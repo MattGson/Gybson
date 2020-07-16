@@ -1,4 +1,4 @@
-const { createLogger, format } = require('winston');
+const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 
 let logger: Logger;
@@ -38,9 +38,14 @@ export const buildLogger = (config: { logLevel: LogLevel }) => {
         ),
         level: config.logLevel,
         defaultMeta: { service: 'Nodent' },
-        transports: [consoleTransport],
+        transports: [new transports.Console(consoleTransport)],
     });
 };
 
 // @ts-ignore
-export default logger;
+export default {
+    info: console.log,
+    debug: console.log,
+    warn: console.log,
+    error: console.log,
+}

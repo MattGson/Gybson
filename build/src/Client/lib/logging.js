@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildLogger = exports.LogLevel = void 0;
-const { createLogger, format } = require('winston');
+const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 let logger;
 var LogLevel;
@@ -21,9 +21,14 @@ exports.buildLogger = (config) => {
         }), json()),
         level: config.logLevel,
         defaultMeta: { service: 'Nodent' },
-        transports: [consoleTransport],
+        transports: [new transports.Console(consoleTransport)],
     });
 };
 // @ts-ignore
-exports.default = logger;
+exports.default = {
+    info: console.log,
+    debug: console.log,
+    warn: console.log,
+    error: console.log,
+};
 //# sourceMappingURL=logging.js.map

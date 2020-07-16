@@ -29,8 +29,8 @@ knex_duplicate_key_1.attachOnDuplicateUpdate();
 //
 // INTERNAL USE
 //
-var QueryBuilder_1 = require("./QueryBuilders/QueryBuilder");
-Object.defineProperty(exports, "QueryBuilder", { enumerable: true, get: function () { return QueryBuilder_1.QueryBuilder; } });
+var SQLQueryBuilder_1 = require("./QueryBuilders/SQLQueryBuilder");
+Object.defineProperty(exports, "SQLQueryBuilder", { enumerable: true, get: function () { return SQLQueryBuilder_1.SQLQueryBuilder; } });
 __exportStar(require("./QueryBuilders/QueryTypes"), exports);
 const state = {
     knex: undefined,

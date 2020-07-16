@@ -72,12 +72,12 @@ class TableClientBuilder {
         const { rowTypeName, columnTypeName, valueTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
-            import { QueryBuilder } from 'nodent';
+            import { SQLQueryBuilder } from 'nodent';
             import { ${this.table} } from './db-schema';
             
             ${this.types}
 
-             export default class ${this.className} extends QueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}, ${whereTypeName}, ${orderByTypeName}> {
+             export default class ${this.className} extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}, ${whereTypeName}, ${orderByTypeName}> {
                     constructor() {
                         super('${this.table}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }

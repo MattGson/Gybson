@@ -1,8 +1,8 @@
 import { PoolConnection } from 'promise-mysql';
-import {knex, OrderByBase, WhereBase} from '../index';
+import { Enumerable, knex, NumberWhere, OrderByBase, WhereBase } from '../index';
 import _logger from '../lib/logging';
 import _, { Dictionary } from 'lodash';
-import {QueryBuilder} from "knex";
+import { QueryBuilder } from 'knex';
 
 // TODO:- auto connection handling
 
@@ -88,8 +88,7 @@ export abstract class SQLQueryBuilder<
      * @param params
      *      * // TODO:-
      *              - cursor pagination,
-     *              - ordering - multiple directions and columns?, remove string constants?
-     *              - Joins (join filtering), eager load?
+     *              - Joins (join filtering (every - left join, some - inner join, none - outer join)), eager load?
      *              type defs
      *               - gen more comprehensive types for each table i.e. SelectionSet
      *                  - Split the type outputs by table maybe? Alias to more usable names
@@ -104,22 +103,132 @@ export abstract class SQLQueryBuilder<
         const { orderBy, where, includeDeleted } = params;
         let query = knex()(this.tableName).select();
 
-        const buildWhere = <T extends WhereBase>(clause: T, queryBuilder: QueryBuilder) => {
-
+        enum operators {
+            equals = 'equals',
+            not = 'not',
+            notIn = 'notIn',
+            lt = 'lt',
+            lte = 'lte',
+            gt = 'gt',
+            gte = 'gte',
         }
 
+        const combiners = {
+            AND: 'AND',
+            OR: 'OR',
+            NOT: 'NOT',
+        };
+
+        const primitives = {
+            string: true,
+            number: true,
+            bigint: true,
+            boolean: true,
+            date: true,
+        };
+
+        // resolves a single where block like:
+        // user_id: {
+        //      not_in: [3, 4],
+        //      gte: 1
+        // }
+        // These are the leafs in the recursion
+        const buildWhereBlock = (column: string, value: any, builder: QueryBuilder) => {
+            const valueType: string = typeof value;
+            // @ts-ignore - can't index
+            if (primitives[valueType]) {
+                // is a primitive so use equals clause
+                builder.where(column, value);
+            } else if (valueType === 'object') {
+                //is an object so need to work out operators
+                for (let [operator, val] of Object.entries(value)) {
+                    switch (operator) {
+                        case operators.equals:
+                            //@ts-ignore
+                            builder.where(column, val);
+                            break;
+                        case operators.not:
+                            //@ts-ignore
+                            builder.whereNot(column, val);
+                            break;
+                        case operators.notIn:
+                            // @ts-ignore
+                            builder.whereNotIn(column, val);
+                            break;
+                        case operators.lt:
+                            // @ts-ignore
+                            builder.where(column, '<', val);
+                            break;
+                        case operators.lte:
+                            // @ts-ignore
+                            builder.where(column, '<=', val);
+                            break;
+                        case operators.gt:
+                            // @ts-ignore
+                            builder.where(column, '>', val);
+                            break;
+                        case operators.gte:
+                            // @ts-ignore
+                            builder.whereNot(column, '>=', val);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        };
+
+        //query.where(function() {
+        //
+        //                 this.where('post_messages.message', 'like', search)
+        //                     .orWhere('users.fname', 'like', sargableSearch)
+        //                     .orWhere('users.lname', 'like', sargableSearch);
+        //             });
+
+        // resolve each where clause
+        // can be either a where block or a combiner
+        const resolveWhere = (subQuery: any, builder: QueryBuilder) => {
+            console.log(subQuery);
+            for (let [column, value] of Object.entries(subQuery)) {
+                console.log('CLAUSE: ', column, value);
+
+                // @ts-ignore
+                if (!combiners[column]) {
+                    // resolve leaf node
+                    buildWhereBlock(column, value, builder);
+                    continue;
+                }
+                // is a combiner so need to resolve each sub block recursively
+                switch (column) {
+                    case combiners.AND:
+                        builder.where(function () {
+                            // @ts-ignore
+                            for (let clause of value) {
+                                console.log('CLAUSE: ', clause);
+                                resolveWhere(clause, this);
+                            }
+                        });
+                        break;
+                    default:
+                        break;
+                }
+            }
+        };
+
+        // const buildWhere = (key: keyof WhereBase, value: any) => {
+        //     if (typeof value === 'string') {
+        //         query.andWhere;
+        //     }
+        // };
+
         if (where) {
-            query.where(where);
+            resolveWhere(where, query);
         }
 
         if (orderBy) {
-            // const { asc, desc, columns } = orderBy;
             for (let [column, direction] of Object.entries(orderBy)) {
                 query.orderBy(column, direction);
             }
-            // let direction = 'asc';
-            // if (desc && !asc) direction = 'desc';
-            // for (let order of columns) query.orderBy(order, direction);
         }
 
         if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
