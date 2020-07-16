@@ -28,7 +28,7 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    manyByCompoundColumnLoader(params: {
+    protected manyByCompoundColumnLoader(params: {
         keys: readonly PartialTblRow[];
         includeSoftDeleted?: boolean;
         orderBy: TblOrderBy;
@@ -38,7 +38,7 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    byCompoundColumnLoader(params: {
+    protected byCompoundColumnLoader(params: {
         keys: readonly PartialTblRow[];
     }): Promise<(TblRow | null)[]>;
     /**
