@@ -163,6 +163,9 @@ export abstract class SQLQueryBuilder<
             lte = 'lte',
             gt = 'gt',
             gte = 'gte',
+            contains = 'contains',
+            startsWith = 'startsWith',
+            endsWith = 'endsWith',
         }
 
         const combiners = {
@@ -222,6 +225,18 @@ export abstract class SQLQueryBuilder<
                         case operators.gte:
                             // @ts-ignore
                             builder.whereNot(column, '>=', val);
+                            break;
+                        case operators.contains:
+                            // @ts-ignore
+                            builder.where(column, 'like', `$%{val}%`);
+                            break;
+                        case operators.startsWith:
+                            // @ts-ignore
+                            builder.where(column, 'like', `${val}%`);
+                            break;
+                        case operators.endsWith:
+                            // @ts-ignore
+                            builder.where(column, 'like', `$%{val}`);
                             break;
                         default:
                             break;

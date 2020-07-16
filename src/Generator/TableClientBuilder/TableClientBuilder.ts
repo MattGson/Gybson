@@ -199,7 +199,7 @@ export class TableClientBuilder {
         `;
     }
 
-    /** // TODO:- add compound key loaders i.e. orgMembers.byOrgIdAndUserId()
+    /**
      *   // TODO:- compound loader is a more general case so maybe don't need this?
      * //  TODO  - Localise public methods
      * Build a loader to load a single row for each key
@@ -263,7 +263,7 @@ export class TableClientBuilder {
         // `;
     }
 
-    /**
+    /** TODO:- this should allow ordering on response - may need to change data loader to execute multiple times for each ordering specified
      * Build a loader to load many rows for each key
      * At the moment, this always filters out soft deleted rows
      * @param column
