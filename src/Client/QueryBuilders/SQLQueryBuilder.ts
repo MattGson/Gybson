@@ -1,14 +1,17 @@
 import { PoolConnection } from 'promise-mysql';
-import { knex } from '../index';
+import {knex, OrderByBase, WhereBase} from '../index';
 import _logger from '../lib/logging';
 import _, { Dictionary } from 'lodash';
+import {QueryBuilder} from "knex";
 
 // TODO:- auto connection handling
 
-export abstract class QueryBuilder<
+export abstract class SQLQueryBuilder<
     TblRow,
     TblColumn extends string,
     TblKey extends string | number,
+    TblWhere extends WhereBase,
+    TblOrderBy extends OrderByBase,
     PartialTblRow = Partial<TblRow>
 > {
     private tableName: string;
@@ -92,22 +95,31 @@ export abstract class QueryBuilder<
      *                  - Split the type outputs by table maybe? Alias to more usable names
      */
     public async findMany(params: {
-        orderBy?: { columns: TblColumn[]; asc?: boolean; desc?: boolean };
-        where?: PartialTblRow;
+        where?: TblWhere;
+        first?: number;
+        after?: TblColumn;
+        orderBy?: TblOrderBy;
         includeDeleted?: boolean;
     }): Promise<TblRow[]> {
         const { orderBy, where, includeDeleted } = params;
         let query = knex()(this.tableName).select();
+
+        const buildWhere = <T extends WhereBase>(clause: T, queryBuilder: QueryBuilder) => {
+
+        }
 
         if (where) {
             query.where(where);
         }
 
         if (orderBy) {
-            const { asc, desc, columns } = orderBy;
-            let direction = 'asc';
-            if (desc && !asc) direction = 'desc';
-            for (let order of columns) query.orderBy(order, direction);
+            // const { asc, desc, columns } = orderBy;
+            for (let [column, direction] of Object.entries(orderBy)) {
+                query.orderBy(column, direction);
+            }
+            // let direction = 'asc';
+            // if (desc && !asc) direction = 'desc';
+            // for (let order of columns) query.orderBy(order, direction);
         }
 
         if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });

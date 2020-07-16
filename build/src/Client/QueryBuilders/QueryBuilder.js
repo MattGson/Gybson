@@ -95,12 +95,13 @@ class QueryBuilder {
                 query.where(where);
             }
             if (orderBy) {
-                const { asc, desc, columns } = orderBy;
-                let direction = 'asc';
-                if (desc && !asc)
-                    direction = 'desc';
-                for (let order of columns)
-                    query.orderBy(order, direction);
+                // const { asc, desc, columns } = orderBy;
+                for (let [column, direction] of Object.entries(orderBy)) {
+                    query.orderBy(column, direction);
+                }
+                // let direction = 'asc';
+                // if (desc && !asc) direction = 'desc';
+                // for (let order of columns) query.orderBy(order, direction);
             }
             if (!includeDeleted && this.hasSoftDelete())
                 query.where({ [this.softDeleteColumnString]: false });

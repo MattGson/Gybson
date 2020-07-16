@@ -30,6 +30,8 @@ class TableClientBuilder {
             rowTypeName: `${this.className}${options.rowTypeSuffix || 'Row'}`,
             columnTypeName: `${this.className}Column`,
             valueTypeName: `${this.className}Value`,
+            whereTypeName: `${this.className}Where`,
+            orderByTypeName: `${this.className}OrderBy`,
         };
     }
     static PascalCase(name) {
@@ -67,19 +69,15 @@ class TableClientBuilder {
     }
     buildTemplate(content) {
         // TODO:- this should be in type gen
-        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
+        const { rowTypeName, columnTypeName, valueTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
-            import { QueryBuilder, Order } from 'nodent';
+            import { QueryBuilder } from 'nodent';
             import { ${this.table} } from './db-schema';
-
-            export type ${rowTypeName} = ${this.table};
-            export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
-            export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
             
             ${this.types}
 
-             export default class ${this.className} extends QueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}> {
+             export default class ${this.className} extends QueryBuilder<${rowTypeName}, ${columnTypeName}, ${valueTypeName}, ${whereTypeName}, ${orderByTypeName}> {
                     constructor() {
                         super('${this.table}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }
@@ -87,45 +85,52 @@ class TableClientBuilder {
             }
             `;
     }
+    // TODO:- where should this go?
     buildQueryTypes(table) {
-        const { rowTypeName, columnTypeName, valueTypeName } = this.typeNames;
-        const WhereName = `${this.entityName}Where`;
+        const { rowTypeName, columnTypeName, valueTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         const whereTypeForColumn = (col) => {
             if (!col.tsType)
                 return '';
-            return `${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}}`;
+            return `${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}`;
         };
         return `
                 
-                import { Order, NumberWhere, NumberWhereNullable, StringWhere, StringWhereNullable, BooleanWhere, DateWhere, DateWhereNullable } from 'nodent';
+                import { 
+                    Order, 
+                    Enumerable, 
+                    NumberWhere, 
+                    NumberWhereNullable, 
+                    StringWhere, 
+                    StringWhereNullable, 
+                    BooleanWhere, 
+                    BooleanWhereNullable, 
+                    DateWhere, 
+                    DateWhereNullable 
+                } from 'nodent';
                
                 export type ${rowTypeName} = ${this.table};
                 export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
                 export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
                 
-                export type ${WhereName} = {
-                    ${Object.values(table).map((col) => {
+                export type ${whereTypeName} = {
+                    ${Object.values(table)
+            .map((col) => {
             return `${col.columnName}?: ${col.tsType} | ${whereTypeForColumn(col)};`;
-        }).join(' ')}
-                    AND?: ${WhereName} | null;
-                    OR?: ${WhereName} | null;
-                    NOT?: ${WhereName} | null;
+        })
+            .join(' ')}
+                    AND?: Enumerable<${whereTypeName}>;
+                    OR?: Enumerable<${whereTypeName}>;
+                    NOT?: Enumerable<${whereTypeName}>;
                 };
                 
                 
-                export type ${this.table}OrderByInput = {
-                    ${Object.values(table).map((col) => {
+                export type ${orderByTypeName} = {
+                    ${Object.values(table)
+            .map((col) => {
             return `${col.columnName}?: Order;`;
-        }).join(' ')}
+        })
+            .join(' ')}
                 };
-                
-                export type ${this.table}FindManyArgs = {
-                    where?: ${WhereName};
-                    first?: number;
-                    after?: ${columnTypeName};
-                    orderBy?: ${this.table}OrderByInput;
-                };
-   
         `;
     }
     /**

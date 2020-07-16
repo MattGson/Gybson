@@ -12,6 +12,8 @@ export declare class TableClientBuilder {
         rowTypeName: string;
         columnTypeName: string;
         valueTypeName: string;
+        whereTypeName: string;
+        orderByTypeName: string;
     };
     readonly className: string;
     readonly table: string;

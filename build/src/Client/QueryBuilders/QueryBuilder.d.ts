@@ -1,5 +1,8 @@
 import { PoolConnection } from 'promise-mysql';
-export declare abstract class QueryBuilder<TblRow, TblColumn extends string, TblKey extends string | number, PartialTblRow = Partial<TblRow>> {
+import { Order } from '../index';
+export declare abstract class QueryBuilder<TblRow, TblColumn extends string, TblKey extends string | number, TblWhere, TblOrderBy extends {
+    [column: string]: Order;
+}, PartialTblRow = Partial<TblRow>> {
     private tableName;
     private softDeleteColumn?;
     protected constructor(tableName: string, softDeleteColumn: string);
@@ -43,12 +46,10 @@ export declare abstract class QueryBuilder<TblRow, TblColumn extends string, Tbl
      *                  - Split the type outputs by table maybe? Alias to more usable names
      */
     findMany(params: {
-        orderBy?: {
-            columns: TblColumn[];
-            asc?: boolean;
-            desc?: boolean;
-        };
-        where?: PartialTblRow;
+        where?: TblWhere;
+        first?: number;
+        after?: TblColumn;
+        orderBy?: TblOrderBy;
         includeDeleted?: boolean;
     }): Promise<TblRow[]>;
     /**

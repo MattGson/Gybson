@@ -2,6 +2,13 @@
 export declare type Enumerable<T> = T | Array<T>;
 export type Order = 'asc' | 'desc';
 
+export type OrderByBase = { [column: string]: Order | undefined };
+export type WhereBase = { [column: string]: any } & {
+    AND?: Enumerable<WhereBase>;
+    OR?: Enumerable<WhereBase>;
+    NOT?: Enumerable<WhereBase>;
+};
+
 export type NumberWhere = {
     equals?: number;
     not?: number | NumberWhere;
@@ -57,25 +64,29 @@ export type BooleanWhere = {
     not?: boolean | BooleanWhere;
 };
 
+export type BooleanWhereNullable = {
+    equals?: boolean | null;
+    not?: boolean | BooleanWhere | null;
+};
 
 export type DateWhereNullable = {
-    equals?: Date | string | null
-    not?: Date | string | null | DateWhereNullable
-    in?: Enumerable<Date | string> | null
-    notIn?: Enumerable<Date | string> | null
-    lt?: Date | string | null
-    lte?: Date | string | null
-    gt?: Date | string | null
-    gte?: Date | string | null
-}
+    equals?: Date | string | null;
+    not?: Date | string | null | DateWhereNullable;
+    in?: Enumerable<Date | string> | null;
+    notIn?: Enumerable<Date | string> | null;
+    lt?: Date | string | null;
+    lte?: Date | string | null;
+    gt?: Date | string | null;
+    gte?: Date | string | null;
+};
 
 export type DateWhere = {
-    equals?: Date | string
-    not?: Date | string | DateWhere
-    in?: Enumerable<Date | string> | null
-    notIn?: Enumerable<Date | string> | null
-    lt?: Date | string | null
-    lte?: Date | string | null
-    gt?: Date | string | null
-    gte?: Date | string | null
-}
+    equals?: Date | string;
+    not?: Date | string | DateWhere;
+    in?: Enumerable<Date | string> | null;
+    notIn?: Enumerable<Date | string> | null;
+    lt?: Date | string | null;
+    lte?: Date | string | null;
+    gt?: Date | string | null;
+    gte?: Date | string | null;
+};
