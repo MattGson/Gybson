@@ -88,7 +88,7 @@ export abstract class SQLQueryBuilder<
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    public async manyByCompoundColumnLoader(params: {
+    protected async manyByCompoundColumnLoader(params: {
         keys: readonly PartialTblRow[];
         includeSoftDeleted?: boolean;
         orderBy: TblOrderBy;
@@ -133,7 +133,7 @@ export abstract class SQLQueryBuilder<
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    public async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
+    protected async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
         const { keys } = params;
 
         // get the key columns to load on
