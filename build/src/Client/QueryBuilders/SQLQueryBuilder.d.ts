@@ -3,7 +3,7 @@ import { OrderByBase, WhereBase } from '../index';
 export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, TblWhere extends WhereBase, TblOrderBy extends OrderByBase, PartialTblRow = Partial<TblRow>> {
     private tableName;
     private softDeleteColumn?;
-    protected constructor(tableName: string, softDeleteColumn: string);
+    protected constructor(tableName: string, softDeleteColumn?: string);
     private hasSoftDelete;
     private get softDeleteColumnString();
     /**

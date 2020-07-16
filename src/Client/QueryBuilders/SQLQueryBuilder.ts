@@ -16,7 +16,7 @@ export abstract class SQLQueryBuilder<
     private tableName: string;
     private softDeleteColumn?: string;
 
-    protected constructor(tableName: string, softDeleteColumn: string) {
+    protected constructor(tableName: string, softDeleteColumn?: string) {
         this.tableName = tableName;
         this.softDeleteColumn = softDeleteColumn;
     }
