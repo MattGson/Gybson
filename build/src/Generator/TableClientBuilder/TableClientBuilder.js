@@ -48,20 +48,42 @@ class TableClientBuilder {
             // TODO:- work out where this goes
             this.types = this.buildQueryTypes(columns);
             const tableKeys = yield introspection.getTableKeys(this.table);
-            // filter duplicate columns
-            const uniqueKeys = lodash_1.default.keyBy(tableKeys, 'columnName');
-            Object.values(uniqueKeys).forEach((key) => {
-                const { columnName } = key;
-                const column = columns[columnName];
+            // const primaryKeys = _.keyBy(
+            //     tableKeys.filter((k) => k.constraintName === 'PRIMARY'),
+            //     (key) => key.columnName,
+            // );
+            const unique = CardinalityResolver_1.CardinalityResolver.getUniqueKeys(tableKeys);
+            const nonUnique = CardinalityResolver_1.CardinalityResolver.getNonUniqueKey(tableKeys);
+            if (this.table === 'wellness_surveys') {
+                console.log('TABLE: ', this.table);
+                console.log('UNI: ', unique);
+                console.log('NON UNI: ', nonUnique);
+                console.log('***********************');
+            }
+            unique.forEach((key) => {
                 // for now only accept loaders on string and number column types
-                if (column.tsType !== 'string' && column.tsType !== 'number')
-                    return;
-                const isMany = CardinalityResolver_1.CardinalityResolver.isToMany(columnName, tableKeys);
-                if (!isMany)
-                    this.addByColumnLoader(column);
-                else
-                    this.addManyByColumnLoader(column);
+                const keyColumns = key.map((k) => columns[k.columnName]);
+                for (let col of keyColumns) {
+                    if (col.tsType !== 'string' && col.tsType !== 'number')
+                        return;
+                }
+                this.addCompoundByColumnLoader(keyColumns);
             });
+            // filter duplicate columns
+            // const uniqueKeys = _.keyBy(tableKeys, (key) => key.columnName);
+            //
+            // Object.values(uniqueKeys).forEach((key: KeyDefinition) => {
+            //     const { columnName } = key;
+            //
+            //     const column: ColumnDefinition = columns[columnName];
+            //
+            //     // for now only accept loaders on string and number column types
+            //     if (column.tsType !== 'string' && column.tsType !== 'number') return;
+            //
+            //     const isMany = CardinalityResolver.isToMany(columnName, tableKeys);
+            //     if (!isMany) this.addByColumnLoader(column);
+            //     else this.addManyByColumnLoader(column);
+            // });
             return this.buildTemplate(this.loaders.join(`
         
         `));
@@ -186,9 +208,11 @@ class TableClientBuilder {
     addCompoundByColumnLoader(columns) {
         const { rowTypeName } = this.typeNames;
         const colNames = columns.map((col) => TableClientBuilder.PascalCase(col.columnName));
-        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType};`)} }`;
+        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)} }`;
         const loaderName = `${this.entityName}By${colNames.join('And')}Loader`;
         this.loaders.push(`
+
+                type
                  private readonly ${loaderName} = new DataLoader<${keyType}, ${rowTypeName} | null>(keys => {
                     return this.byCompoundColumnLoader({ keys });
                 });

@@ -1,9 +1,8 @@
 import { PoolConnection } from 'promise-mysql';
-import { Enumerable, knex, NumberWhere, OrderByBase, WhereBase } from '../index';
+import { knex, OrderByBase, WhereBase } from '../index';
 import _logger from '../lib/logging';
 import _, { Dictionary } from 'lodash';
 import { QueryBuilder } from 'knex';
-import { UsersDTO } from '../../Gen/Users';
 
 // TODO:- auto connection handling
 
@@ -90,7 +89,7 @@ export abstract class SQLQueryBuilder<
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    private async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
+    public async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
         const { keys } = params;
         // const columns = Object.keys(keys);
         // const values = Object.values(keys);
@@ -120,7 +119,7 @@ export abstract class SQLQueryBuilder<
         // map rows back to key order
         return sortKeys.map((k) => {
             if (keyed[k]) return keyed[k];
-            _logger.debug(`Missing row for feedback: ${k}`);
+            _logger.debug(`Missing row for ${this.tableName}, columns: ${columns.join(':')}, key: ${k}`);
             return null;
         });
     }

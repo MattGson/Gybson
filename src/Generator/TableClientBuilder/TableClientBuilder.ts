@@ -65,21 +65,33 @@ export class TableClientBuilder {
         this.types = this.buildQueryTypes(columns);
 
         const tableKeys = await introspection.getTableKeys(this.table);
-        // filter duplicate columns
-        const uniqueKeys = _.keyBy(tableKeys, 'columnName');
+        const unique = CardinalityResolver.getUniqueKeys(tableKeys);
+        const nonUnique = CardinalityResolver.getNonUniqueKey(tableKeys);
 
-        Object.values(uniqueKeys).forEach((key: KeyDefinition) => {
-            const { columnName } = key;
-
-            const column: ColumnDefinition = columns[columnName];
-
+        unique.forEach((key) => {
             // for now only accept loaders on string and number column types
-            if (column.tsType !== 'string' && column.tsType !== 'number') return;
+            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
+            for (let col of keyColumns) {
+                if (col.tsType !== 'string' && col.tsType !== 'number') return;
+            }
 
-            const isMany = CardinalityResolver.isToMany(columnName, tableKeys);
-            if (!isMany) this.addByColumnLoader(column);
-            else this.addManyByColumnLoader(column);
+            this.addCompoundByColumnLoader(keyColumns);
         });
+        // filter duplicate columns
+        // const uniqueKeys = _.keyBy(tableKeys, (key) => key.columnName);
+        //
+        // Object.values(uniqueKeys).forEach((key: KeyDefinition) => {
+        //     const { columnName } = key;
+        //
+        //     const column: ColumnDefinition = columns[columnName];
+        //
+        //     // for now only accept loaders on string and number column types
+        //     if (column.tsType !== 'string' && column.tsType !== 'number') return;
+        //
+        //     const isMany = CardinalityResolver.isToMany(columnName, tableKeys);
+        //     if (!isMany) this.addByColumnLoader(column);
+        //     else this.addManyByColumnLoader(column);
+        // });
 
         return this.buildTemplate(
             this.loaders.join(`
@@ -221,7 +233,7 @@ export class TableClientBuilder {
         const { rowTypeName } = this.typeNames;
 
         const colNames = columns.map((col) => TableClientBuilder.PascalCase(col.columnName));
-        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType};`)} }`;
+        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)} }`;
 
         const loaderName = `${this.entityName}By${colNames.join('And')}Loader`;
 
