@@ -87,21 +87,6 @@ export class TableClientBuilder {
 
             this.addCompoundManyByColumnLoader(keyColumns);
         });
-        // filter duplicate columns
-        // const uniqueKeys = _.keyBy(tableKeys, (key) => key.columnName);
-        //
-        // Object.values(uniqueKeys).forEach((key: KeyDefinition) => {
-        //     const { columnName } = key;
-        //
-        //     const column: ColumnDefinition = columns[columnName];
-        //
-        //     // for now only accept loaders on string and number column types
-        //     if (column.tsType !== 'string' && column.tsType !== 'number') return;
-        //
-        //     const isMany = CardinalityResolver.isToMany(columnName, tableKeys);
-        //     if (!isMany) this.addByColumnLoader(column);
-        //     else this.addManyByColumnLoader(column);
-        // });
 
         return this.buildTemplate(
             this.loaders.join(`
@@ -111,12 +96,11 @@ export class TableClientBuilder {
     }
 
     private buildTemplate(content: string) {
-        // TODO:- this should be in type gen
         const { rowTypeName, columnTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { SQLQueryBuilder } from 'nodent';
-            import { ${this.table} } from './db-schema';
+            import { ${this.table}, ${Object.keys(this.enums).join(',')} } from './db-schema';
             
             ${this.types}
 
@@ -135,9 +119,17 @@ export class TableClientBuilder {
     private buildQueryTypes(table: TableDefinition) {
         const { rowTypeName, columnTypeName, valueTypeName, whereTypeName, orderByTypeName } = this.typeNames;
 
+        const primitives = {
+            string: true,
+            number: true,
+            bigint: true,
+            boolean: true,
+            date: true,
+        };
         const whereTypeForColumn = (col: ColumnDefinition) => {
-            if (!col.tsType) return '';
-            return `${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}`;
+            // @ts-ignore - don't have where clause for special (enum) types
+            if (!col.tsType || !primitives[col.tsType]) return '';
+            return ` | ${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}`;
         };
 
         return `
@@ -162,7 +154,7 @@ export class TableClientBuilder {
                 export type ${whereTypeName} = {
                     ${Object.values(table)
                         .map((col) => {
-                            return `${col.columnName}?: ${col.tsType} | ${whereTypeForColumn(col)};`;
+                            return `${col.columnName}?: ${col.tsType} ${whereTypeForColumn(col)};`;
                         })
                         .join(' ')}
                     AND?: Enumerable<${whereTypeName}>;
