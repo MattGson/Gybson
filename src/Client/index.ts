@@ -28,59 +28,60 @@ export interface NodentConfig {
 }
 
 export interface MYSQLConnection {
-    client: 'mysql';
-    connection?: {
-        host?: string;
-        port?: number;
-        localAddress?: string;
-        socketPath?: string;
-        user?: string;
-        password?: string;
-        database?: string;
-        charset?: string;
-        timezone?: string;
-        connectTimeout?: number;
-        stringifyObjects?: boolean;
-        insecureAuth?: boolean;
-        typeCast?: any;
-        queryFormat?: (query: string, values: any) => string;
-        supportBigNumbers?: boolean;
-        bigNumberStrings?: boolean;
-        dateStrings?: boolean;
-        debug?: boolean;
-        trace?: boolean;
-        multipleStatements?: boolean;
-        flags?: string;
-        ssl?: string;
-        decimalNumbers?: boolean;
-    };
+    host?: string;
+    port?: number;
+    localAddress?: string;
+    socketPath?: string;
+    user?: string;
+    password?: string;
+    database?: string;
+    charset?: string;
+    timezone?: string;
+    connectTimeout?: number;
+    stringifyObjects?: boolean;
+    insecureAuth?: boolean;
+    typeCast?: any;
+    queryFormat?: (query: string, values: any) => string;
+    supportBigNumbers?: boolean;
+    bigNumberStrings?: boolean;
+    dateStrings?: boolean;
+    debug?: boolean;
+    trace?: boolean;
+    multipleStatements?: boolean;
+    flags?: string;
+    ssl?: string;
+    decimalNumbers?: boolean;
 }
 
 export interface PostgresConnection {
-    client: 'postgres';
-    connection?: {
-        user?: string;
-        database?: string;
-        password?: string;
-        port?: number;
-        host?: string;
-        connectionString?: string;
-        keepAlive?: boolean;
-        statement_timeout?: false | number;
-        connectionTimeoutMillis?: number;
-        keepAliveInitialDelayMillis?: number;
-        ssl?: boolean | ConnectionOptions;
-    };
+    user?: string;
+    database?: string;
+    password?: string;
+    port?: number;
+    host?: string;
+    connectionString?: string;
+    keepAlive?: boolean;
+    statement_timeout?: false | number;
+    connectionTimeoutMillis?: number;
+    keepAliveInitialDelayMillis?: number;
+    ssl?: boolean | ConnectionOptions;
 }
 
-const init = (connection: MYSQLConnection | PostgresConnection, config?: NodentConfig) => {
+const init = (config: {
+    client: 'mysql' | 'postgres';
+    connection?: MYSQLConnection | PostgresConnection;
+    config?: NodentConfig;
+}) => {
     const useConfig = {
         logLevel: LogLevel.info,
         ...config,
     };
     buildLogger(useConfig);
 
-    state.knex = Knex(connection);
+    state.knex = Knex({
+        client: config.client,
+        connection: config.connection,
+    });
     _logger.info('Initialising Nodent...');
 };
 
