@@ -29,6 +29,11 @@ exports.knex = () => {
         throw new Error('Nodent must be configured with a knex instance');
     return state.knex;
 };
+//
+// EXTERNAL USE
+//
+var logging_2 = require("./lib/logging");
+Object.defineProperty(exports, "LogLevel", { enumerable: true, get: function () { return logging_2.LogLevel; } });
 const init = (config) => {
     const useConfig = Object.assign({ logLevel: logging_1.LogLevel.info }, config);
     const logger = logging_1.buildLogger(useConfig);

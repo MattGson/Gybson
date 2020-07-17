@@ -5,6 +5,7 @@ import { ConnectionOptions } from 'tls';
 export { SQLQueryBuilder } from './QueryBuilders/SQLQueryBuilder';
 export * from './QueryBuilders/QueryTypes';
 export declare const knex: () => Knex<any, unknown[]>;
+export { LogLevel } from './lib/logging';
 export interface NodentConfig {
     logLevel?: LogLevel;
 }

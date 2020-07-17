@@ -1,9 +1,8 @@
 import { PoolConnection } from 'promise-mysql';
 import { knex, OrderByBase, WhereBase } from '../index';
-import { logger } from '../lib/logging';
-import _, { Dictionary } from 'lodash';
+import { _logger } from '../lib/logging';
+import _ from 'lodash';
 import { QueryBuilder } from 'knex';
-const _logger = logger();
 
 // TODO:- auto connection handling
 

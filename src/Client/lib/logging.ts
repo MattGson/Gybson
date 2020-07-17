@@ -6,11 +6,6 @@ let state: {
     logger?: winston.Logger;
 } = {};
 
-export const logger = (): winston.Logger => {
-    if (!state.logger) throw new Error('Logger not initialised');
-    return state.logger;
-};
-
 export enum LogLevel {
     info = 'info',
     warn = 'warn',
@@ -45,3 +40,6 @@ export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
     state.logger.exceptions.handle(new transports.Console(console));
     return state.logger;
 };
+
+// @ts-ignore - assume initialised
+export const _logger: winston.Logger = state.logger;

@@ -23,6 +23,7 @@ export const knex = () => {
 //
 // EXTERNAL USE
 //
+export { LogLevel } from './lib/logging';
 export interface NodentConfig {
     logLevel?: LogLevel;
 }

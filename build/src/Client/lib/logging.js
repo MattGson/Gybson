@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildLogger = exports.LogLevel = exports.logger = void 0;
+exports._logger = exports.buildLogger = exports.LogLevel = exports.logger = void 0;
 const winston_1 = require("winston");
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = winston_1.format;
 let state = {};
@@ -32,4 +32,6 @@ exports.buildLogger = (config) => {
     state.logger.exceptions.handle(new winston_1.transports.Console(console));
     return state.logger;
 };
+// @ts-ignore
+exports._logger = state.logger;
 //# sourceMappingURL=logging.js.map
