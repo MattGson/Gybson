@@ -1,15 +1,15 @@
 import { createLogger, format, transports } from 'winston';
-import * as winston from "winston";
+import * as winston from 'winston';
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 
-let logger: winston.Logger;
+let state: {
+    logger?: winston.Logger;
+} = {};
 
-export interface Logger {
-    debug(...params: any): void;
-    info(...params: any): void;
-    error(...params: any): void;
-    warn(...params: any): void;
-}
+export const logger = (): winston.Logger => {
+    if (!state.logger) throw new Error('Logger not initialised');
+    return state.logger;
+};
 
 export enum LogLevel {
     info = 'info',
@@ -28,7 +28,7 @@ export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
         ),
     };
 
-    logger = createLogger({
+    state.logger = createLogger({
         format: combine(
             errors({ stack: true }),
             splat(),
@@ -41,10 +41,7 @@ export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
         defaultMeta: { service: 'Nodent' },
         transports: [],
     });
-    logger.add(new transports.Console(console));
-    logger.exceptions.handle(new transports.Console(console));
-    return logger;
+    state.logger.add(new transports.Console(console));
+    state.logger.exceptions.handle(new transports.Console(console));
+    return state.logger;
 };
-
-// @ts-ignore
-export default logger;

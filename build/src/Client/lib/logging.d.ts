@@ -1,11 +1,5 @@
-import * as winston from "winston";
-declare let logger: winston.Logger;
-export interface Logger {
-    debug(...params: any): void;
-    info(...params: any): void;
-    error(...params: any): void;
-    warn(...params: any): void;
-}
+import * as winston from 'winston';
+export declare const logger: () => winston.Logger;
 export declare enum LogLevel {
     info = "info",
     warn = "warn",
@@ -15,4 +9,3 @@ export declare enum LogLevel {
 export declare const buildLogger: (config: {
     logLevel: LogLevel;
 }) => winston.Logger;
-export default logger;

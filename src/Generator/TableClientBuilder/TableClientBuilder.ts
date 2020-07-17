@@ -297,7 +297,7 @@ export class TableClientBuilder {
                     // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
                     return this.manyByCompoundColumnLoader({ keys, orderBy: first.orderBy });
                 }, {
-                    // ignore order for cache equivalency TODO - re-assess
+                    // ignore order for cache equivalency TODO - re-assess - will this compare objects properly?
                     cacheKeyFn: (k => ({...k, orderBy: {}}))
                 });
                 

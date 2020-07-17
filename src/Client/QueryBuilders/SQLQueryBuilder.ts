@@ -1,8 +1,9 @@
 import { PoolConnection } from 'promise-mysql';
 import { knex, OrderByBase, WhereBase } from '../index';
-import _logger from '../lib/logging';
+import { logger } from '../lib/logging';
 import _, { Dictionary } from 'lodash';
 import { QueryBuilder } from 'knex';
+const _logger = logger();
 
 // TODO:- auto connection handling
 
@@ -148,7 +149,7 @@ export abstract class SQLQueryBuilder<
 
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
 
-        _logger.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        _logger?.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 

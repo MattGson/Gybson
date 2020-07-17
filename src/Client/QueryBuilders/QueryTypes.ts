@@ -7,7 +7,7 @@ export type OrderByBase = { [column: string]: Order | undefined };
 export type WhereBase = { [column: string]: any } & {
     AND?: Enumerable<WhereBase>;
     OR?: Enumerable<WhereBase>;
-    NOT?: Enumerable<WhereBase>; // TODO
+    NOT?: Enumerable<WhereBase>;
 };
 
 // Types for where conditions
