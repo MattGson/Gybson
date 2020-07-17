@@ -18,7 +18,7 @@ export enum LogLevel {
     debug = 'debug',
 }
 
-export const buildLogger = (config: { logLevel: LogLevel }) => {
+export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
     const console = {
         format: combine(
             colorize(),
@@ -43,6 +43,7 @@ export const buildLogger = (config: { logLevel: LogLevel }) => {
     });
     logger.add(new transports.Console(console));
     logger.exceptions.handle(new transports.Console(console));
+    return logger;
 };
 
 // @ts-ignore

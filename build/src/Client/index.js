@@ -6,18 +6,6 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
 };
@@ -25,7 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.knex = void 0;
 const Knex = require("knex");
 const knex_duplicate_key_1 = require("./lib/knex.duplicate.key");
-const logging_1 = __importStar(require("./lib/logging"));
+const logging_1 = require("./lib/logging");
 knex_duplicate_key_1.attachOnDuplicateUpdate();
 //
 // INTERNAL USE
@@ -43,12 +31,12 @@ exports.knex = () => {
 };
 const init = (config) => {
     const useConfig = Object.assign({ logLevel: logging_1.LogLevel.info }, config);
-    logging_1.buildLogger(useConfig);
+    const logger = logging_1.buildLogger(useConfig);
     state.knex = Knex({
         client: config.client,
         connection: config.connection,
     });
-    logging_1.default.info('Initialising Nodent...');
+    logger.info('Initialising Nodent...');
 };
 exports.default = {
     init,

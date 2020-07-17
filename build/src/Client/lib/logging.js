@@ -25,6 +25,7 @@ exports.buildLogger = (config) => {
     });
     logger.add(new winston_1.transports.Console(console));
     logger.exceptions.handle(new winston_1.transports.Console(console));
+    return logger;
 };
 // @ts-ignore
 exports.default = logger;

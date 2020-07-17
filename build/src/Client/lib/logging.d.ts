@@ -14,5 +14,5 @@ export declare enum LogLevel {
 }
 export declare const buildLogger: (config: {
     logLevel: LogLevel;
-}) => void;
+}) => winston.Logger;
 export default logger;
