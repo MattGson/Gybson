@@ -73,6 +73,7 @@ async function generateClientIndex(builders: TableClientBuilder[], outdir: strin
         return {${clients}};
         };
         export default Nodent;
+        export type Nodent = ReturnType<typeof Nodent>;
     `;
 
     await writeTypescriptFile(index, outdir, 'index.ts');
