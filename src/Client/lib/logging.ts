@@ -41,5 +41,7 @@ export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
     return state.logger;
 };
 
-// @ts-ignore - assume initialised
-export const _logger: winston.Logger = state.logger;
+export const logger = (): winston.Logger => {
+    if (!state.logger) throw new Error('Must initialise the logger');
+    return state.logger;
+};

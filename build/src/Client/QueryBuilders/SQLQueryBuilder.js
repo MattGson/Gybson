@@ -104,7 +104,7 @@ class SQLQueryBuilder {
                     query.orderBy(column, direction);
                 }
             }
-            logging_1._logger.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+            logging_1.logger().debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
             const rows = yield query;
             // join multiple keys into a unique string to allow mapping to dictionary
             // again map columns to make sure order is preserved
@@ -131,7 +131,7 @@ class SQLQueryBuilder {
                 return columns.map((col) => k[col]);
             });
             let query = index_1.knex()(this.tableName).select().whereIn(columns, loadValues);
-            logging_1._logger === null || logging_1._logger === void 0 ? void 0 : logging_1._logger.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+            logging_1.logger().debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
             const rows = yield query;
             // join multiple keys into a unique string to allow mapping to dictionary
             // again map columns to make sure order is preserved
@@ -143,7 +143,7 @@ class SQLQueryBuilder {
             return sortKeys.map((k) => {
                 if (keyed[k])
                     return keyed[k];
-                logging_1._logger.debug(`Missing row for ${this.tableName}, columns: ${columns.join(':')}, key: ${k}`);
+                logging_1.logger().debug(`Missing row for ${this.tableName}, columns: ${columns.join(':')}, key: ${k}`);
                 return null;
             });
         });
@@ -319,7 +319,7 @@ class SQLQueryBuilder {
             }
             if (!includeDeleted && this.hasSoftDelete())
                 query.where({ [this.softDeleteColumnString]: false });
-            logging_1._logger.debug('Executing SQL: %j', query.toSQL().sql);
+            logging_1.logger().debug('Executing SQL: %j', query.toSQL().sql);
             return query;
         });
     }
@@ -343,11 +343,11 @@ class SQLQueryBuilder {
             }
             let insertRows = values;
             if (insertRows.length < 1) {
-                logging_1._logger.warn('Persistors.upsert: No values passed.');
+                logging_1.logger().warn('Persistors.upsert: No values passed.');
                 return null;
             }
             if (columnsToUpdate.length < 1 && !reinstateSoftDeletedRows) {
-                logging_1._logger.warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
+                logging_1.logger().warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
                 return null;
             }
             // add deleted column to all records
@@ -367,7 +367,7 @@ class SQLQueryBuilder {
                 .insert(insertRows)
                 .onDuplicateUpdate(...columnsToUpdate)
                 .connection(connection);
-            logging_1._logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
+            logging_1.logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
             // knex seems to return 0 for insertId on upsert?
             return (yield query)[0].insertId;
         });
@@ -384,7 +384,7 @@ class SQLQueryBuilder {
         return __awaiter(this, void 0, void 0, function* () {
             const { value, connection } = params;
             let query = index_1.knex()(this.tableName).insert(value);
-            logging_1._logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
+            logging_1.logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
             const result = yield query.connection(connection);
             // seems to return 0 for non-auto-increment inserts
             return result[0];
@@ -404,7 +404,7 @@ class SQLQueryBuilder {
             if (values.length < 1)
                 return null;
             let query = index_1.knex()(this.tableName).insert(values);
-            logging_1._logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
+            logging_1.logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
             const result = yield query.connection(connection);
             // seems to return 0 for non-auto-increment inserts
             return result[0];
@@ -429,7 +429,7 @@ class SQLQueryBuilder {
                 .where(where)
                 .update({ [this.softDeleteColumnString]: true })
                 .connection(connection);
-            logging_1._logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
+            logging_1.logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
             return query;
         });
     }
@@ -449,7 +449,7 @@ class SQLQueryBuilder {
             if (Object.keys(where).length < 1)
                 throw new Error('Must have at least one where condition');
             const query = index_1.knex()(this.tableName).where(where).update(values).connection(connection);
-            logging_1._logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
+            logging_1.logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
             return query;
         });
     }

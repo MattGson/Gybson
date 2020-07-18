@@ -1,6 +1,6 @@
 import { PoolConnection } from 'promise-mysql';
 import { knex, OrderByBase, WhereBase } from '../index';
-import { _logger } from '../lib/logging';
+import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { QueryBuilder } from 'knex';
 
@@ -115,7 +115,7 @@ export abstract class SQLQueryBuilder<
             }
         }
 
-        _logger.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        logger().debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 
@@ -148,7 +148,7 @@ export abstract class SQLQueryBuilder<
 
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
 
-        _logger?.debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        logger().debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 
@@ -162,7 +162,7 @@ export abstract class SQLQueryBuilder<
         // map rows back to key order
         return sortKeys.map((k) => {
             if (keyed[k]) return keyed[k];
-            _logger.debug(`Missing row for ${this.tableName}, columns: ${columns.join(':')}, key: ${k}`);
+            logger().debug(`Missing row for ${this.tableName}, columns: ${columns.join(':')}, key: ${k}`);
             return null;
         });
     }
@@ -350,7 +350,7 @@ export abstract class SQLQueryBuilder<
 
         if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
 
-        _logger.debug('Executing SQL: %j', query.toSQL().sql);
+        logger().debug('Executing SQL: %j', query.toSQL().sql);
         return query;
     }
     /**
@@ -378,11 +378,11 @@ export abstract class SQLQueryBuilder<
 
         let insertRows = values;
         if (insertRows.length < 1) {
-            _logger.warn('Persistors.upsert: No values passed.');
+            logger().warn('Persistors.upsert: No values passed.');
             return null;
         }
         if (columnsToUpdate.length < 1 && !reinstateSoftDeletedRows) {
-            _logger.warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
+            logger().warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
             return null;
         }
 
@@ -408,7 +408,7 @@ export abstract class SQLQueryBuilder<
             .onDuplicateUpdate(...columnsToUpdate)
             .connection(connection);
 
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
+        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
 
         // knex seems to return 0 for insertId on upsert?
         return (await query)[0].insertId;
@@ -427,7 +427,7 @@ export abstract class SQLQueryBuilder<
 
         let query = knex()(this.tableName).insert(value);
 
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
+        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
         const result = await query.connection(connection);
 
         // seems to return 0 for non-auto-increment inserts
@@ -448,7 +448,7 @@ export abstract class SQLQueryBuilder<
 
         let query = knex()(this.tableName).insert(values);
 
-        _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
+        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
         const result = await query.connection(connection);
 
         // seems to return 0 for non-auto-increment inserts
@@ -473,7 +473,7 @@ export abstract class SQLQueryBuilder<
             .update({ [this.softDeleteColumnString]: true })
             .connection(connection);
 
-        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
+        logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
 
         return query;
     }
@@ -493,7 +493,7 @@ export abstract class SQLQueryBuilder<
 
         const query = knex()(this.tableName).where(where).update(values).connection(connection);
 
-        _logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
+        logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
 
         return query;
     }
