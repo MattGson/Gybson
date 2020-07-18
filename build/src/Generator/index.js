@@ -78,6 +78,7 @@ function generateClientIndex(builders, outdir) {
         return {${clients}};
         };
         export default Nodent;
+        export type Nodent = ReturnType<typeof Nodent>;
     `;
         yield writeTypescriptFile(index, outdir, 'index.ts');
     });
