@@ -16,7 +16,6 @@ exports.SQLQueryBuilder = void 0;
 const index_1 = require("../index");
 const logging_1 = require("../lib/logging");
 const lodash_1 = __importDefault(require("lodash"));
-// const _logger = logger();
 // TODO:- auto connection handling
 class SQLQueryBuilder {
     constructor(tableName, softDeleteColumn) {

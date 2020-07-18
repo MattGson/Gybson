@@ -19,6 +19,12 @@ const CardinalityResolver_1 = require("./CardinalityResolver");
  * Builds db client methods for a table
  */
 class TableClientBuilder {
+    /**
+     *
+     * @param table - name of the table
+     * @param enums - Definitions for DB enums
+     * @param options - preferences for code gen
+     */
     constructor(table, enums, options) {
         this.loaders = [];
         this.entityName = TableClientBuilder.PascalCase(table);
@@ -178,27 +184,6 @@ class TableClientBuilder {
                 }
         `;
     }
-    /**
-     *   // TODO:- compound loader is a more general case so maybe don't need this?
-     * //  TODO  - Localise public methods
-     * Build a loader to load a single row for each key
-     * Gives the caller choice on whether to include soft deleted rows
-     * @param column
-     */
-    // private addByColumnLoader(column: ColumnDefinition) {
-    //     const { rowTypeName } = this.typeNames;
-    //
-    //     const { columnName } = column;
-    //     const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
-    //
-    //     this.loaders.push(`
-    //              private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
-    //                 return this.byColumnLoader({ column: '${columnName}', keys: ids });
-    //             });
-    //
-    //             ${this.loaderPublicMethod(column, loaderName, true)}
-    //         `);
-    // }
     /**
      * Build a loader to load a single row for a compound key
      * Gives the caller choice on whether to include soft deleted rows

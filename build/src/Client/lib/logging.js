@@ -1,14 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports._logger = exports.buildLogger = exports.LogLevel = exports.logger = void 0;
+exports._logger = exports.buildLogger = exports.LogLevel = void 0;
 const winston_1 = require("winston");
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = winston_1.format;
 let state = {};
-exports.logger = () => {
-    if (!state.logger)
-        throw new Error('Logger not initialised');
-    return state.logger;
-};
 var LogLevel;
 (function (LogLevel) {
     LogLevel["info"] = "info";
@@ -32,6 +27,6 @@ exports.buildLogger = (config) => {
     state.logger.exceptions.handle(new winston_1.transports.Console(console));
     return state.logger;
 };
-// @ts-ignore
+// @ts-ignore - assume initialised
 exports._logger = state.logger;
 //# sourceMappingURL=logging.js.map

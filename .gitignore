@@ -5,6 +5,9 @@ logs
 *.log
 npm-debug.log*
 
+# generated files
+Gen/*
+
 # Runtime data
 pids
 *.pid

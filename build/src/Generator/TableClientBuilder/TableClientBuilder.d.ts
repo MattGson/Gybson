@@ -23,6 +23,12 @@ export declare class TableClientBuilder {
     private softDeleteColumn?;
     private loaders;
     private types?;
+    /**
+     *
+     * @param table - name of the table
+     * @param enums - Definitions for DB enums
+     * @param options - preferences for code gen
+     */
     constructor(table: string, enums: EnumDefinitions, options: BuilderOptions);
     private static PascalCase;
     build(introspection: Introspection): Promise<string>;
@@ -36,13 +42,6 @@ export declare class TableClientBuilder {
      * @param softDeleteFilter
      */
     private loaderPublicMethod;
-    /**
-     *   // TODO:- compound loader is a more general case so maybe don't need this?
-     * //  TODO  - Localise public methods
-     * Build a loader to load a single row for each key
-     * Gives the caller choice on whether to include soft deleted rows
-     * @param column
-     */
     /**
      * Build a loader to load a single row for a compound key
      * Gives the caller choice on whether to include soft deleted rows

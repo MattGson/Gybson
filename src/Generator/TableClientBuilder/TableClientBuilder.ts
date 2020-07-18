@@ -34,6 +34,12 @@ export class TableClientBuilder {
     private loaders: string[] = [];
     private types?: string;
 
+    /**
+     *
+     * @param table - name of the table
+     * @param enums - Definitions for DB enums
+     * @param options - preferences for code gen
+     */
     public constructor(table: string, enums: EnumDefinitions, options: BuilderOptions) {
         this.entityName = TableClientBuilder.PascalCase(table);
         this.table = table;
@@ -219,28 +225,6 @@ export class TableClientBuilder {
     }
 
     /**
-     *   // TODO:- compound loader is a more general case so maybe don't need this?
-     * //  TODO  - Localise public methods
-     * Build a loader to load a single row for each key
-     * Gives the caller choice on whether to include soft deleted rows
-     * @param column
-     */
-    // private addByColumnLoader(column: ColumnDefinition) {
-    //     const { rowTypeName } = this.typeNames;
-    //
-    //     const { columnName } = column;
-    //     const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
-    //
-    //     this.loaders.push(`
-    //              private readonly ${loaderName} = new DataLoader<${column.tsType}, ${rowTypeName} | null>(ids => {
-    //                 return this.byColumnLoader({ column: '${columnName}', keys: ids });
-    //             });
-    //
-    //             ${this.loaderPublicMethod(column, loaderName, true)}
-    //         `);
-    // }
-
-    /**
      * Build a loader to load a single row for a compound key
      * Gives the caller choice on whether to include soft deleted rows
      * @param columns
@@ -307,27 +291,4 @@ export class TableClientBuilder {
                 
             `);
     }
-
-    /** TODO:- this should allow ordering on response - may need to change data loader to execute multiple times for each ordering specified
-     * Build a loader to load many rows for each key
-     * At the moment, this always filters out soft deleted rows
-     * @param column
-     */
-    // private addManyByColumnLoader(column: ColumnDefinition) {
-    //     const { columnName } = column;
-    //     const loaderName = `${this.entityName}By${TableClientBuilder.PascalCase(columnName)}Loader`;
-    //
-    //     this.loaders.push(`
-    //             private readonly ${loaderName} = new DataLoader<${column.tsType}, ${
-    //         this.typeNames.rowTypeName
-    //     }[]>(ids => {
-    //             return this.manyByColumnLoader({ column: '${columnName}', keys: ids, orderBy: ['${columnName}'], filterSoftDelete: ${
-    //         this.softDeleteColumn ? 'true' : 'false'
-    //     } });
-    //          });
-    //
-    //         ${this.loaderPublicMethod(column, loaderName, false)}
-    //
-    //     `);
-    // }
 }
