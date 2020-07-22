@@ -28,59 +28,7 @@ class SQLQueryBuilder {
     get softDeleteColumnString() {
         return this.softDeleteColumn;
     }
-    /**
-     * Bulk loader function
-     * Types arguments against the table schema for safety
-     * Loads one row per input key
-     * Ensures order is preserved
-     * For example get users [1, 2, 4] returns users [1, 2, 4]
-     * @param params
-     * @deprecated compound loader is a more general case
-     */
-    // public async byColumnLoader(params: { column: TblColumn; keys: readonly TblKey[] }): Promise<(TblRow | null)[]> {
-    //     const { column, keys } = params;
-    //
-    //     let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
-    //
-    //     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
-    //     const rows = await query;
-    //
-    //     const keyed: Dictionary<TblRow | null> = _.keyBy(rows, column);
-    //     return keys.map((k) => {
-    //         if (keyed[k]) return keyed[k];
-    //         _logger.debug(`Missing row for ${this.tableName}:${column} ${k}`);
-    //         return null;
-    //     });
-    // }
-    /**
-     * Bulk loader function
-     * Uses table schema for typing
-     * Loads multiple rows per input key
-     * Ensures order is preserved
-     * For example get team_members for users [1, 2, 4] returns team_members for each user [[3,4], [4,5], [4]]
-    //  * @param params
-    //  */
-    // public async manyByColumnLoader(params: {
-    //     column: TblColumn;
-    //     keys: readonly TblKey[];
-    //     orderBy: TblColumn[];
-    //     filterSoftDelete?: boolean;
-    // }): Promise<TblRow[][]> {
-    //     const { column, keys, orderBy, filterSoftDelete } = params;
-    //     let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
-    //
-    //     if (filterSoftDelete && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
-    //     if (orderBy.length < 1) query.orderBy(column, 'asc');
-    //     for (let order of orderBy) query.orderBy(order, 'asc');
-    //
-    //     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
-    //     const rows = await query;
-    //
-    //     // map rows back to input keys
-    //     const grouped = _.groupBy(rows, column);
-    //     return keys.map((id) => grouped[id] || []);
-    // }
-    /**
+    /** // TODO:- make order optional?
      * Load multiple rows for each input compound key
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
@@ -148,16 +96,149 @@ class SQLQueryBuilder {
             });
         });
     }
-    // private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
-    //     { user_id: number; post_id: number },
-    //     FeedbackDTO | null
-    // >((ids) => {
-    //     return this.loadFeedback(ids);
-    // });
-    //
-    // public feedbackByPostIdAndUserId(post_id: number, user_id: number) {
-    //     return this.FeedbackByPostIdAndUserIdLoader.load({ user_id, post_id });
-    // }
+    /**
+     * Resolve a where clause
+     * @param params
+     */
+    resolveWhereClause(params) {
+        const { queryBuilder, where } = params;
+        let operators;
+        (function (operators) {
+            operators["equals"] = "equals";
+            operators["not"] = "not";
+            operators["notIn"] = "notIn";
+            operators["lt"] = "lt";
+            operators["lte"] = "lte";
+            operators["gt"] = "gt";
+            operators["gte"] = "gte";
+            operators["contains"] = "contains";
+            operators["startsWith"] = "startsWith";
+            operators["endsWith"] = "endsWith";
+        })(operators || (operators = {}));
+        const combiners = {
+            AND: 'AND',
+            OR: 'OR',
+            NOT: 'NOT',
+        };
+        const primitives = {
+            string: true,
+            number: true,
+            bigint: true,
+            boolean: true,
+            date: true,
+        };
+        // resolves a single where block like:
+        // user_id: {
+        //      not_in: [3, 4],
+        //      gte: 1
+        // }
+        // These are the leafs in the recursion
+        const buildWhereLeafClause = (column, value, builder) => {
+            const valueType = typeof value;
+            // @ts-ignore - can't index
+            if (primitives[valueType]) {
+                // is a primitive so use equals clause
+                builder.where(column, value);
+            }
+            else if (valueType === 'object') {
+                //is an object so need to work out operators
+                for (let [operator, val] of Object.entries(value)) {
+                    switch (operator) {
+                        case operators.equals:
+                            //@ts-ignore
+                            builder.where(column, val);
+                            break;
+                        case operators.not:
+                            //@ts-ignore
+                            builder.whereNot(column, val);
+                            break;
+                        case operators.notIn:
+                            // @ts-ignore
+                            builder.whereNotIn(column, val);
+                            break;
+                        case operators.lt:
+                            // @ts-ignore
+                            builder.where(column, '<', val);
+                            break;
+                        case operators.lte:
+                            // @ts-ignore
+                            builder.where(column, '<=', val);
+                            break;
+                        case operators.gt:
+                            // @ts-ignore
+                            builder.where(column, '>', val);
+                            break;
+                        case operators.gte:
+                            // @ts-ignore
+                            builder.whereNot(column, '>=', val);
+                            break;
+                        case operators.contains:
+                            // @ts-ignore
+                            builder.where(column, 'like', `$%{val}%`);
+                            break;
+                        case operators.startsWith:
+                            // @ts-ignore
+                            builder.where(column, 'like', `${val}%`);
+                            break;
+                        case operators.endsWith:
+                            // @ts-ignore
+                            builder.where(column, 'like', `$%{val}`);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        };
+        // resolve each where clause
+        // can be either a where leaf or a combiner
+        // recurse the where tree
+        const resolveWhere = (subQuery, builder) => {
+            for (let [column, value] of Object.entries(subQuery)) {
+                // @ts-ignore
+                if (!combiners[column]) {
+                    // resolve leaf node
+                    buildWhereLeafClause(column, value, builder);
+                    continue;
+                }
+                // is a combiner so need to resolve each sub block recursively
+                switch (column) {
+                    case combiners.AND:
+                        builder.where(function () {
+                            // @ts-ignore
+                            for (let clause of value) {
+                                resolveWhere(clause, this);
+                            }
+                        });
+                        break;
+                    case combiners.OR:
+                        builder.where(function () {
+                            // @ts-ignore
+                            for (let clause of value) {
+                                this.orWhere(function () {
+                                    resolveWhere(clause, this);
+                                });
+                            }
+                        });
+                        break;
+                    case combiners.NOT:
+                        builder.where(function () {
+                            // @ts-ignore
+                            for (let clause of value) {
+                                this.andWhereNot(function () {
+                                    resolveWhere(clause, this);
+                                });
+                            }
+                        });
+                        break;
+                    default:
+                        break;
+                }
+            }
+        };
+        resolveWhere(where, queryBuilder);
+        return queryBuilder;
+    }
     /**
      * Complex find rows from a table
      * @param params
@@ -166,148 +247,13 @@ class SQLQueryBuilder {
      *              - Joins (join filtering (every - left join, some - inner join, none - outer join)), eager load?
      *              type defs
      *               - gen more comprehensive types for each table i.e. SelectionSet
-     *                  - Split the type outputs by table maybe? Alias to more usable names
      */
     findMany(params) {
         return __awaiter(this, void 0, void 0, function* () {
             const { orderBy, first, where, includeDeleted } = params;
             let query = index_1.knex()(this.tableName).select();
-            let operators;
-            (function (operators) {
-                operators["equals"] = "equals";
-                operators["not"] = "not";
-                operators["notIn"] = "notIn";
-                operators["lt"] = "lt";
-                operators["lte"] = "lte";
-                operators["gt"] = "gt";
-                operators["gte"] = "gte";
-                operators["contains"] = "contains";
-                operators["startsWith"] = "startsWith";
-                operators["endsWith"] = "endsWith";
-            })(operators || (operators = {}));
-            const combiners = {
-                AND: 'AND',
-                OR: 'OR',
-                NOT: 'NOT',
-            };
-            const primitives = {
-                string: true,
-                number: true,
-                bigint: true,
-                boolean: true,
-                date: true,
-            };
-            // resolves a single where block like:
-            // user_id: {
-            //      not_in: [3, 4],
-            //      gte: 1
-            // }
-            // These are the leafs in the recursion
-            const buildWhereBlock = (column, value, builder) => {
-                const valueType = typeof value;
-                // @ts-ignore - can't index
-                if (primitives[valueType]) {
-                    // is a primitive so use equals clause
-                    builder.where(column, value);
-                }
-                else if (valueType === 'object') {
-                    //is an object so need to work out operators
-                    for (let [operator, val] of Object.entries(value)) {
-                        switch (operator) {
-                            case operators.equals:
-                                //@ts-ignore
-                                builder.where(column, val);
-                                break;
-                            case operators.not:
-                                //@ts-ignore
-                                builder.whereNot(column, val);
-                                break;
-                            case operators.notIn:
-                                // @ts-ignore
-                                builder.whereNotIn(column, val);
-                                break;
-                            case operators.lt:
-                                // @ts-ignore
-                                builder.where(column, '<', val);
-                                break;
-                            case operators.lte:
-                                // @ts-ignore
-                                builder.where(column, '<=', val);
-                                break;
-                            case operators.gt:
-                                // @ts-ignore
-                                builder.where(column, '>', val);
-                                break;
-                            case operators.gte:
-                                // @ts-ignore
-                                builder.whereNot(column, '>=', val);
-                                break;
-                            case operators.contains:
-                                // @ts-ignore
-                                builder.where(column, 'like', `$%{val}%`);
-                                break;
-                            case operators.startsWith:
-                                // @ts-ignore
-                                builder.where(column, 'like', `${val}%`);
-                                break;
-                            case operators.endsWith:
-                                // @ts-ignore
-                                builder.where(column, 'like', `$%{val}`);
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                }
-            };
-            // resolve each where clause
-            // can be either a where block or a combiner
-            // recurse the where tree
-            const resolveWhere = (subQuery, builder) => {
-                for (let [column, value] of Object.entries(subQuery)) {
-                    // @ts-ignore
-                    if (!combiners[column]) {
-                        // resolve leaf node
-                        buildWhereBlock(column, value, builder);
-                        continue;
-                    }
-                    // is a combiner so need to resolve each sub block recursively
-                    switch (column) {
-                        case combiners.AND:
-                            builder.where(function () {
-                                // @ts-ignore
-                                for (let clause of value) {
-                                    resolveWhere(clause, this);
-                                }
-                            });
-                            break;
-                        case combiners.OR:
-                            builder.where(function () {
-                                // @ts-ignore
-                                for (let clause of value) {
-                                    this.orWhere(function () {
-                                        resolveWhere(clause, this);
-                                    });
-                                }
-                            });
-                            break;
-                        case combiners.NOT:
-                            builder.where(function () {
-                                // @ts-ignore
-                                for (let clause of value) {
-                                    this.andWhereNot(function () {
-                                        resolveWhere(clause, this);
-                                    });
-                                }
-                            });
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            };
             if (where) {
-                resolveWhere(where, query);
+                this.resolveWhereClause({ where, queryBuilder: query });
             }
             if (orderBy) {
                 for (let [column, direction] of Object.entries(orderBy)) {
@@ -331,7 +277,7 @@ class SQLQueryBuilder {
      *     * This should be set to false if the table does not support soft deletes
      * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
      * Will take the superset of all columns in the insert values
-     * @param params
+     * @param params // TODO:- return type
      */
     upsert(params) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -365,8 +311,9 @@ class SQLQueryBuilder {
             //    This connection MUST be added last to work with the duplicateUpdateExtension
             const query = index_1.knex()(this.tableName)
                 .insert(insertRows)
-                .onDuplicateUpdate(...columnsToUpdate)
-                .connection(connection);
+                .onDuplicateUpdate(...columnsToUpdate);
+            if (connection)
+                query.connection(connection);
             logging_1.logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
             // knex seems to return 0 for insertId on upsert?
             return (yield query)[0].insertId;
@@ -383,10 +330,13 @@ class SQLQueryBuilder {
     insertOne(params) {
         return __awaiter(this, void 0, void 0, function* () {
             const { value, connection } = params;
+            // TODO:- add returning() to support postgres
             let query = index_1.knex()(this.tableName).insert(value);
+            if (connection)
+                query.connection(connection);
             logging_1.logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
-            const result = yield query.connection(connection);
-            // seems to return 0 for non-auto-increment inserts
+            const result = yield query;
+            // TODO seems to return 0 for non-auto-increment inserts
             return result[0];
         });
     }
@@ -404,8 +354,10 @@ class SQLQueryBuilder {
             if (values.length < 1)
                 return null;
             let query = index_1.knex()(this.tableName).insert(values);
+            if (connection)
+                query.connection(connection);
             logging_1.logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
-            const result = yield query.connection(connection);
+            const result = yield query;
             // seems to return 0 for non-auto-increment inserts
             return result[0];
         });
@@ -427,13 +379,13 @@ class SQLQueryBuilder {
                 throw new Error('Must have at least one where condition');
             const query = index_1.knex()(this.tableName)
                 .where(where)
-                .update({ [this.softDeleteColumnString]: true })
-                .connection(connection);
+                .update({ [this.softDeleteColumnString]: true });
+            if (connection)
+                query.connection(connection);
             logging_1.logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
             return query;
         });
     }
-    // TODO: generalise where builder
     /**
      * Type-safe update function
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
@@ -448,7 +400,10 @@ class SQLQueryBuilder {
                 throw new Error('Must have at least one updated column');
             if (Object.keys(where).length < 1)
                 throw new Error('Must have at least one where condition');
-            const query = index_1.knex()(this.tableName).where(where).update(values).connection(connection);
+            const query = index_1.knex()(this.tableName).update(values);
+            this.resolveWhereClause({ queryBuilder: query, where });
+            if (connection)
+                query.connection(connection);
             logging_1.logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
             return query;
         });

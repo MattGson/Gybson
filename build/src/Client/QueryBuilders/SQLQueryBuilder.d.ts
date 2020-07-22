@@ -6,24 +6,7 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
     protected constructor(tableName: string, softDeleteColumn?: string);
     private hasSoftDelete;
     private get softDeleteColumnString();
-    /**
-     * Bulk loader function
-     * Types arguments against the table schema for safety
-     * Loads one row per input key
-     * Ensures order is preserved
-     * For example get users [1, 2, 4] returns users [1, 2, 4]
-     * @param params
-     * @deprecated compound loader is a more general case
-     */
-    /**
-     * Bulk loader function
-     * Uses table schema for typing
-     * Loads multiple rows per input key
-     * Ensures order is preserved
-     * For example get team_members for users [1, 2, 4] returns team_members for each user [[3,4], [4,5], [4]]
-    //  * @param params
-    //  */
-    /**
+    /** // TODO:- make order optional?
      * Load multiple rows for each input compound key
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
@@ -31,7 +14,7 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
     protected manyByCompoundColumnLoader(params: {
         keys: readonly PartialTblRow[];
         includeSoftDeleted?: boolean;
-        orderBy: TblOrderBy;
+        orderBy?: TblOrderBy;
     }): Promise<TblRow[][]>;
     /**
      * Load a single row for each input compound key
@@ -42,6 +25,11 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
         keys: readonly PartialTblRow[];
     }): Promise<(TblRow | null)[]>;
     /**
+     * Resolve a where clause
+     * @param params
+     */
+    private resolveWhereClause;
+    /**
      * Complex find rows from a table
      * @param params
      *      * // TODO:-
@@ -49,7 +37,6 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
      *              - Joins (join filtering (every - left join, some - inner join, none - outer join)), eager load?
      *              type defs
      *               - gen more comprehensive types for each table i.e. SelectionSet
-     *                  - Split the type outputs by table maybe? Alias to more usable names
      */
     findMany(params: {
         where?: TblWhere;
@@ -66,7 +53,7 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
      *     * This should be set to false if the table does not support soft deletes
      * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
      * Will take the superset of all columns in the insert values
-     * @param params
+     * @param params // TODO:- return type
      */
     upsert(params: {
         connection?: PoolConnection;
@@ -107,7 +94,7 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
      * @param params
      */
     softDelete(params: {
-        connection: PoolConnection;
+        connection?: PoolConnection;
         where: PartialTblRow;
     }): Promise<number>;
     /**
@@ -118,8 +105,8 @@ export declare abstract class SQLQueryBuilder<TblRow, TblColumn extends string, 
      *      -> UPDATE users SET fname = 'joe' WHERE user_id = 3 AND email = 'steve'
      */
     update(params: {
-        connection: PoolConnection;
+        connection?: PoolConnection;
         values: PartialTblRow;
-        where: PartialTblRow;
+        where: TblWhere;
     }): Promise<number>;
 }

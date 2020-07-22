@@ -262,22 +262,21 @@ export class TableClientBuilder {
      * @param columns
      */
     private addCompoundManyByColumnLoader(columns: ColumnDefinition[]) {
-        const { rowTypeName } = this.typeNames;
+        const { rowTypeName, orderByTypeName } = this.typeNames;
 
         const colNames = columns.map((col) => col.columnName);
-        const keyType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; orderBy: ${
-            this.typeNames.orderByTypeName
-        }; }`;
-        const paramType = `{ ${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; orderBy: ${
-            this.typeNames.orderByTypeName
-        }; ${this.softDeleteColumn ? 'includeDeleted?: boolean' : ''} }`;
+        const keyType = `${columns.map((col) => `${col.columnName}: ${col.tsType}`)};`;
+        const paramType = `${columns.map((col) => `${col.columnName}: ${col.tsType}`)}; ${
+            this.softDeleteColumn ? 'includeDeleted?: boolean;' : ''
+        }`;
 
         const loadKeyName = colNames.map((name) => TableClientBuilder.PascalCase(name)).join('And');
         const loaderName = `${this.entityName}By${loadKeyName}Loader`;
 
         this.loaders.push(`
-                 private readonly ${loaderName} = new DataLoader<${keyType}, ${rowTypeName}[]>(keys => {
+                 private readonly ${loaderName} = new DataLoader<{ ${keyType} orderBy: ${orderByTypeName} | undefined; }, ${rowTypeName}[]>(keys => {
                     const [first] = keys;
+                    keys.map(k => delete k.orderBy); // remove key so its not included as a load param
                     // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
                     return this.manyByCompoundColumnLoader({ keys, orderBy: first.orderBy });
                 }, {
@@ -285,7 +284,9 @@ export class TableClientBuilder {
                     cacheKeyFn: (k => ({...k, orderBy: {}}))
                 });
                 
-                 public async by${loadKeyName}({ ${colNames.join(',')}, orderBy }: ${paramType}) {
+                 public async by${loadKeyName}({ ${colNames.join(
+            ',',
+        )}, orderBy }: { ${paramType} orderBy?: ${orderByTypeName} }) {
                     return this.${loaderName}.load({ ${colNames.join(',')}, orderBy });
                 }
                 

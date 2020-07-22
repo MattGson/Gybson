@@ -30,61 +30,7 @@ export abstract class SQLQueryBuilder<
         return this.softDeleteColumn as string;
     }
 
-    /**
-     * Bulk loader function
-     * Types arguments against the table schema for safety
-     * Loads one row per input key
-     * Ensures order is preserved
-     * For example get users [1, 2, 4] returns users [1, 2, 4]
-     * @param params
-     * @deprecated compound loader is a more general case
-     */
-    // public async byColumnLoader(params: { column: TblColumn; keys: readonly TblKey[] }): Promise<(TblRow | null)[]> {
-    //     const { column, keys } = params;
-    //
-    //     let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
-    //
-    //     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
-    //     const rows = await query;
-    //
-    //     const keyed: Dictionary<TblRow | null> = _.keyBy(rows, column);
-    //     return keys.map((k) => {
-    //         if (keyed[k]) return keyed[k];
-    //         _logger.debug(`Missing row for ${this.tableName}:${column} ${k}`);
-    //         return null;
-    //     });
-    // }
-
-    /**
-     * Bulk loader function
-     * Uses table schema for typing
-     * Loads multiple rows per input key
-     * Ensures order is preserved
-     * For example get team_members for users [1, 2, 4] returns team_members for each user [[3,4], [4,5], [4]]
-    //  * @param params
-    //  */
-    // public async manyByColumnLoader(params: {
-    //     column: TblColumn;
-    //     keys: readonly TblKey[];
-    //     orderBy: TblColumn[];
-    //     filterSoftDelete?: boolean;
-    // }): Promise<TblRow[][]> {
-    //     const { column, keys, orderBy, filterSoftDelete } = params;
-    //     let query = knex()(this.tableName).select().whereIn(column, _.uniq(keys));
-    //
-    //     if (filterSoftDelete && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
-    //     if (orderBy.length < 1) query.orderBy(column, 'asc');
-    //     for (let order of orderBy) query.orderBy(order, 'asc');
-    //
-    //     _logger.debug('Executing SQL: %j with keys: %j', query.toSQL().sql, keys);
-    //     const rows = await query;
-    //
-    //     // map rows back to input keys
-    //     const grouped = _.groupBy(rows, column);
-    //     return keys.map((id) => grouped[id] || []);
-    // }
-
-    /**
+    /** // TODO:- make order optional?
      * Load multiple rows for each input compound key
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
@@ -92,7 +38,7 @@ export abstract class SQLQueryBuilder<
     protected async manyByCompoundColumnLoader(params: {
         keys: readonly PartialTblRow[];
         includeSoftDeleted?: boolean;
-        orderBy: TblOrderBy;
+        orderBy?: TblOrderBy;
     }): Promise<TblRow[][]> {
         const { keys, includeSoftDeleted, orderBy } = params;
 
@@ -167,37 +113,12 @@ export abstract class SQLQueryBuilder<
         });
     }
 
-    // private readonly FeedbackByPostIdAndUserIdLoader = new DataLoader<
-    //     { user_id: number; post_id: number },
-    //     FeedbackDTO | null
-    // >((ids) => {
-    //     return this.loadFeedback(ids);
-    // });
-    //
-    // public feedbackByPostIdAndUserId(post_id: number, user_id: number) {
-    //     return this.FeedbackByPostIdAndUserIdLoader.load({ user_id, post_id });
-    // }
-
     /**
-     * Complex find rows from a table
+     * Resolve a where clause
      * @param params
-     *      * // TODO:-
-     *              - cursor pagination,
-     *              - Joins (join filtering (every - left join, some - inner join, none - outer join)), eager load?
-     *              type defs
-     *               - gen more comprehensive types for each table i.e. SelectionSet
-     *                  - Split the type outputs by table maybe? Alias to more usable names
      */
-    public async findMany(params: {
-        where?: TblWhere;
-        first?: number;
-        after?: TblColumn;
-        orderBy?: TblOrderBy;
-        includeDeleted?: boolean;
-    }): Promise<TblRow[]> {
-        const { orderBy, first, where, includeDeleted } = params;
-        let query = knex()(this.tableName).select();
-
+    private resolveWhereClause(params: { queryBuilder: QueryBuilder; where: TblWhere }): QueryBuilder {
+        const { queryBuilder, where } = params;
         enum operators {
             equals = 'equals',
             not = 'not',
@@ -231,7 +152,7 @@ export abstract class SQLQueryBuilder<
         //      gte: 1
         // }
         // These are the leafs in the recursion
-        const buildWhereBlock = (column: string, value: any, builder: QueryBuilder) => {
+        const buildWhereLeafClause = (column: string, value: any, builder: QueryBuilder) => {
             const valueType: string = typeof value;
             // @ts-ignore - can't index
             if (primitives[valueType]) {
@@ -289,14 +210,14 @@ export abstract class SQLQueryBuilder<
         };
 
         // resolve each where clause
-        // can be either a where block or a combiner
+        // can be either a where leaf or a combiner
         // recurse the where tree
         const resolveWhere = (subQuery: any, builder: QueryBuilder) => {
             for (let [column, value] of Object.entries(subQuery)) {
                 // @ts-ignore
                 if (!combiners[column]) {
                     // resolve leaf node
-                    buildWhereBlock(column, value, builder);
+                    buildWhereLeafClause(column, value, builder);
                     continue;
                 }
                 // is a combiner so need to resolve each sub block recursively
@@ -334,9 +255,31 @@ export abstract class SQLQueryBuilder<
                 }
             }
         };
+        resolveWhere(where, queryBuilder);
+        return queryBuilder;
+    }
+
+    /**
+     * Complex find rows from a table
+     * @param params
+     *      * // TODO:-
+     *              - cursor pagination,
+     *              - Joins (join filtering (every - left join, some - inner join, none - outer join)), eager load?
+     *              type defs
+     *               - gen more comprehensive types for each table i.e. SelectionSet
+     */
+    public async findMany(params: {
+        where?: TblWhere;
+        first?: number;
+        after?: TblColumn;
+        orderBy?: TblOrderBy;
+        includeDeleted?: boolean;
+    }): Promise<TblRow[]> {
+        const { orderBy, first, where, includeDeleted } = params;
+        let query = knex()(this.tableName).select();
 
         if (where) {
-            resolveWhere(where, query);
+            this.resolveWhereClause({ where, queryBuilder: query });
         }
 
         if (orderBy) {
@@ -361,7 +304,7 @@ export abstract class SQLQueryBuilder<
      *     * This should be set to false if the table does not support soft deletes
      * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
      * Will take the superset of all columns in the insert values
-     * @param params
+     * @param params // TODO:- return type
      */
     public async upsert(params: {
         connection?: PoolConnection;
@@ -405,8 +348,9 @@ export abstract class SQLQueryBuilder<
         //    This connection MUST be added last to work with the duplicateUpdateExtension
         const query = knex()(this.tableName)
             .insert(insertRows)
-            .onDuplicateUpdate(...columnsToUpdate)
-            .connection(connection);
+            .onDuplicateUpdate(...columnsToUpdate);
+
+        if (connection) query.connection(connection);
 
         logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
 
@@ -425,12 +369,15 @@ export abstract class SQLQueryBuilder<
     public async insertOne(params: { connection?: PoolConnection; value: PartialTblRow }): Promise<number | null> {
         const { value, connection } = params;
 
+        // TODO:- add returning() to support postgres
         let query = knex()(this.tableName).insert(value);
 
-        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
-        const result = await query.connection(connection);
+        if (connection) query.connection(connection);
 
-        // seems to return 0 for non-auto-increment inserts
+        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
+        const result = await query;
+
+        // TODO seems to return 0 for non-auto-increment inserts
         return result[0];
     }
 
@@ -447,9 +394,10 @@ export abstract class SQLQueryBuilder<
         if (values.length < 1) return null;
 
         let query = knex()(this.tableName).insert(values);
+        if (connection) query.connection(connection);
 
         logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
-        const result = await query.connection(connection);
+        const result = await query;
 
         // seems to return 0 for non-auto-increment inserts
         return result[0];
@@ -463,22 +411,22 @@ export abstract class SQLQueryBuilder<
      *      -> UPDATE users SET deleted = true WHERE user_id = 3 AND email = 'steve'
      * @param params
      */
-    public async softDelete(params: { connection: PoolConnection; where: PartialTblRow }) {
+    public async softDelete(params: { connection?: PoolConnection; where: PartialTblRow }) {
         const { where, connection } = params;
         if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
         const query = knex()(this.tableName)
             .where(where)
-            .update({ [this.softDeleteColumnString]: true })
-            .connection(connection);
+            .update({ [this.softDeleteColumnString]: true });
+
+        if (connection) query.connection(connection);
 
         logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
 
         return query;
     }
 
-    // TODO: generalise where builder
     /**
      * Type-safe update function
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
@@ -486,12 +434,14 @@ export abstract class SQLQueryBuilder<
      *      updateByConditions(conn, 'users', { fname: 'joe' }, { user_id: 3, email: 'steve' }
      *      -> UPDATE users SET fname = 'joe' WHERE user_id = 3 AND email = 'steve'
      */
-    public async update(params: { connection: PoolConnection; values: PartialTblRow; where: PartialTblRow }) {
+    public async update(params: { connection?: PoolConnection; values: PartialTblRow; where: TblWhere }) {
         const { values, connection, where } = params;
         if (Object.keys(values).length < 1) throw new Error('Must have at least one updated column');
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
-        const query = knex()(this.tableName).where(where).update(values).connection(connection);
+        const query = knex()(this.tableName).update(values);
+        this.resolveWhereClause({ queryBuilder: query, where });
+        if (connection) query.connection(connection);
 
         logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
 
