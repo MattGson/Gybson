@@ -1,8 +1,8 @@
-import Nodent, { LogLevel } from '../build/src/Client';
+import Gybson, { LogLevel } from '../build/src/Client';
 
 const main = async () => {
 
-    Nodent.init({
+    Gybson.init({
         client: 'mysql',
         connection: {
             host: '127.0.0.1',

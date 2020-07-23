@@ -107,7 +107,7 @@ export class TableClientBuilder {
         const { rowTypeName, columnTypeName, columnMapTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
-            import { SQLQueryBuilder } from 'nodent';
+            import { SQLQueryBuilder } from 'gybson';
             import { ${this.table}, ${Object.keys(this.enums).join(',')} } from './db-schema';
             
             ${this.types}
@@ -160,7 +160,7 @@ export class TableClientBuilder {
                     BooleanWhereNullable, 
                     DateWhere, 
                     DateWhereNullable 
-                } from 'nodent';
+                } from 'gybson';
                
                 export type ${rowTypeName} = ${this.table};
                 export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;

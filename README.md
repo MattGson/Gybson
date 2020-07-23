@@ -1,27 +1,27 @@
-# Nodent
+# Gybson
 
 [![npm](https://img.shields.io/npm/v/schemats.svg)](https://www.npmjs.com/package/schemats)
 [![GitHub tag](https://img.shields.io/github/tag/SweetIQ/schemats.svg)](https://github.com/SweetIQ/schemats)
 [![TravisCI Build Status](https://travis-ci.org/SweetIQ/schemats.svg?branch=master)](https://travis-ci.org/SweetIQ/schemats)
 [![Coverage Status](https://coveralls.io/repos/github/SweetIQ/schemats/badge.svg?branch=coverage)](https://coveralls.io/github/SweetIQ/schemats?branch=coverage)
 
-Nodent is a type-safe, auto-generated query client for SQL databases (MySQL and PostgreSQL).
-Nodent is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps using Typescript.
+Gybson is a type-safe, auto-generated query client for SQL databases (MySQL and PostgreSQL).
+Gybson is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps using Typescript.
 
-### Why Nodent?
+### Why Gybson?
 
 #### Type-safe
 
-Nodent comes with full type safety out of the box so you know exactly what data goes in and out of your database.
+Gybson comes with full type safety out of the box so you know exactly what data goes in and out of your database.
 
 #### Auto-generated
 
-Nodent auto-generates a client from your database-schema. This means you don't have to defined complex types in code.
-You can get started using Nodent in 5 minutes.
+Gybson auto-generates a client from your database-schema. This means you don't have to defined complex types in code.
+You can get started using Gybson in 5 minutes.
 
 #### GraphQL optimized
 
-Most ORMs are built for eager loading. Nodent is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
+Most ORMs are built for eager loading. Gybson is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
 Loads are batched and cached to minimise round trips to the database and reduce joins.
 
 ### Simple example
@@ -41,7 +41,7 @@ You can query:
 
 ```typescript
 // this insert is type checked against the db schema
-const id = await nodent.users.insert({
+const id = await gybson.users.insert({
     values: {
         user_id: 300,
         username: 'name',
@@ -51,7 +51,7 @@ const id = await nodent.users.insert({
 });
 
 // load methods are generated for all keys fields
-const user = await nodent.users.byUserId(300);
+const user = await gybson.users.byUserId(300);
 
 // user typed as
 interface users {
@@ -64,15 +64,15 @@ interface users {
 
 ## Quick Start
 
-### Installing Nodent
+### Installing Gybson
 
 ```
-npm i nodent
+npm i gybson
 ```
 
 ### Generating the client from your schema
 
-Define a config file `nodent-config.json` to point to your database and output for generated files.
+Define a config file `gybson-config.json` to point to your database and output for generated files.
 
 ```json
 {
@@ -86,7 +86,7 @@ Define a config file `nodent-config.json` to point to your database and output f
 Run:
 
 ```
-nodent generate
+gybson generate
 ```
 
 The above commands will generate the client for `users` database.
@@ -94,7 +94,7 @@ The resulting files are stored in `./generated`.
 
 ### Using with GraphQL
 
-Add a new Nodent instance to your context for each request.
+Add a new Gybson instance to your context for each request.
 
 i.e with Apollo
 
@@ -102,7 +102,7 @@ i.e with Apollo
 new ApolloServer({
     context: async () => {
         return {
-            nodent: Nodent(),
+            gybson: Gybson(),
         };
     },
 });
@@ -115,7 +115,7 @@ Then in your resolvers:
 
 Query: {
     user(parent, args, context, info) {
-        return context.nodent.Users.byUserId(args.id);
+        return context.gybson.Users.byUserId(args.id);
     }
 }
 ```
@@ -159,21 +159,21 @@ SELECT * FROM users WHERE best_friend_id = FRIEND5.bestfriend;
 
 ```
 
-Nodent uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch database requests and cache returned data.
-Executing the same GraphQL query with Nodent can be done like:
+Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch database requests and cache returned data.
+Executing the same GraphQL query with Gybson can be done like:
 
 ```typescript
 
 // Note this is pseudo code approximating graphql resolvers
 
-(me) => nodent.Users.byUserId(me.id);
+(me) => gybson.Users.byUserId(me.id);
 
 (friends) => {
-    const friends_list = await nodent.Friends.byFromId(me.id);
-    return friends_list.map((row) => nodent.Users.byUserId(row.toId));
+    const friends_list = await gybson.Friends.byFromId(me.id);
+    return friends_list.map((row) => gybson.Users.byUserId(row.toId));
 };
 
-(best_friend) => nodent.Users.byUserId(user.best_friend_id);
+(best_friend) => gybson.Users.byUserId(user.best_friend_id);
 ```
 
 This results in the following SQL:

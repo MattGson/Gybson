@@ -33,7 +33,7 @@ export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
             json(),
         ),
         level: config.logLevel,
-        defaultMeta: { service: 'Nodent' },
+        defaultMeta: { service: 'Gybson' },
         transports: [],
     });
     state.logger.add(new transports.Console(console));

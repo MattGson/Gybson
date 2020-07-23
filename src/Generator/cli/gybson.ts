@@ -22,10 +22,10 @@ const args = usage('Usage: $0 <command> [options]')
         outdir: { type: 'string', default: './gen' },
     })
     .global('config')
-    .default('config', 'nodent-config.json')
+    .default('config', 'gybson-config.json')
     .config('config', 'Configure using a json file')
     .command('generate', 'Generate database client')
-    .example('$0 generate', 'generate the client using a nodent-config.json file in the current directory') //     .demand('o')
+    .example('$0 generate', 'generate the client using a gybson-config.json file in the current directory') //     .demand('o')
     .alias('h', 'help').argv;
 
 
@@ -49,7 +49,7 @@ const run = async () => {
         await generate(conn, GENERATED_DIR);
     } catch (e) {
         console.error(e.message);
-        console.log('Use: "nodent -h" to see help');
+        console.log('Use: "gybson -h" to see help');
         process.exit(1);
     }
 };
@@ -60,7 +60,7 @@ run()
     })
     .catch((e: any) => {
         console.warn(e.message);
-        console.log('Use: "nodent -h" to see help');
+        console.log('Use: "gybson -h" to see help');
         process.exit(1);
     });
 

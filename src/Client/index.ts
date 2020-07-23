@@ -16,7 +16,7 @@ const state: { knex: Knex<any, unknown[]> | undefined } = {
 };
 
 export const knex = () => {
-    if (!state.knex) throw new Error('Nodent must be configured with a knex instance');
+    if (!state.knex) throw new Error('Gybson must be configured with a knex instance');
     return state.knex;
 };
 
@@ -24,7 +24,7 @@ export const knex = () => {
 // EXTERNAL USE
 //
 export { LogLevel } from './lib/logging';
-export interface NodentConfig {
+export interface GybsonConfig {
     logLevel?: LogLevel;
 }
 
@@ -71,7 +71,7 @@ export interface PostgresConnection {
 const init = (config: {
     client: 'mysql' | 'postgres';
     connection?: MYSQLConnection | PostgresConnection;
-    config?: NodentConfig;
+    config?: GybsonConfig;
 }) => {
     const useConfig = {
         logLevel: LogLevel.info,
@@ -83,7 +83,7 @@ const init = (config: {
         client: config.client,
         connection: config.connection,
     });
-    logger.info('Initialising Nodent...');
+    logger.info('Initialising Gybson...');
 };
 
 export default {

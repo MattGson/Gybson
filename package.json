@@ -1,5 +1,5 @@
 {
-    "name": "nodent",
+    "name": "gybson",
     "version": "0.1.0",
     "description": "Generate a type-safe database client from a SQL database",
     "keywords": [
@@ -15,19 +15,19 @@
     "scripts": {
         "lint": "eslint ./src",
         "build": "tsc",
-        "dependency-check": "dependency-check . --entry src/Generator/cli/nodent.js --missing --no-dev",
+        "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
         "test": "npm run lint",
         "prepublish": "npm run build"
     },
     "bin": {
-        "nodent": "build/src/Generator/cli/nodent.js"
+        "gybson": "build/src/Generator/cli/gybson.js"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/MattGson/Nodent.git"
+        "url": "https://github.com/MattGson/Gybson.git"
     },
     "bugs": {
-        "url": "https://github.com/MattGson/Nodent/issues"
+        "url": "https://github.com/MattGson/Gybson/issues"
     },
     "author": "Matt Goodson <matt.goodson.business@gmail.com>",
     "license": "MIT",

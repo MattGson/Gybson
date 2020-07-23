@@ -7,6 +7,8 @@ npm-debug.log*
 
 # generated files
 Gen/*
+build
+build/*
 
 # Runtime data
 pids
