@@ -1,4 +1,4 @@
-![Image of logo](./logo-small.png)
+![Image of logo](https://github.com/MattGson/Gybson/blob/master/logo-small.png?raw=true)
 
 [![npm](https://img.shields.io/npm/v/gybson.svg)](https://www.npmjs.com/package/gybson)
 [![GitHub tag](https://img.shields.io/github/tag/MattGson/Gybson.svg)](https://github.com/MattGson/Gybson)
@@ -28,7 +28,7 @@ Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood t
 Managing soft deletes is hard but is a vital part of many apps. Gybson has native support for 
 soft-deletes including automatically filtering out deleted rows.
 
-![Image of demo](./demo.gif?raw=true)
+![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
 
 
 ### Simple example
