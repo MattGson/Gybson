@@ -77,7 +77,7 @@ const init = (config: {
         logLevel: LogLevel.info,
         ...config,
     };
-     const logger = buildLogger(useConfig);
+    const logger = buildLogger(useConfig);
 
     state.knex = Knex({
         client: config.client,
@@ -86,6 +86,12 @@ const init = (config: {
     logger.info('Initialising Gybson...');
 };
 
+const close = () => {
+    if (state.knex) state.knex.destroy();
+    console.log('Gybson connection closed');
+};
+
 export default {
     init,
+    close,
 };
