@@ -1,9 +1,8 @@
-# Gybson
+![Image of logo](./logo-small.png)
 
-[![npm](https://img.shields.io/npm/v/schemats.svg)](https://www.npmjs.com/package/schemats)
-[![GitHub tag](https://img.shields.io/github/tag/SweetIQ/schemats.svg)](https://github.com/SweetIQ/schemats)
+[![npm](https://img.shields.io/npm/v/gybson.svg)](https://www.npmjs.com/package/gybson)
+[![GitHub tag](https://img.shields.io/github/tag/MattGson/Gybson.svg)](https://github.com/MattGson/Gybson)
 [![TravisCI Build Status](https://travis-ci.org/SweetIQ/schemats.svg?branch=master)](https://travis-ci.org/SweetIQ/schemats)
-[![Coverage Status](https://coveralls.io/repos/github/SweetIQ/schemats/badge.svg?branch=coverage)](https://coveralls.io/github/SweetIQ/schemats?branch=coverage)
 
 Gybson is a type-safe, auto-generated query client for SQL databases (MySQL and PostgreSQL).
 Gybson is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps using Typescript.
@@ -22,7 +21,15 @@ You can get started using Gybson in 5 minutes.
 #### GraphQL optimized
 
 Most ORMs are built for eager loading. Gybson is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
-Loads are batched and cached to minimise round trips to the database and reduce joins.
+Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests returned data to minimise round trips.
+
+#### Native support for soft-deletes
+
+Managing soft deletes is hard but is a vital part of many apps. Gybson has native support for 
+soft-deletes including automatically filtering out deleted rows.
+
+![Image of demo](./demo.gif?raw=true)
+
 
 ### Simple example
 
@@ -40,7 +47,6 @@ CREATE TABLE users (
 You can query:
 
 ```typescript
-// this insert is type checked against the db schema
 const id = await gybson.users.insert({
     values: {
         user_id: 300,
@@ -50,16 +56,18 @@ const id = await gybson.users.insert({
     },
 });
 
-// load methods are generated for all keys fields
-const user = await gybson.users.byUserId(300);
+const user = await gybson.users.byUserId({ user_id: 31 });
 
-// user typed as
-interface users {
-    id: number;
-    username: string;
-    password: string;
-    last_logon: Date | null;
-}
+/* user typed as:
+
+ interface users {
+   id: number;
+   username: string;
+   password: string;
+   last_logon: Date | null;
+ }
+
+*/
 ```
 
 ## Quick Start
@@ -67,7 +75,7 @@ interface users {
 ### Installing Gybson
 
 ```
-npm i gybson
+npm i gybson --save
 ```
 
 ### Generating the client from your schema
@@ -96,13 +104,29 @@ The resulting files are stored in `./generated`.
 
 Add a new Gybson instance to your context for each request.
 
+Note: It is important to attach a new instance per request to refresh the cache.
+
 i.e with Apollo
 
 ```typescript
+import Gybson from 'gybson';
+import GybsonClient from './generated';
+
+// initialise the client connection
+Gybson.init({
+    client: 'mysql',
+    connection: {
+        database: 'komodo',
+        user: 'root',
+        password: '',
+    },
+});
+
+// attach a client instance to the context
 new ApolloServer({
     context: async () => {
         return {
-            gybson: Gybson(),
+            gybson: GybsonClient(),
         };
     },
 });
@@ -115,84 +139,13 @@ Then in your resolvers:
 
 Query: {
     user(parent, args, context, info) {
-        return context.gybson.Users.byUserId(args.id);
+        return context.gybson.Users.byUserId({ user_id: args.id });
     }
 }
 ```
 
-#### Resolving a nested query example:
+## Prior Art
 
-```graphql
-{
-    me {
-        name
-        friends(first: 5) {
-            name
-            bestFriend {
-                name
-            }
-        }
-    }
-}
-```
-
-If we just naively query for each object then we could execute potentially 12 database requests:
-
-```sql
-/* Get me and my friends list */
-SELECT * FROM users WHERE user_id = ME;
-SELECT * FROM friends WHERE from_id = ME;
-
-/* Need to resolve each of the five friends */
-SELECT * FROM users WHERE user_id = FRIEND1;
-SELECT * FROM users WHERE user_id = FRIEND2;
-SELECT * FROM users WHERE user_id = FRIEND3;
-SELECT * FROM users WHERE user_id = FRIEND4;
-SELECT * FROM users WHERE user_id = FRIEND5;
-
-/* Need to get the best friend for each friend */
-SELECT * FROM users WHERE best_friend_id = FRIEND1.bestfriend;
-SELECT * FROM users WHERE best_friend_id = FRIEND2.bestfriend;
-SELECT * FROM users WHERE best_friend_id = FRIEND3.bestfriend;
-SELECT * FROM users WHERE best_friend_id = FRIEND4.bestfriend;
-SELECT * FROM users WHERE best_friend_id = FRIEND5.bestfriend;
-
-```
-
-Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch database requests and cache returned data.
-Executing the same GraphQL query with Gybson can be done like:
-
-```typescript
-
-// Note this is pseudo code approximating graphql resolvers
-
-(me) => gybson.Users.byUserId(me.id);
-
-(friends) => {
-    const friends_list = await gybson.Friends.byFromId(me.id);
-    return friends_list.map((row) => gybson.Users.byUserId(row.toId));
-};
-
-(best_friend) => gybson.Users.byUserId(user.best_friend_id);
-```
-
-This results in the following SQL:
-
-```SQL
-SELECT * FROM users WHERE user_id IN (ME);
-SELECT * FROM friends WHERE from_id IN (ME);
-
-SELECT * FROM users WHERE user_id IN (FRIEND1, FRIEND2, FRIEND3, FRIEND4, FRIEND5);
-SELECT * FROM users WHERE user_id IN (FRIEND1.best_friend_id, FRIEND2.best_friend_id, ...);
-```
-
-We've cut down the number of queries to just 4. This effect amplifies greatly as the depth of the query tree increases.
-
-With generated type definition for our database schema, we can write code with autocompletion and static type checks.
-
-<p align="center">
-<img align="center" src="https://github.com/SweetIQ/schemats/raw/master/demo.gif" width="100%" alt="demo 1"/>
-</p>
-<p align="center">
-<img align="center" src="https://github.com/SweetIQ/schemats/raw/master/demo2.gif" width="100%" alt="demo 2"/>
-</p>
+- [Knex.JS](http://knexjs.org/) - Gybson is build on top of the Knex query builder.
+- [Schemats](https://github.com/SweetIQ/schemats) - The database introspection code was inspired by Schemats.
+- [Dataloader](https://github.com/graphql/dataloader) - Gybson uses dataloader to perform batching and de-duplication.
