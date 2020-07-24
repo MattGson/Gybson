@@ -21,12 +21,13 @@ You can get started using Gybson in 5 minutes.
 #### GraphQL optimized
 
 Most ORMs are built for eager loading. Gybson is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
-Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests returned data to minimise round trips.
+Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests to minimise round trips.
 
 #### Native support for soft-deletes
 
 Managing soft deletes is hard but is a vital part of many apps. Gybson has native support for 
 soft-deletes including automatically filtering out deleted rows.
+
 
 ![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
 
@@ -144,6 +145,169 @@ Query: {
 }
 ```
 
+### API
+
+#### Loaders
+Loaders are methods for each table that allow super fast batched and de-duped loads on key columns.
+Loader methods are generated for each unique and non-unique key combination.
+
+Unique key loaders return a single record or null
+```typescript
+
+const user = await gybson.Users.byUserId({ user_id: 1 });
+
+// Return type: user | null
+
+```
+Non-Unique key loaders return an array of records. These loaders allow an order to be specified.
+```typescript
+
+const user = await gybson.Post.byUserId({ 
+    user_id: 1, 
+    orderBy: {
+        first_name: 'asc'
+    } 
+});
+
+// Return type: post[]
+
+```
+Loaders are generated for unique and non-unique key combinations as well
+```typescript
+
+const user = await gybson.Post.byTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
+
+// Return type: post[]
+```
+
+#### findMany
+findMany loads many rows from a table. It provides a flexible query API whilst maintaining full type safety.
+Due to this flexibility, findMany does not perform batching or caching.
+
+Example: Find all users where:
+ - The first name is 'John'
+ - The age is less than 20
+ - The favourite Pet is either a 'dog' or a 'cat'
+ - Order by last_name in descending order.
+```typescript
+
+const users = await gybson.Users.findMany({ 
+    where: {
+        first_name: 'John',
+        age: {
+            lt: 20
+        },
+        OR: [
+            { favourite_pet: 'dog' },
+            { favourite_pet: 'cat' }
+        ]
+    },
+    orderBy: {
+        last_name: 'desc'
+    }
+});
+
+// Return type: user[]
+```
+
+#### insertOne
+Insert a single row into the database. This will automatically apply DEFAULT values for any 
+columns that are undefined.
+
+```typescript
+
+const users = await gybson.Users.insertOne({ 
+    value: {
+        first_name: 'John',
+        age: 25,
+        last_name: 'Doe'
+    },
+});
+```
+#### insertMany
+Inserts multiple row into the database. This will automatically apply DEFAULT values for any 
+columns that are undefined.
+
+```typescript
+
+const users = await gybson.Users.insertMany({ 
+    values: [
+        {
+            first_name: 'John',
+            age: 25,
+            last_name: 'Doe'
+        },
+        {
+            first_name: 'Jane',
+            age: 30,
+            last_name: 'Doe'
+        },
+    ]
+});
+```
+
+#### upsert
+Inserts multiple row into the database. If a row already exists with the primary key, the row will be updated.
+You can specify which columns you want to update in this case.
+You can also specify whether to reinstate (remove soft delete) on a row that has previously been soft-deleted.
+
+```typescript
+
+const users = await gybson.Users.insertMany({ 
+    values: [
+        {
+            first_name: 'John',
+            age: 25,
+            last_name: 'Doe'
+        },
+        {
+            first_name: 'Jane',
+            age: 30,
+            last_name: 'Doe'
+        },
+    ],
+    updateColumns: {
+        age: true
+    },
+    reinstateSoftDeletedRows: true
+});
+```
+
+#### update
+Update rows that match a where filter.
+All the where options from findMany are also available here.
+
+
+```typescript
+
+const users = await gybson.Users.update({ 
+    values: {
+        first_name: 'Joe',
+        age: 25,
+    },
+    where: {
+        user_id: {
+            not: 5
+        }
+    }
+});
+```
+
+#### softDelete
+This is a shortcut to soft delete rows rather than using update.
+It will set the soft-delete column to true and cause the row to be filtered from future queries.
+This allows the same where options as update and findMany.
+
+```typescript
+
+const users = await gybson.Users.softDelete({ 
+    where: {
+        user_id: {
+            not: 5
+        }
+    }
+});
+```
 ## Prior Art
 
 - [Knex.JS](http://knexjs.org/) - Gybson is build on top of the Knex query builder.

@@ -411,14 +411,14 @@ export abstract class SQLQueryBuilder<
      *      -> UPDATE users SET deleted = true WHERE user_id = 3 AND email = 'steve'
      * @param params
      */
-    public async softDelete(params: { connection?: PoolConnection; where: PartialTblRow }) {
+    public async softDelete(params: { connection?: PoolConnection; where: TblWhere }) {
         const { where, connection } = params;
         if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
-        const query = knex()(this.tableName)
-            .where(where)
-            .update({ [this.softDeleteColumnString]: true });
+        const query = knex()(this.tableName).update({ [this.softDeleteColumnString]: true });
+
+        this.resolveWhereClause({ queryBuilder: query, where });
 
         if (connection) query.connection(connection);
 
