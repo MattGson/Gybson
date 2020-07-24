@@ -253,7 +253,7 @@ You can also specify whether to reinstate (remove soft delete) on a row that has
 
 ```typescript
 
-const users = await gybson.Users.insertMany({ 
+const users = await gybson.Users.upsert({ 
     values: [
         {
             first_name: 'John',
