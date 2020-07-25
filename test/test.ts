@@ -15,9 +15,6 @@ const main = async () => {
             logLevel: LogLevel.debug,
         },
     });
-
-
-
 };
 
 

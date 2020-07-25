@@ -4,8 +4,6 @@ import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { QueryBuilder } from 'knex';
 
-// TODO:- auto connection handling
-
 export abstract class SQLQueryBuilder<
     TblRow,
     TblColumn extends string,
@@ -30,7 +28,7 @@ export abstract class SQLQueryBuilder<
         return this.softDeleteColumn as string;
     }
 
-    /** // TODO:- make order optional?
+    /**
      * Load multiple rows for each input compound key
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
@@ -265,8 +263,7 @@ export abstract class SQLQueryBuilder<
      *      * // TODO:-
      *              - cursor pagination,
      *              - Joins (join filtering (every - left join, some - inner join, none - outer join)), eager load?
-     *              type defs
-     *               - gen more comprehensive types for each table i.e. SelectionSet
+     *
      */
     public async findMany(params: {
         where?: TblWhere;

@@ -9,6 +9,7 @@ attachOnDuplicateUpdate();
 // INTERNAL USE
 //
 export { SQLQueryBuilder } from './QueryBuilders/SQLQueryBuilder';
+export { transaction } from './QueryBuilders/Transaction';
 export * from './QueryBuilders/QueryTypes';
 
 const state: { knex: Knex<any, unknown[]> | undefined } = {
