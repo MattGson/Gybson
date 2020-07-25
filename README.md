@@ -189,12 +189,19 @@ Example: Find all users where:
  - The last name does NOT start with 'P',
  - The age is less than 20
  - The favourite Pet is either a 'dog' or a 'cat'
- - Order by first_name and last_name in descending.
+ - Order by first_name and last_name descending.
 ```typescript
 
 const users = await gybson.Users.findMany({ 
     where: {
         first_name: 'John',
+        NOT: [
+            { 
+                last_name: {
+                    startsWith: 'P'
+                }
+            }
+        ],
         last_name: {
             NOT: [
                 { startsWith: 'P' }
@@ -309,6 +316,8 @@ of the queries fail then none of the changes will be committed. You can include 
 the transaction by passing in the `connection` argument.
 
 ```typescript
+
+import { transaction } from 'gybson';
 
 const newUser = await transaction(async (connection) => {
 
