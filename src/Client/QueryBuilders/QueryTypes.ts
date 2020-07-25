@@ -4,10 +4,16 @@ export type Order = 'asc' | 'desc';
 
 // These are just for helping write the query builder
 export type OrderByBase = { [column: string]: Order | undefined };
-export type WhereBase = { [column: string]: any } & {
+export type WhereBase = {
     AND?: Enumerable<WhereBase>;
     OR?: Enumerable<WhereBase>;
     NOT?: Enumerable<WhereBase>;
+};
+
+export type PaginateBase = {
+    limit?: number;
+    afterCursor?: { [column: string]: any };
+    afterCount?: number;
 };
 
 // Types for where conditions

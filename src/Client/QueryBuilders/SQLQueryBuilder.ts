@@ -1,15 +1,15 @@
 import { PoolConnection } from 'promise-mysql';
-import { knex, OrderByBase, WhereBase } from '../index';
+import { knex, OrderByBase, PaginateBase, WhereBase } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { QueryBuilder } from 'knex';
 
 export abstract class SQLQueryBuilder<
     TblRow,
-    TblColumn extends string,
     TblColumnMap,
     TblWhere extends WhereBase,
     TblOrderBy extends OrderByBase,
+    TblPaginate extends PaginateBase,
     PartialTblRow = Partial<TblRow>
 > {
     private tableName: string;
@@ -267,12 +267,12 @@ export abstract class SQLQueryBuilder<
      */
     public async findMany(params: {
         where?: TblWhere;
-        first?: number;
-        after?: TblColumn;
+        limit?: number;
+        paginate?: TblPaginate;
         orderBy?: TblOrderBy;
         includeDeleted?: boolean;
     }): Promise<TblRow[]> {
-        const { orderBy, first, where, includeDeleted } = params;
+        const { orderBy, paginate, where, includeDeleted } = params;
         let query = knex()(this.tableName).select();
 
         if (where) {
@@ -284,9 +284,17 @@ export abstract class SQLQueryBuilder<
                 query.orderBy(column, direction);
             }
         }
-        // TODO:- review pagination
-        if (first) {
-            query.limit(first);
+
+        if (paginate) {
+            const { limit, afterCursor, afterCount } = paginate;
+
+            if (limit) query.limit(limit);
+            if (afterCount) query.offset(afterCount);
+            if (afterCursor) {
+                Object.entries(afterCursor).forEach(([column, value]) => {
+                    query.where(column, '>', value);
+                });
+            }
         }
 
         if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });

@@ -1,7 +1,7 @@
 import Gybson, { LogLevel } from '../build/src/Client';
+import by from '../Gen';
 
 const main = async () => {
-
     Gybson.init({
         client: 'mysql',
         connection: {
@@ -15,7 +15,24 @@ const main = async () => {
             logLevel: LogLevel.debug,
         },
     });
-};
 
+    const gyb = by();
+
+    await gyb.Users.findMany({
+        where: {
+            user_id: 4,
+        },
+        orderBy: {
+            fname: 'asc',
+        },
+        paginate: {
+            limit: 3,
+            afterCount: 4,
+            afterCursor: {
+                user_id: 5,
+            },
+        },
+    });
+};
 
 main();

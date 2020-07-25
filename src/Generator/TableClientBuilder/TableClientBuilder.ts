@@ -20,6 +20,7 @@ export class TableClientBuilder {
         valueTypeName: string;
         whereTypeName: string;
         orderByTypeName: string;
+        paginationTypeName: string;
     };
     public readonly className: string;
     public readonly tableName: string;
@@ -46,6 +47,7 @@ export class TableClientBuilder {
             valueTypeName: `${this.className}Value`,
             whereTypeName: `${this.className}Where`,
             orderByTypeName: `${this.className}OrderBy`,
+            paginationTypeName: `${this.className}Paginate`,
         };
     }
 
@@ -70,7 +72,7 @@ export class TableClientBuilder {
     }
 
     private buildTemplate() {
-        const { rowTypeName, columnTypeName, columnMapTypeName, whereTypeName, orderByTypeName } = this.typeNames;
+        const { rowTypeName, columnMapTypeName, whereTypeName, orderByTypeName, paginationTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { 
@@ -91,7 +93,7 @@ export class TableClientBuilder {
 
              export default class ${
                  this.className
-             } extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}> {
+             } extends SQLQueryBuilder<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}> {
                     constructor() {
                         super('${this.tableName}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }
@@ -136,6 +138,7 @@ export class TableClientBuilder {
             valueTypeName,
             whereTypeName,
             orderByTypeName,
+            paginationTypeName
         } = this.typeNames;
 
         const primitives = {
@@ -200,6 +203,13 @@ export class TableClientBuilder {
                             return `${col.columnName}?: Order;`;
                         })
                         .join(' ')}
+                };
+                
+                //Pagination types
+                export type ${paginationTypeName} = {
+                    limit?: number;
+                    afterCursor?: Partial<${rowTypeName}>;
+                    afterCount?: number;
                 };
         `;
     }
