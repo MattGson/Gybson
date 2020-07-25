@@ -1,11 +1,5 @@
 import _ from 'lodash';
-import {
-    Introspection,
-    KeyDefinition,
-    ColumnDefinition,
-    EnumDefinitions,
-    TableDefinition,
-} from '../Introspection/IntrospectionTypes';
+import { ColumnDefinition, EnumDefinitions, Introspection, TableDefinition } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 
 interface BuilderOptions {
@@ -29,7 +23,6 @@ export class TableClientBuilder {
     };
     public readonly className: string;
     public readonly tableName: string;
-    private readonly enums: EnumDefinitions;
     private readonly options: BuilderOptions;
     private softDeleteColumn?: string;
     private loaders: string[] = [];
@@ -37,16 +30,13 @@ export class TableClientBuilder {
 
     /**
      *
-     * @param table - name of the table
-     * @param dbIntrospection
-     * @param enums - Definitions for DB enums
-     * @param options - preferences for code gen
+     * @param params
      */
-    public constructor(table: string, dbIntrospection: Introspection, enums: EnumDefinitions, options: BuilderOptions) {
+    public constructor(params: { table: string; dbIntrospection: Introspection; options: BuilderOptions }) {
+        const { table, dbIntrospection, options } = params;
         this.entityName = TableClientBuilder.PascalCase(table);
         this.introspection = dbIntrospection;
         this.tableName = table;
-        this.enums = enums;
         this.className = `${this.entityName}`;
         this.options = options;
         this.typeNames = {
@@ -79,7 +69,8 @@ export class TableClientBuilder {
     }
 
     public async build(): Promise<string> {
-        const columns = await this.introspection.getTableTypes(this.tableName, this.enums);
+        const enums = await this.introspection.getEnumTypesForTable(this.tableName);
+        const columns = await this.introspection.getTableTypes(this.tableName, enums);
 
         // if a soft delete column is given, check if it exists on the table
         this.softDeleteColumn =
@@ -88,7 +79,7 @@ export class TableClientBuilder {
                 : undefined;
 
         await this.buildLoadersForTable(columns);
-        await this.buildTableTypes(columns);
+        await this.buildTableTypes(columns, enums);
 
         return this.buildTemplate();
     }
@@ -152,21 +143,7 @@ export class TableClientBuilder {
         });
     }
 
-    /**
-     * Convert enum object to type definitions
-     * @param enumObject
-     */
-    private static generateEnumType(enumObject: EnumDefinitions) {
-        let enumString = '';
-        for (let enumName of Object.keys(enumObject)) {
-            enumString += `export type ${enumName} = `;
-            enumString += enumObject[enumName].map((v: string) => `'${v}'`).join(' | ');
-            enumString += ';\n';
-        }
-        return enumString;
-    }
-
-    private buildTableTypes(table: TableDefinition) {
+    private buildTableTypes(table: TableDefinition, enums: EnumDefinitions) {
         const {
             rowTypeName,
             columnTypeName,
@@ -191,24 +168,31 @@ export class TableClientBuilder {
 
         this.types = `
                 
-                // TODO:- split this by table?
-                ${TableClientBuilder.generateEnumType(this.enums)}
+                // Enums
+                ${Object.entries(enums).map(([name, values]) => {
+                    return `export type ${name} = ${values.map((v) => `'${v}'`).join(' | ')}`;
+                })}
                
+               // Row types
                 export namespace ${this.tableName}Fields {
-                    ${Object.entries(table).map(([columnName, columnDefinition]) => {
-                        let type = columnDefinition.tsType;
-                        let nullable = columnDefinition.nullable ? '| null' : '';
-                        return `export type ${TableClientBuilder.normalizeName(columnName)} = ${type}${nullable};`;
-                    }).join(' ')}
+                    ${Object.entries(table)
+                        .map(([columnName, columnDefinition]) => {
+                            let type = columnDefinition.tsType;
+                            let nullable = columnDefinition.nullable ? '| null' : '';
+                            return `export type ${TableClientBuilder.normalizeName(columnName)} = ${type}${nullable};`;
+                        })
+                        .join(' ')}
                 }
-                    
                  export interface ${this.typeNames.rowTypeName} {
-                    ${Object.keys(table).map((columnName) => {
-                        return `${columnName}: ${this.tableName}Fields.${TableClientBuilder.normalizeName(
-                            columnName,
-                        )};`;
-                    }).join(' ')}
+                    ${Object.keys(table)
+                        .map((columnName) => {
+                            return `${columnName}: ${this.tableName}Fields.${TableClientBuilder.normalizeName(
+                                columnName,
+                            )};`;
+                        })
+                        .join(' ')}
                 }
+                // Columns types
                 export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
                 export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
                 
@@ -220,6 +204,7 @@ export class TableClientBuilder {
                         .join(' ')}
                 }
                 
+                // Where types
                 export type ${whereTypeName} = {
                     ${Object.values(table)
                         .map((col) => {
@@ -231,7 +216,7 @@ export class TableClientBuilder {
                     NOT?: Enumerable<${whereTypeName}>;
                 };
                 
-                
+                // Order by types
                 export type ${orderByTypeName} = {
                     ${Object.values(table)
                         .map((col) => {

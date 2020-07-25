@@ -71,10 +71,9 @@ async function generateClientIndex(builders: TableClientBuilder[], outdir: strin
 async function generateClients(db: Introspection, outdir: string): Promise<string[]> {
     const builders: TableClientBuilder[] = [];
     const tables = await db.getSchemaTables();
-    const enums = await db.getEnumTypes();
 
     for (let table of tables) {
-        const builder = new TableClientBuilder(table, db, enums, codeGenPreferences);
+        const builder = new TableClientBuilder({ table, dbIntrospection: db, options: codeGenPreferences });
         builders.push(builder);
         await writeTypescriptFile(await builder.build(), outdir, `${builder.className}.ts`);
     }

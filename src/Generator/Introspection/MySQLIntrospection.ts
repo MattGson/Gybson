@@ -1,5 +1,4 @@
-import { mapValues, isEqual } from 'lodash';
-import { ColumnDefinition, EnumDefinitions, Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
+import { EnumDefinitions, Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
 import Knex = require('knex');
 
 export class MySQLIntrospection implements Introspection {
@@ -95,29 +94,20 @@ export class MySQLIntrospection implements Introspection {
     }
 
     /**
-     * Get the enum types from the database schema
+     * Get the enum types for a table
      * Note: - SET type is supported as well as ENUM but should rarely be used
      */
-    public async getEnumTypes(): Promise<EnumDefinitions> {
+    public async getEnumTypesForTable(tableName: string): Promise<EnumDefinitions> {
         let enums: { [enumName: string]: string[] } = {};
 
         const rawEnumRecords = await this.knex('information_schema.columns')
             .select('table_name', 'column_name', 'column_type')
             .whereIn('data_type', ['enum', 'set'])
-            .where({ table_schema: this.schemaName });
+            .where({ table_schema: this.schemaName, table_name: tableName });
 
         rawEnumRecords.forEach((enumItem: { table_name: string; column_name: string; column_type: string }) => {
             const enumName = MySQLIntrospection.getEnumName(enumItem.table_name, enumItem.column_name);
-            const enumValues = MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type);
-
-            // make sure no duplicates
-            if (enums[enumName] && !isEqual(enums[enumName], enumValues)) {
-                const errorMsg =
-                    `Multiple enums with the same name and contradicting types were found: ` +
-                    `${enumItem.column_name}: ${JSON.stringify(enums[enumName])} and ${JSON.stringify(enumValues)}`;
-                throw new Error(errorMsg);
-            }
-            enums[enumName] = enumValues;
+            enums[enumName] = MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type);
         });
         return enums;
     }
