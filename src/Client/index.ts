@@ -72,11 +72,10 @@ export interface PostgresConnection {
 const init = (config: {
     client: 'mysql' | 'postgres';
     connection?: MYSQLConnection | PostgresConnection;
-    config?: GybsonConfig;
+    options?: GybsonConfig;
 }) => {
     const useConfig = {
-        logLevel: LogLevel.info,
-        ...config,
+        logLevel: config.options?.logLevel || LogLevel.info,
     };
     const logger = buildLogger(useConfig);
 

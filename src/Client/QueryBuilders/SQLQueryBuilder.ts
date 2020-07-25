@@ -297,6 +297,12 @@ export abstract class SQLQueryBuilder<
             }
         }
 
+        if (paginate && paginate.afterCursor && orderBy) {
+            for (let key of Object.keys(paginate.afterCursor)) {
+                if (!orderBy[key]) logger().warn('You are ordering by different keys to your cursor. This may lead to unexpected results');
+            }
+        }
+
         if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
 
         logger().debug('Executing SQL: %j', query.toSQL().sql);
