@@ -202,11 +202,6 @@ const users = await gybson.Users.findMany({
                 }
             }
         ],
-        last_name: {
-            NOT: [
-                { startsWith: 'P' }
-            ]
-        },
         age: {
             lt: 20
         },
