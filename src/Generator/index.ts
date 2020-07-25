@@ -7,7 +7,6 @@ import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder/TableClientBuilder';
 import { Introspection } from './Introspection/IntrospectionTypes';
-import { TypeBuilder } from './TypeBuilder/TypeBuilder';
 
 // TODO:- options
 
@@ -35,21 +34,6 @@ async function writeTypescriptFile(content: string, directory: string, filename:
         path.join(directory, filename),
         format(fileHeader + content, { parser: 'typescript', ...prettier }),
     );
-}
-
-// **************************
-// generate types
-// **************************
-
-async function generateTypes(db: Introspection, outdir: string): Promise<void> {
-    const tables = await db.getSchemaTables();
-    const enums = await db.getEnumTypes();
-
-    const typeBuilder = new TypeBuilder(tables, enums, codeGenPreferences);
-
-    const types = await typeBuilder.build(db);
-
-    await writeTypescriptFile(types, outdir, 'db-schema.ts');
 }
 
 // **************************
@@ -90,9 +74,9 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
     const enums = await db.getEnumTypes();
 
     for (let table of tables) {
-        const builder = new TableClientBuilder(table, enums, codeGenPreferences);
+        const builder = new TableClientBuilder(table, db, enums, codeGenPreferences);
         builders.push(builder);
-        await writeTypescriptFile(await builder.build(db), outdir, `${builder.className}.ts`);
+        await writeTypescriptFile(await builder.build(), outdir, `${builder.className}.ts`);
     }
 
     // BUILD ENTRY POINT
@@ -126,7 +110,6 @@ export async function generate(conn: Connection, outdir: string) {
         DB = new MySQLIntrospection(knex, conn.connection.database);
     } else throw new Error('PostgreSQL not currently supported');
 
-    await generateTypes(DB, outdir);
     const tables = await generateClients(DB, outdir);
 
     console.log(`Generated for ${tables.length} tables in ${outdir}`);

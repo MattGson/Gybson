@@ -17,6 +17,7 @@ interface BuilderOptions {
  * Builds db client methods for a table
  */
 export class TableClientBuilder {
+    private readonly introspection: Introspection;
     public readonly entityName: string;
     public readonly typeNames: {
         rowTypeName: string;
@@ -27,7 +28,7 @@ export class TableClientBuilder {
         orderByTypeName: string;
     };
     public readonly className: string;
-    public readonly table: string;
+    public readonly tableName: string;
     private readonly enums: EnumDefinitions;
     private readonly options: BuilderOptions;
     private softDeleteColumn?: string;
@@ -37,12 +38,14 @@ export class TableClientBuilder {
     /**
      *
      * @param table - name of the table
+     * @param dbIntrospection
      * @param enums - Definitions for DB enums
      * @param options - preferences for code gen
      */
-    public constructor(table: string, enums: EnumDefinitions, options: BuilderOptions) {
+    public constructor(table: string, dbIntrospection: Introspection, enums: EnumDefinitions, options: BuilderOptions) {
         this.entityName = TableClientBuilder.PascalCase(table);
-        this.table = table;
+        this.introspection = dbIntrospection;
+        this.tableName = table;
         this.enums = enums;
         this.className = `${this.entityName}`;
         this.options = options;
@@ -60,8 +63,23 @@ export class TableClientBuilder {
         return _.upperFirst(_.camelCase(name));
     }
 
-    public async build(introspection: Introspection): Promise<string> {
-        const columns = await introspection.getTableTypes(this.table, this.enums);
+    /**
+     * Change names of types to remove any reserved words
+     * @param name
+     */
+    private static normalizeName(name: string): string {
+        const reservedKeywords = ['string', 'number', 'package', 'symbol'];
+        const reserved = reservedKeywords.indexOf(name) !== -1;
+
+        if (reserved) {
+            return name + '_';
+        } else {
+            return name;
+        }
+    }
+
+    public async build(): Promise<string> {
+        const columns = await this.introspection.getTableTypes(this.tableName, this.enums);
 
         // if a soft delete column is given, check if it exists on the table
         this.softDeleteColumn =
@@ -69,46 +87,29 @@ export class TableClientBuilder {
                 ? this.options.softDeleteColumn
                 : undefined;
 
-        // TODO:- work out where this goes
-        this.types = this.buildQueryTypes(columns);
+        await this.buildLoadersForTable(columns);
+        await this.buildTableTypes(columns);
 
-        const tableKeys = await introspection.getTableKeys(this.table);
-        const unique = CardinalityResolver.getUniqueKeys(tableKeys);
-        const nonUnique = CardinalityResolver.getNonUniqueKey(tableKeys);
-
-        unique.forEach((key) => {
-            // for now only accept loaders on string and number column types
-            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
-            for (let col of keyColumns) {
-                if (col.tsType !== 'string' && col.tsType !== 'number') return;
-            }
-
-            this.addCompoundByColumnLoader(keyColumns);
-        });
-
-        nonUnique.forEach((key) => {
-            // for now only accept loaders on string and number column types
-            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
-            for (let col of keyColumns) {
-                if (col.tsType !== 'string' && col.tsType !== 'number') return;
-            }
-
-            this.addCompoundManyByColumnLoader(keyColumns);
-        });
-
-        return this.buildTemplate(
-            this.loaders.join(`
-        
-        `),
-        );
+        return this.buildTemplate();
     }
 
-    private buildTemplate(content: string) {
+    private buildTemplate() {
         const { rowTypeName, columnTypeName, columnMapTypeName, whereTypeName, orderByTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
-            import { SQLQueryBuilder } from 'gybson';
-            import { ${this.table}, ${Object.keys(this.enums).join(',')} } from './db-schema';
+            import { 
+                    SQLQueryBuilder,
+                    Order, 
+                    Enumerable, 
+                    NumberWhere, 
+                    NumberWhereNullable, 
+                    StringWhere, 
+                    StringWhereNullable, 
+                    BooleanWhere, 
+                    BooleanWhereNullable, 
+                    DateWhere, 
+                    DateWhereNullable 
+                } from 'gybson';
             
             ${this.types}
 
@@ -116,15 +117,56 @@ export class TableClientBuilder {
                  this.className
              } extends SQLQueryBuilder<${rowTypeName}, ${columnTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}> {
                     constructor() {
-                        super('${this.table}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
+                        super('${this.tableName}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
                     }
-                ${content}
+                ${this.loaders.join(`
+        
+                `)}
             }
             `;
     }
 
-    // TODO:- where should this go?
-    private buildQueryTypes(table: TableDefinition) {
+    private async buildLoadersForTable(columns: TableDefinition) {
+        const tableKeys = await this.introspection.getTableKeys(this.tableName);
+        const unique = CardinalityResolver.getUniqueKeys(tableKeys);
+        const nonUnique = CardinalityResolver.getNonUniqueKey(tableKeys);
+
+        unique.forEach((key) => {
+            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
+            for (let col of keyColumns) {
+                // for now only accept loaders on string and number column types
+                if (col.tsType !== 'string' && col.tsType !== 'number') return;
+            }
+
+            this.addCompoundByColumnLoader(keyColumns);
+        });
+
+        nonUnique.forEach((key) => {
+            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
+            for (let col of keyColumns) {
+                // for now only accept loaders on string and number column types
+                if (col.tsType !== 'string' && col.tsType !== 'number') return;
+            }
+
+            this.addCompoundManyByColumnLoader(keyColumns);
+        });
+    }
+
+    /**
+     * Convert enum object to type definitions
+     * @param enumObject
+     */
+    private static generateEnumType(enumObject: EnumDefinitions) {
+        let enumString = '';
+        for (let enumName of Object.keys(enumObject)) {
+            enumString += `export type ${enumName} = `;
+            enumString += enumObject[enumName].map((v: string) => `'${v}'`).join(' | ');
+            enumString += ';\n';
+        }
+        return enumString;
+    }
+
+    private buildTableTypes(table: TableDefinition) {
         const {
             rowTypeName,
             columnTypeName,
@@ -147,22 +189,26 @@ export class TableClientBuilder {
             return ` | ${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}`;
         };
 
-        return `
+        this.types = `
                 
-                import { 
-                    Order, 
-                    Enumerable, 
-                    NumberWhere, 
-                    NumberWhereNullable, 
-                    StringWhere, 
-                    StringWhereNullable, 
-                    BooleanWhere, 
-                    BooleanWhereNullable, 
-                    DateWhere, 
-                    DateWhereNullable 
-                } from 'gybson';
+                // TODO:- split this by table?
+                ${TableClientBuilder.generateEnumType(this.enums)}
                
-                export type ${rowTypeName} = ${this.table};
+                export namespace ${this.tableName}Fields {
+                    ${Object.entries(table).map(([columnName, columnDefinition]) => {
+                        let type = columnDefinition.tsType;
+                        let nullable = columnDefinition.nullable ? '| null' : '';
+                        return `export type ${TableClientBuilder.normalizeName(columnName)} = ${type}${nullable};`;
+                    }).join(' ')}
+                }
+                    
+                 export interface ${this.typeNames.rowTypeName} {
+                    ${Object.keys(table).map((columnName) => {
+                        return `${columnName}: ${this.tableName}Fields.${TableClientBuilder.normalizeName(
+                            columnName,
+                        )};`;
+                    }).join(' ')}
+                }
                 export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
                 export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
                 
@@ -193,34 +239,6 @@ export class TableClientBuilder {
                         })
                         .join(' ')}
                 };
-        `;
-    }
-
-    /**
-     * Build a public interface for a loader
-     * Can optionally include soft delete filtering
-     * @param column
-     * @param loaderName
-     * @param softDeleteFilter
-     */
-    private loaderPublicMethod(column: ColumnDefinition, loaderName: string, softDeleteFilter: boolean) {
-        const { columnName, tsType } = column;
-
-        if (softDeleteFilter && this.softDeleteColumn)
-            return `
-            public async by${TableClientBuilder.PascalCase(
-                columnName,
-            )}(${columnName}: ${tsType}, includeDeleted = false) {
-                    const row = await this.${loaderName}.load(${columnName});
-                    if (row?.${this.softDeleteColumn} && !includeDeleted) return null;
-                    return row;
-                }
-        `;
-
-        return `
-            public by${TableClientBuilder.PascalCase(columnName)}(${columnName}: ${tsType}) {
-                    return this.${loaderName}.load(${columnName});
-                }
         `;
     }
 

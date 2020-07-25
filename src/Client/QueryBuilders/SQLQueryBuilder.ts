@@ -284,6 +284,7 @@ export abstract class SQLQueryBuilder<
                 query.orderBy(column, direction);
             }
         }
+        // TODO:- review pagination
         if (first) {
             query.limit(first);
         }
