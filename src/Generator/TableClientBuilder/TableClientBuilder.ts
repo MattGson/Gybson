@@ -53,21 +53,6 @@ export class TableClientBuilder {
         return _.upperFirst(_.camelCase(name));
     }
 
-    /**
-     * Change names of types to remove any reserved words
-     * @param name
-     */
-    private static normalizeName(name: string): string {
-        const reservedKeywords = ['string', 'number', 'package', 'symbol'];
-        const reserved = reservedKeywords.indexOf(name) !== -1;
-
-        if (reserved) {
-            return name + '_';
-        } else {
-            return name;
-        }
-    }
-
     public async build(): Promise<string> {
         const enums = await this.introspection.getEnumTypesForTable(this.tableName);
         const columns = await this.introspection.getTableTypes(this.tableName, enums);
@@ -174,24 +159,16 @@ export class TableClientBuilder {
                 })}
                
                // Row types
-                export namespace ${this.tableName}Fields {
+                export interface ${rowTypeName} {
                     ${Object.entries(table)
                         .map(([columnName, columnDefinition]) => {
                             let type = columnDefinition.tsType;
                             let nullable = columnDefinition.nullable ? '| null' : '';
-                            return `export type ${TableClientBuilder.normalizeName(columnName)} = ${type}${nullable};`;
+                            return `${columnName}: ${type}${nullable};`;
                         })
                         .join(' ')}
                 }
-                 export interface ${this.typeNames.rowTypeName} {
-                    ${Object.keys(table)
-                        .map((columnName) => {
-                            return `${columnName}: ${this.tableName}Fields.${TableClientBuilder.normalizeName(
-                                columnName,
-                            )};`;
-                        })
-                        .join(' ')}
-                }
+
                 // Columns types
                 export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
                 export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
