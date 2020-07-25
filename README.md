@@ -184,17 +184,19 @@ const user = await gybson.Post.byTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
 `findMany` loads many rows from a table. It provides a flexible query API whilst maintaining full type safety.
 Due to this flexibility, `findMany` does not perform batching or caching.
 
-Example: Find all users where:
- - The first name is 'John'
+##### A complex example: 
+Find the first 3 users where:
+ - The city is 'NY'
  - The last name does NOT start with 'P',
  - The age is less than 20
  - The favourite Pet is either a 'dog' or a 'cat'
- - Order by first_name and last_name descending.
+ - Order by first_name and last_name ascending.
+ - Start from cursor 'John'
 ```typescript
 
 const users = await gybson.Users.findMany({ 
     where: {
-        first_name: 'John',
+        city: 'NY',
         NOT: [
             { 
                 last_name: {
@@ -213,6 +215,12 @@ const users = await gybson.Users.findMany({
     orderBy: {
         first_name: 'desc',
         last_name: 'desc'
+    },
+    paginate: {
+        limit: 3,
+        afterCursor: {
+            first_name: 'John'
+        }
     }
 });
 
