@@ -181,19 +181,25 @@ const user = await gybson.Post.byTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
 ```
 
 #### findMany
-findMany loads many rows from a table. It provides a flexible query API whilst maintaining full type safety.
-Due to this flexibility, findMany does not perform batching or caching.
+`findMany` loads many rows from a table. It provides a flexible query API whilst maintaining full type safety.
+Due to this flexibility, `findMany` does not perform batching or caching.
 
 Example: Find all users where:
  - The first name is 'John'
+ - The last name does NOT start with 'P',
  - The age is less than 20
  - The favourite Pet is either a 'dog' or a 'cat'
- - Order by last_name in descending order.
+ - Order by first_name and last_name in descending.
 ```typescript
 
 const users = await gybson.Users.findMany({ 
     where: {
         first_name: 'John',
+        last_name: {
+            NOT: [
+                { startsWith: 'P' }
+            ]
+        },
         age: {
             lt: 20
         },
@@ -203,6 +209,7 @@ const users = await gybson.Users.findMany({
         ]
     },
     orderBy: {
+        first_name: 'desc',
         last_name: 'desc'
     }
 });
@@ -210,27 +217,14 @@ const users = await gybson.Users.findMany({
 // Return type: user[]
 ```
 
-#### insertOne
-Insert a single row into the database. This will automatically apply DEFAULT values for any 
+
+#### insert
+Inserts one or more rows into the database. This will automatically apply DEFAULT values for any 
 columns that are undefined.
 
 ```typescript
 
-const users = await gybson.Users.insertOne({ 
-    value: {
-        first_name: 'John',
-        age: 25,
-        last_name: 'Doe'
-    },
-});
-```
-#### insertMany
-Inserts multiple row into the database. This will automatically apply DEFAULT values for any 
-columns that are undefined.
-
-```typescript
-
-const users = await gybson.Users.insertMany({ 
+const users = await gybson.Users.insert({ 
     values: [
         {
             first_name: 'John',
@@ -274,8 +268,8 @@ const users = await gybson.Users.upsert({
 ```
 
 #### update
-Update rows that match a where filter.
-All the where options from findMany are also available here.
+Update rows that match a `where` filter.
+All the `where` options from `findMany` are also available here.
 
 
 ```typescript
@@ -296,7 +290,7 @@ const users = await gybson.Users.update({
 #### softDelete
 This is a shortcut to soft delete rows rather than using update.
 It will set the soft-delete column to true and cause the row to be filtered from future queries.
-This allows the same where options as update and findMany.
+This allows the same `where` options as `update` and `findMany`.
 
 ```typescript
 
@@ -306,6 +300,31 @@ const users = await gybson.Users.softDelete({
             not: 5
         }
     }
+});
+```
+
+#### transaction
+Use `transaction` to run a set of queries as a single atomic query. This means if any
+of the queries fail then none of the changes will be committed. You can include a query in
+the transaction by passing in the `connection` argument.
+
+```typescript
+
+const newUser = await transaction(async (connection) => {
+
+    const users = await gybson.Users.softDelete({ 
+        connection,
+        where: {
+            user_id: 1
+        }
+    });
+    return await gybson.Users.insert({
+        connection,
+        values: [
+            { first_name: 'Steve' }
+        ]
+    });
+
 });
 ```
 ## Prior Art

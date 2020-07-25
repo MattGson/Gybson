@@ -356,29 +356,6 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Type-safe insert function
-     * Inserts row. Fails on duplicate key error
-     *     * use upsert if you wish to ignore duplicate rows
-     * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
-     * Will take the superset of all columns in the insert values
-     * @param params
-     */
-    public async insertOne(params: { connection?: PoolConnection; value: PartialTblRow }): Promise<number | null> {
-        const { value, connection } = params;
-
-        // TODO:- add returning() to support postgres
-        let query = knex()(this.tableName).insert(value);
-
-        if (connection) query.connection(connection);
-
-        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, value);
-        const result = await query;
-
-        // TODO seems to return 0 for non-auto-increment inserts
-        return result[0];
-    }
-
-    /**
      * Type-safe multi insert function
      * Inserts all rows. Fails on duplicate key error
      *     * use upsert if you wish to ignore duplicate rows
@@ -386,10 +363,11 @@ export abstract class SQLQueryBuilder<
      * Will take the superset of all columns in the insert values
      * @param params
      */
-    public async insertMany(params: { connection?: PoolConnection; values: PartialTblRow[] }): Promise<number | null> {
+    public async insert(params: { connection?: PoolConnection; values: PartialTblRow[] }): Promise<number | null> {
         const { values, connection } = params;
         if (values.length < 1) return null;
 
+        // TODO:- add returning() to support postgres
         let query = knex()(this.tableName).insert(values);
         if (connection) query.connection(connection);
 
