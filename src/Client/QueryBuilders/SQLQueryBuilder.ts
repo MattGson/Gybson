@@ -2,7 +2,16 @@ import { PoolConnection } from 'promise-mysql';
 import { knex, OrderByBase, PaginateBase, WhereBase } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
-import { QueryBuilder } from 'knex';
+import { WhereResolver } from './WhereResolver';
+
+export interface JoinColumn {
+    fromColumn: string;
+    toColumn: string;
+}
+
+export interface RelationTables {
+    [tableName: string]: JoinColumn[];
+}
 
 export abstract class SQLQueryBuilder<
     TblRow,
@@ -14,10 +23,12 @@ export abstract class SQLQueryBuilder<
 > {
     private tableName: string;
     private softDeleteColumn?: string;
+    private relationTables: RelationTables;
 
-    protected constructor(tableName: string, softDeleteColumn?: string) {
-        this.tableName = tableName;
-        this.softDeleteColumn = softDeleteColumn;
+    protected constructor(params: { tableName: string; softDeleteColumn?: string; relations: RelationTables }) {
+        this.tableName = params.tableName;
+        this.softDeleteColumn = params.softDeleteColumn;
+        this.relationTables = params.relations;
     }
 
     private hasSoftDelete(): boolean {
@@ -112,152 +123,6 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Resolve a where clause
-     * @param params
-     */
-    private resolveWhereClause(params: { queryBuilder: QueryBuilder; where: TblWhere }): QueryBuilder {
-        const { queryBuilder, where } = params;
-        enum operators {
-            equals = 'equals',
-            not = 'not',
-            notIn = 'notIn',
-            lt = 'lt',
-            lte = 'lte',
-            gt = 'gt',
-            gte = 'gte',
-            contains = 'contains',
-            startsWith = 'startsWith',
-            endsWith = 'endsWith',
-        }
-
-        const combiners = {
-            AND: 'AND',
-            OR: 'OR',
-            NOT: 'NOT',
-        };
-
-        const primitives = {
-            string: true,
-            number: true,
-            bigint: true,
-            boolean: true,
-            date: true,
-        };
-
-        // resolves a single where block like:
-        // user_id: {
-        //      not_in: [3, 4],
-        //      gte: 1
-        // }
-        // These are the leafs in the recursion
-        const buildWhereLeafClause = (column: string, value: any, builder: QueryBuilder) => {
-            const valueType: string = typeof value;
-            // @ts-ignore - can't index
-            if (primitives[valueType]) {
-                // is a primitive so use equals clause
-                builder.where(column, value);
-            } else if (valueType === 'object') {
-                //is an object so need to work out operators
-                for (let [operator, val] of Object.entries(value)) {
-                    switch (operator) {
-                        case operators.equals:
-                            //@ts-ignore
-                            builder.where(column, val);
-                            break;
-                        case operators.not:
-                            //@ts-ignore
-                            builder.whereNot(column, val);
-                            break;
-                        case operators.notIn:
-                            // @ts-ignore
-                            builder.whereNotIn(column, val);
-                            break;
-                        case operators.lt:
-                            // @ts-ignore
-                            builder.where(column, '<', val);
-                            break;
-                        case operators.lte:
-                            // @ts-ignore
-                            builder.where(column, '<=', val);
-                            break;
-                        case operators.gt:
-                            // @ts-ignore
-                            builder.where(column, '>', val);
-                            break;
-                        case operators.gte:
-                            // @ts-ignore
-                            builder.whereNot(column, '>=', val);
-                            break;
-                        case operators.contains:
-                            // @ts-ignore
-                            builder.where(column, 'like', `$%{val}%`);
-                            break;
-                        case operators.startsWith:
-                            // @ts-ignore
-                            builder.where(column, 'like', `${val}%`);
-                            break;
-                        case operators.endsWith:
-                            // @ts-ignore
-                            builder.where(column, 'like', `$%{val}`);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        };
-
-        // resolve each where clause
-        // can be either a where leaf or a combiner
-        // recurse the where tree
-        const resolveWhere = (subQuery: any, builder: QueryBuilder) => {
-            for (let [column, value] of Object.entries(subQuery)) {
-                // @ts-ignore
-                if (!combiners[column]) {
-                    // resolve leaf node
-                    buildWhereLeafClause(column, value, builder);
-                    continue;
-                }
-                // is a combiner so need to resolve each sub block recursively
-                switch (column) {
-                    case combiners.AND:
-                        builder.where(function () {
-                            // @ts-ignore
-                            for (let clause of value) {
-                                resolveWhere(clause, this);
-                            }
-                        });
-                        break;
-                    case combiners.OR:
-                        builder.where(function () {
-                            // @ts-ignore
-                            for (let clause of value) {
-                                this.orWhere(function () {
-                                    resolveWhere(clause, this);
-                                });
-                            }
-                        });
-                        break;
-                    case combiners.NOT:
-                        builder.where(function () {
-                            // @ts-ignore
-                            for (let clause of value) {
-                                this.andWhereNot(function () {
-                                    resolveWhere(clause, this);
-                                });
-                            }
-                        });
-                        break;
-                    default:
-                        break;
-                }
-            }
-        };
-        resolveWhere(where, queryBuilder);
-        return queryBuilder;
-    }
-
-    /**
      * Complex find rows from a table
      * @param params
      *      * // TODO:-
@@ -276,7 +141,7 @@ export abstract class SQLQueryBuilder<
         let query = knex()(this.tableName).select();
 
         if (where) {
-            this.resolveWhereClause({ where, queryBuilder: query });
+            WhereResolver.resolveWhereClause({ where, queryBuilder: query, relations: this.relationTables });
         }
 
         if (orderBy) {
@@ -299,7 +164,10 @@ export abstract class SQLQueryBuilder<
 
         if (paginate && paginate.afterCursor && orderBy) {
             for (let key of Object.keys(paginate.afterCursor)) {
-                if (!orderBy[key]) logger().warn('You are ordering by different keys to your cursor. This may lead to unexpected results');
+                if (!orderBy[key])
+                    logger().warn(
+                        'You are ordering by different keys to your cursor. This may lead to unexpected results',
+                    );
             }
         }
 
@@ -408,7 +276,7 @@ export abstract class SQLQueryBuilder<
 
         const query = knex()(this.tableName).update({ [this.softDeleteColumnString]: true });
 
-        this.resolveWhereClause({ queryBuilder: query, where });
+        WhereResolver.resolveWhereClause({ queryBuilder: query, where, relations: this.relationTables });
 
         if (connection) query.connection(connection);
 
@@ -430,7 +298,7 @@ export abstract class SQLQueryBuilder<
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
         const query = knex()(this.tableName).update(values);
-        this.resolveWhereClause({ queryBuilder: query, where });
+        WhereResolver.resolveWhereClause({ queryBuilder: query, where, relations: this.relationTables });
         if (connection) query.connection(connection);
 
         logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);

@@ -1,4 +1,10 @@
-import { EnumDefinitions, Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
+import {
+    EnumDefinitions,
+    Introspection,
+    KeyDefinition,
+    RelationDefinitions,
+    TableDefinition,
+} from './IntrospectionTypes';
 import Knex = require('knex');
 
 export class MySQLIntrospection implements Introspection {
@@ -158,6 +164,28 @@ export class MySQLIntrospection implements Introspection {
                 tableName: row.table_name,
             };
         });
+    }
+
+    /**
+     * Get all relations where the given table holds the constraint (1-N)
+     * @param tableName
+     */
+    public async getForwardRelations(tableName: string): Promise<RelationDefinitions> {
+        const rows = await this.knex('information_schema.key_column_usage')
+            .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
+            .where({ table_name: tableName, table_schema: this.schemaName });
+
+        let relations: RelationDefinitions = {};
+        rows.forEach((row) => {
+            const { column_name, referenced_table_name, referenced_column_name } = row;
+            if (referenced_table_name == null || referenced_column_name == null) return;
+            if (!relations[referenced_table_name]) relations[referenced_table_name] = [];
+            relations[referenced_table_name].push({
+                fromColumn: column_name,
+                toColumn: referenced_column_name,
+            });
+        });
+        return relations;
     }
 
     /**

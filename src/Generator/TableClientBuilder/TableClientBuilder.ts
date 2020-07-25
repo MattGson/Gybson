@@ -1,5 +1,11 @@
 import _ from 'lodash';
-import { ColumnDefinition, EnumDefinitions, Introspection, TableDefinition } from '../Introspection/IntrospectionTypes';
+import {
+    ColumnDefinition,
+    EnumDefinitions,
+    Introspection,
+    RelationDefinitions,
+    TableDefinition,
+} from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 
 interface BuilderOptions {
@@ -21,13 +27,23 @@ export class TableClientBuilder {
         whereTypeName: string;
         orderByTypeName: string;
         paginationTypeName: string;
+        relationFilterTypeName: string;
     };
     public readonly className: string;
     public readonly tableName: string;
+    private relatedTables: string[] = [];
     private readonly options: BuilderOptions;
     private softDeleteColumn?: string;
     private loaders: string[] = [];
     private types?: string;
+
+    /**
+     * Get the name of a relation type
+     * @param tableName
+     */
+    private static getRelationFilterName(tableName: string) {
+        return `${this.PascalCase(tableName)}RelationFilter`;
+    }
 
     /**
      *
@@ -48,6 +64,7 @@ export class TableClientBuilder {
             whereTypeName: `${this.className}Where`,
             orderByTypeName: `${this.className}OrderBy`,
             paginationTypeName: `${this.className}Paginate`,
+            relationFilterTypeName: TableClientBuilder.getRelationFilterName(this.tableName),
         };
     }
 
@@ -58,6 +75,9 @@ export class TableClientBuilder {
     public async build(): Promise<string> {
         const enums = await this.introspection.getEnumTypesForTable(this.tableName);
         const columns = await this.introspection.getTableTypes(this.tableName, enums);
+        const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
+
+        this.relatedTables = Object.keys(forwardRelations);
 
         // if a soft delete column is given, check if it exists on the table
         this.softDeleteColumn =
@@ -88,6 +108,13 @@ export class TableClientBuilder {
                     DateWhere, 
                     DateWhereNullable 
                 } from 'gybson';
+                
+            ${this.relatedTables.map((tbl) => {
+                return `import { ${TableClientBuilder.getRelationFilterName(
+                    tbl,
+                )} } from "./${TableClientBuilder.PascalCase(tbl)}"`;
+            }).join(';')}
+
             
             ${this.types}
 
@@ -138,7 +165,8 @@ export class TableClientBuilder {
             valueTypeName,
             whereTypeName,
             orderByTypeName,
-            paginationTypeName
+            paginationTypeName,
+            relationFilterTypeName,
         } = this.typeNames;
 
         const primitives = {
@@ -184,6 +212,12 @@ export class TableClientBuilder {
                         .join(' ')}
                 }
                 
+                export type ${relationFilterTypeName} = {
+                    exists?: ${whereTypeName};
+                    notExists?: ${whereTypeName};
+                    innerJoin?: ${whereTypeName};
+                }
+                
                 // Where types
                 export type ${whereTypeName} = {
                     ${Object.values(table)
@@ -194,6 +228,9 @@ export class TableClientBuilder {
                     AND?: Enumerable<${whereTypeName}>;
                     OR?: Enumerable<${whereTypeName}>;
                     NOT?: Enumerable<${whereTypeName}>;
+                    ${this.relatedTables.map((toTable) => {
+                        return `${toTable}?: ${TableClientBuilder.getRelationFilterName(toTable)} | null`;
+                    })}
                 };
                 
                 // Order by types

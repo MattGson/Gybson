@@ -1,8 +1,9 @@
 export interface Introspection {
     getTableTypes(table: string, enumTypes: EnumDefinitions): Promise<TableDefinition>;
     getTableKeys(table: string): Promise<KeyDefinition[]>;
+    getForwardRelations(table: string): Promise<RelationDefinitions>;
     getSchemaTables(): Promise<string[]>;
-    getEnumTypesForTable(table: string): Promise<{ [enumName: string]: string[] }>;
+    getEnumTypesForTable(table: string): Promise<EnumDefinitions>;
 }
 
 export interface ColumnDefinition {
@@ -24,4 +25,25 @@ export interface TableDefinition {
 
 export interface EnumDefinitions {
     [enumName: string]: string[];
+}
+
+// export interface RelationColumn {
+//     constraintName: string;
+//     fromColumnName: string;
+//     fromTableName: string;
+//     toColumnName: string;
+//     toTableName: string;
+// }
+//
+// export interface RelationDefinitions {
+//     [constraintName: string]: RelationColumn[];
+// }
+
+export interface JoinColumns {
+    fromColumn: string;
+    toColumn: string;
+}
+
+export interface RelationDefinitions {
+    [toTableName: string]: JoinColumns[];
 }
