@@ -9,25 +9,52 @@ Gybson.init({
         password: '',
     },
     options: {
-        logLevel: LogLevel.debug
-    }
+        logLevel: LogLevel.debug,
+    },
 });
 const gyb = by();
 
 const main = async () => {
+    await gyb.Posts.insert({
+        values: [
+            {
+                author_id: 4,
+            },
+        ],
+    });
 
+    await gyb.Posts.upsert({
+        values: [
+            {
+                post_id: 4,
+                author_id: 3,
+            },
+        ],
+        updateColumns: {
+            author_id: true
+        }
+    });
 
+    await gyb.Posts.update({
+        values: {
+            author_id: 1,
+            datetime: new Date(),
+        },
+        where: {
+            post_id: 4
+        }
+    })
 
     const post = await gyb.Posts.findMany({
         where: {
             post_id: 4,
             users: {
                 innerJoinWhere: {
-                    user_id:  {
-                        not: 5
-                    }
-                }
-            }
+                    user_id: {
+                        not: 5,
+                    },
+                },
+            },
         },
         orderBy: {
             datetime: 'asc',

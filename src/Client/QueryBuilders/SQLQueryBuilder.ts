@@ -29,15 +29,15 @@ export abstract class SQLQueryBuilder<
         return this.softDeleteColumn != null;
     }
 
-    private get softDeleteColumnString(): string {
-        return `${this.tableColumnAlias(this.softDeleteColumn as string)}`;
+    private get aliasedSoftDeleteColumn(): string {
+        return `${this.aliasedColumn(this.softDeleteColumn as string)}`;
     }
 
-    private get aliasTableAssign(): string {
+    private get aliasedTable(): string {
         return `${this.tableName} as ${this.tableAlias}`;
     }
 
-    private tableColumnAlias(column: string) {
+    private aliasedColumn(column: string) {
         return `${this.tableAlias}.${column}`;
     }
 
@@ -64,7 +64,7 @@ export abstract class SQLQueryBuilder<
 
         // build query
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
-        if (!includeSoftDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
+        if (!includeSoftDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumn as string]: false });
 
         if (orderBy) {
             for (let [column, direction] of Object.entries(orderBy)) {
@@ -128,8 +128,8 @@ export abstract class SQLQueryBuilder<
      * Complex find rows from a table
      * @param params
      *      * // TODO:-
-     *              - cursor pagination,
-     *              - Joins (join filtering (every - left join, some - inner join, none - outer join)), eager load?
+     *              - cursor pagination - review limit,
+     *              - eager load?
      *
      */
     public async findMany(params: {
@@ -140,7 +140,7 @@ export abstract class SQLQueryBuilder<
         includeDeleted?: boolean;
     }): Promise<TblRow[]> {
         const { orderBy, paginate, where, includeDeleted } = params;
-        let query = knex()(this.aliasTableAssign).select(`${this.tableAlias}.*`);
+        let query = knex()(this.aliasedTable).select(`${this.tableAlias}.*`);
 
         if (where) {
             WhereResolver.resolveWhereClause({
@@ -152,11 +152,11 @@ export abstract class SQLQueryBuilder<
             });
         }
 
-        if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
+        if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.aliasedSoftDeleteColumn]: false });
 
         if (orderBy) {
             for (let [column, direction] of Object.entries(orderBy)) {
-                query.orderBy(this.tableColumnAlias(column), direction);
+                query.orderBy(this.aliasedColumn(column), direction);
             }
         }
 
@@ -167,7 +167,7 @@ export abstract class SQLQueryBuilder<
             if (afterCount) query.offset(afterCount);
             if (afterCursor) {
                 Object.entries(afterCursor).forEach(([column, value]) => {
-                    query.where(this.tableColumnAlias(column), '>', value);
+                    query.where(this.aliasedColumn(column), '>', value);
                 });
             }
         }
@@ -219,11 +219,11 @@ export abstract class SQLQueryBuilder<
 
         // add deleted column to all records
         if (reinstateSoftDeletedRows && this.hasSoftDelete()) {
-            columnsToUpdate.push(this.softDeleteColumnString);
+            columnsToUpdate.push(this.softDeleteColumn as string);
             insertRows = insertRows.map((value) => {
                 return {
                     ...value,
-                    [this.softDeleteColumnString]: false,
+                    [this.softDeleteColumn as string]: false,
                 };
             });
         }
@@ -282,7 +282,7 @@ export abstract class SQLQueryBuilder<
         if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
-        const query = knex()(this.tableName).update({ [this.softDeleteColumnString]: true });
+        const query = knex()(this.aliasedTable).update({ [this.aliasedSoftDeleteColumn]: true });
 
         WhereResolver.resolveWhereClause({
             queryBuilder: query,
@@ -311,7 +311,10 @@ export abstract class SQLQueryBuilder<
         if (Object.keys(values).length < 1) throw new Error('Must have at least one updated column');
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
-        const query = knex()(this.tableName).update(values);
+        // @ts-ignore - PartialTblRow extends object
+        const aliasedValues = _.mapKeys(values, (_val, col: string) => this.aliasedColumn(col));
+
+        const query = knex()(this.aliasedTable).update(aliasedValues);
         WhereResolver.resolveWhereClause({
             queryBuilder: query,
             where,
