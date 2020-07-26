@@ -36,6 +36,7 @@ export class TableClientBuilder {
     private softDeleteColumn?: string;
     private loaders: string[] = [];
     private types?: string;
+    private relations?: string;
 
     /**
      * Get the name of a relation type
@@ -87,6 +88,7 @@ export class TableClientBuilder {
 
         await this.buildLoadersForTable(columns);
         await this.buildTableTypes(columns, enums);
+        await this.buildRelationsForTable(forwardRelations);
 
         return this.buildTemplate();
     }
@@ -109,26 +111,36 @@ export class TableClientBuilder {
                     DateWhereNullable 
                 } from 'gybson';
                 
-            ${this.relatedTables.map((tbl) => {
-                return `import { ${TableClientBuilder.getRelationFilterName(
-                    tbl,
-                )} } from "./${TableClientBuilder.PascalCase(tbl)}"`;
-            }).join(';')}
+            ${this.relatedTables
+                .map((tbl) => {
+                    return `import { ${TableClientBuilder.getRelationFilterName(
+                        tbl,
+                    )} } from "./${TableClientBuilder.PascalCase(tbl)}"`;
+                })
+                .join(';')}
 
-            
+            ${this.relations}
             ${this.types}
 
              export default class ${
                  this.className
              } extends SQLQueryBuilder<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}> {
                     constructor() {
-                        super('${this.tableName}', ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined});
+                        super({ tableName: '${this.tableName}', relations, softDeleteColumn: ${
+            this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined
+        } });
                     }
                 ${this.loaders.join(`
         
                 `)}
             }
             `;
+    }
+
+    private async buildRelationsForTable(relations: RelationDefinitions) {
+        this.relations = `
+            const relations = ${JSON.stringify(relations)};
+        `;
     }
 
     private async buildLoadersForTable(columns: TableDefinition) {
