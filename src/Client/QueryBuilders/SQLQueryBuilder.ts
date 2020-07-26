@@ -1,9 +1,9 @@
 import { PoolConnection } from 'promise-mysql';
-import { knex, TableRelations } from '../index';
+import { knex } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
-import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
+import { OrderBy, Paginate, TableRelations } from '../../TypeTruth/TypeTruth';
 
 export abstract class SQLQueryBuilder<
     TblRow,

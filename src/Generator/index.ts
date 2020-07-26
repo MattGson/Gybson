@@ -91,8 +91,9 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
         builders.push(builder);
         await writeTypescriptFile(await builder.build(), outdir, `${builder.className}.ts`);
     }
+    // ADD relation map
     await writeTypescriptFile(
-        `export const schemaRelations = ${JSON.stringify(relations)}`,
+        `export const schemaRelations: TableRelations = ${JSON.stringify(relations)}`,
         outdir,
         `schemaRelations.ts`,
     );

@@ -18,15 +18,14 @@ const main = async () => {
 
 
 
-    await gyb.Posts.findMany({
+    const post = await gyb.Posts.findMany({
         where: {
             post_id: 4,
             users: {
                 existsWhere: {
-                    user_id: 5,
                     token: {
                         notExistsWhere: {
-                            deleted: false
+                            deleted: true
                         }
                     }
                 }
@@ -37,12 +36,12 @@ const main = async () => {
         },
         paginate: {
             limit: 3,
-            afterCount: 4,
             afterCursor: {
-                post_id: 5,
+                post_id: 1,
             },
         },
     });
+    console.log(post);
 };
 
 main().then(() => {

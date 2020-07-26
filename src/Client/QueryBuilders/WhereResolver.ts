@@ -169,6 +169,23 @@ export class WhereResolver {
                                     });
                                 });
                                 break;
+                            case RelationFilters.notExistsWhere:
+                                builder.whereNotExists(function () {
+                                    // join the child table in a correlated sub-query for exists
+                                    this.select(`${childTableAlias}.*`).from(`${childTable} as ${childTableAlias}`);
+                                    for (let { toColumn, fromColumn } of joins) {
+                                        this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
+                                    }
+                                    // resolve for child table
+                                    resolveWhere({
+                                        subQuery: clause,
+                                        builder: this,
+                                        depth: depth + 1,
+                                        table: childTable,
+                                        tableAlias: childTableAlias,
+                                    });
+                                });
+                                break;
                             default:
                                 break;
                         }
