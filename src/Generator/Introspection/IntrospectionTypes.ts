@@ -2,6 +2,7 @@ export interface Introspection {
     getTableTypes(table: string, enumTypes: EnumDefinitions): Promise<TableDefinition>;
     getTableKeys(table: string): Promise<KeyDefinition[]>;
     getForwardRelations(table: string): Promise<RelationDefinitions>;
+    getBackwardRelations(table: string): Promise<RelationDefinitions>;
     getSchemaTables(): Promise<string[]>;
     getEnumTypesForTable(table: string): Promise<EnumDefinitions>;
 }

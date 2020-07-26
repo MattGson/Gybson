@@ -55,6 +55,13 @@ const main = async () => {
                     },
                 },
             },
+            post_messages: {
+                existsWhere: {
+                    datetime: {
+                        lt: new Date()
+                    }
+                }
+            }
         },
         orderBy: {
             datetime: 'asc',
@@ -66,7 +73,29 @@ const main = async () => {
             },
         },
     });
-    console.log(post);
+
+    const rpe = await gyb.RpeResponses.findMany({
+        where: {
+            session_members: {
+                innerJoinWhere: {
+                    exercise_data_points: {
+                        existsWhere: {}
+                    },
+                    sessions: {
+                        innerJoinWhere: {
+                            session_id: {
+                                gt: 3168
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: {
+            session_id: "asc"
+        }
+    });
+    console.log(rpe);
 };
 
 main().then(() => {

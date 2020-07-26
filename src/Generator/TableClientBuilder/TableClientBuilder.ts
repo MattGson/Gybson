@@ -84,8 +84,9 @@ export class TableClientBuilder {
         const enums = await this.introspection.getEnumTypesForTable(this.tableName);
         const columns = await this.introspection.getTableTypes(this.tableName, enums);
         const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
+        const backwardRelations = await this.introspection.getBackwardRelations(this.tableName);
 
-        this.relatedTables = Object.keys(forwardRelations);
+        this.relatedTables = _.uniq(Object.keys(forwardRelations).concat(Object.keys(backwardRelations)));
 
         // if a soft delete column is given, check if it exists on the table
         this.softDeleteColumn =
@@ -95,7 +96,6 @@ export class TableClientBuilder {
 
         await this.buildLoadersForTable(columns);
         await this.buildTableTypes(columns, enums);
-        // await this.buildRelationsForTable(forwardRelations);
 
         return this.buildTemplate();
     }

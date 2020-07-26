@@ -70,8 +70,15 @@ async function generateClientIndex(builders: TableClientBuilder[], outdir: strin
  * @param db
  */
 async function buildTableRelations(tableName: string, db: Introspection): Promise<JoinsTo> {
-    return await db.getForwardRelations(tableName);
-    // TODO:- backward relations
+    const forward = await db.getForwardRelations(tableName);
+    const backward = await db.getBackwardRelations(tableName);
+
+    // combine
+    for (let table of Object.keys(backward)) {
+        if (forward[table]) continue; // avoid duplicate issues on self relations
+        forward[table] = backward[table];
+    }
+    return forward;
 }
 
 /**
@@ -93,7 +100,10 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
     }
     // ADD relation map
     await writeTypescriptFile(
-        `export const schemaRelations: TableRelations = ${JSON.stringify(relations)}`,
+        `
+        import { TableRelations } from 'gybson';
+
+        export const schemaRelations: TableRelations = ${JSON.stringify(relations)}`,
         outdir,
         `schemaRelations.ts`,
     );
