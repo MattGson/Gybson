@@ -16,7 +16,7 @@ Gybson comes with full type safety out of the box so you know exactly what data 
 
 #### Auto-generated
 
-Gybson auto-generates a client from your database-schema. This means you don't have to defined complex types in code.
+Gybson auto-generates a client from your database-schema. This means you don't have to define complex types in code.
 You can get started using Gybson in 5 minutes.
 
 #### GraphQL optimized

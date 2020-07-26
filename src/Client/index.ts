@@ -10,6 +10,7 @@ attachOnDuplicateUpdate();
 //
 export { SQLQueryBuilder } from './QueryBuilders/SQLQueryBuilder';
 export { transaction } from './QueryBuilders/Transaction';
+export * from '../TypeTruth/TypeTruth';
 
 const state: { knex: Knex<any, unknown[]> | undefined } = {
     knex: undefined,

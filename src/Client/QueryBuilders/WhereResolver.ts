@@ -3,6 +3,78 @@ import { RelationFilters, Combiners, Operators, Primitives, TableRelations } fro
 
 export class WhereResolver {
     /**
+     * Resolve a leaf where clause
+     * like:
+     *  user_id: 2
+     * OR
+     * user_id: {
+     *    not_in: [3, 4],
+     *    gte: 1
+     * }
+     * @param column
+     * @param value
+     * @param builder
+     * @param tableAlias
+     */
+    private static resolveWhereLeaf(column: string, value: any, builder: QueryBuilder, tableAlias: string) {
+        const valueType: string = typeof value;
+        const columnAlias = `${tableAlias}.${column}`;
+        // @ts-ignore - can't index enum
+        if (Primitives[valueType]) {
+            // is a primitive so use equals clause
+            builder.where(columnAlias, value);
+        } else if (valueType === 'object') {
+            //is an object so need to work out operators for each
+            for (let [operator, val] of Object.entries(value)) {
+                switch (operator) {
+                    case Operators.equals:
+                        //@ts-ignore
+                        builder.where(columnAlias, val);
+                        break;
+                    case Operators.not:
+                        //@ts-ignore
+                        builder.whereNot(columnAlias, val);
+                        break;
+                    case Operators.notIn:
+                        // @ts-ignore
+                        builder.whereNotIn(columnAlias, val);
+                        break;
+                    case Operators.lt:
+                        // @ts-ignore
+                        builder.where(columnAlias, '<', val);
+                        break;
+                    case Operators.lte:
+                        // @ts-ignore
+                        builder.where(columnAlias, '<=', val);
+                        break;
+                    case Operators.gt:
+                        // @ts-ignore
+                        builder.where(columnAlias, '>', val);
+                        break;
+                    case Operators.gte:
+                        // @ts-ignore
+                        builder.whereNot(columnAlias, '>=', val);
+                        break;
+                    case Operators.contains:
+                        // @ts-ignore
+                        builder.where(columnAlias, 'like', `$%{val}%`);
+                        break;
+                    case Operators.startsWith:
+                        // @ts-ignore
+                        builder.where(columnAlias, 'like', `${val}%`);
+                        break;
+                    case Operators.endsWith:
+                        // @ts-ignore
+                        builder.where(columnAlias, 'like', `$%{val}`);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    /**
      * Resolve a where clause
      * @param params
      */
@@ -15,76 +87,9 @@ export class WhereResolver {
     }): QueryBuilder {
         const { queryBuilder, where, relations, tableName, tableAlias } = params;
 
-        // resolves a single where block like:
-        // user_id: {
-        //      not_in: [3, 4],
-        //      gte: 1
-        // }
-        // These are the leafs in the recursion
-        const buildWhereLeafClause = (column: string, value: any, builder: QueryBuilder, tableAlias: string) => {
-            const valueType: string = typeof value;
-            const columnAlias = `${tableAlias}.${column}`;
-            // @ts-ignore - can't index
-            if (Primitives[valueType]) {
-                // is a primitive so use equals clause
-                builder.where(columnAlias, value);
-            } else if (valueType === 'object') {
-                //is an object so need to work out operators
-                for (let [operator, val] of Object.entries(value)) {
-                    switch (operator) {
-                        case Operators.equals:
-                            //@ts-ignore
-                            builder.where(columnAlias, val);
-                            break;
-                        case Operators.not:
-                            //@ts-ignore
-                            builder.whereNot(columnAlias, val);
-                            break;
-                        case Operators.notIn:
-                            // @ts-ignore
-                            builder.whereNotIn(columnAlias, val);
-                            break;
-                        case Operators.lt:
-                            // @ts-ignore
-                            builder.where(columnAlias, '<', val);
-                            break;
-                        case Operators.lte:
-                            // @ts-ignore
-                            builder.where(columnAlias, '<=', val);
-                            break;
-                        case Operators.gt:
-                            // @ts-ignore
-                            builder.where(columnAlias, '>', val);
-                            break;
-                        case Operators.gte:
-                            // @ts-ignore
-                            builder.whereNot(columnAlias, '>=', val);
-                            break;
-                        case Operators.contains:
-                            // @ts-ignore
-                            builder.where(columnAlias, 'like', `$%{val}%`);
-                            break;
-                        case Operators.startsWith:
-                            // @ts-ignore
-                            builder.where(columnAlias, 'like', `${val}%`);
-                            break;
-                        case Operators.endsWith:
-                            // @ts-ignore
-                            builder.where(columnAlias, 'like', `$%{val}`);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        };
-
-        // const resolveWhereRelation = (subQuery: any, builder: QueryBuilder) => {};
-
-        // resolve each where clause
-        // can be either a where leaf or a combiner
-        // recurse the where tree
-        // depth is used to unique table alias'
+        // Resolve each sub-clause recursively
+        // Clause can be either a where-leaf, a combiner or a relation
+        // Depth is used to create unique table alias'
         const resolveWhere = (params: {
             subQuery: any;
             builder: QueryBuilder;
@@ -95,26 +100,18 @@ export class WhereResolver {
             const { subQuery, builder, depth, table, tableAlias } = params;
             for (let [field, value] of Object.entries(subQuery)) {
                 // @ts-ignore
-                if (!Combiners[field] && !RelationFilters[field] && !relations[field]) {
+                if (!Combiners[field] && !relations[field]) {
                     // resolve leaf node
-                    buildWhereLeafClause(field, value, builder, tableAlias);
+                    WhereResolver.resolveWhereLeaf(field, value, builder, tableAlias);
                     continue;
                 }
-                // if a combiner need to resolve each sub block recursively
-                switch (field) {
-                    case Combiners.AND:
-                        builder.where(function () {
-                            // @ts-ignore
-                            for (let clause of value) {
-                                resolveWhere({ subQuery: clause, builder: this, depth: depth + 1, table, tableAlias });
-                            }
-                        });
-                        break;
-                    case Combiners.OR:
-                        builder.where(function () {
-                            // @ts-ignore
-                            for (let clause of value) {
-                                this.orWhere(function () {
+                // @ts-ignore - index enum
+                if (Combiners[field]) {
+                    switch (field) {
+                        case Combiners.AND:
+                            builder.where(function () {
+                                // @ts-ignore
+                                for (let clause of value) {
                                     resolveWhere({
                                         subQuery: clause,
                                         builder: this,
@@ -122,32 +119,47 @@ export class WhereResolver {
                                         table,
                                         tableAlias,
                                     });
-                                });
-                            }
-                        });
-                        break;
-                    case Combiners.NOT:
-                        builder.where(function () {
-                            // @ts-ignore
-                            for (let clause of value) {
-                                this.andWhereNot(function () {
-                                    resolveWhere({
-                                        subQuery: clause,
-                                        builder: this,
-                                        depth: depth + 1,
-                                        table,
-                                        tableAlias,
+                                }
+                            });
+                            break;
+                        case Combiners.OR:
+                            builder.where(function () {
+                                // @ts-ignore
+                                for (let clause of value) {
+                                    this.orWhere(function () {
+                                        resolveWhere({
+                                            subQuery: clause,
+                                            builder: this,
+                                            depth: depth + 1,
+                                            table,
+                                            tableAlias,
+                                        });
                                     });
-                                });
-                            }
-                        });
-                        break;
-                    default:
-                        break;
+                                }
+                            });
+                            break;
+                        case Combiners.NOT:
+                            builder.where(function () {
+                                // @ts-ignore
+                                for (let clause of value) {
+                                    this.andWhereNot(function () {
+                                        resolveWhere({
+                                            subQuery: clause,
+                                            builder: this,
+                                            depth: depth + 1,
+                                            table,
+                                            tableAlias,
+                                        });
+                                    });
+                                }
+                            });
+                            break;
+                        default:
+                            break;
+                    }
                 }
-                // TODO:- multiple relations at same query level breaks query - maybe just good error message?
+                // TODO:- multiple relations at same query level breaks query - maybe just need a good error message?
                 //  TODO:- filter soft delete on relations?
-                // if a relation (join) need to recurse
                 if (relations[field]) {
                     const childTable = field;
                     const childTableAlias = childTable + depth;

@@ -122,6 +122,7 @@ export class TableClientBuilder {
                 
             ${this.relatedTables
                 .map((tbl) => {
+                    if (tbl === this.tableName) return ''; // don't import own types
                     return `import { ${TableClientBuilder.getRelationFilterName(
                         tbl,
                     )} } from "./${TableClientBuilder.PascalCase(tbl)}"`;
@@ -146,12 +147,6 @@ export class TableClientBuilder {
             }
             `;
     }
-
-    // private async buildRelationsForTable(relations: RelationDefinitions) {
-    //     this.relations = `
-    //         const relations = ${JSON.stringify(relations)};
-    //     `;
-    // }
 
     private async buildLoadersForTable(columns: TableDefinition) {
         const tableKeys = await this.introspection.getTableKeys(this.tableName);
@@ -208,10 +203,6 @@ export class TableClientBuilder {
                         })
                         .join(' ')}
                 }
-
-                //  Columns types
-                //  export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
-                //  export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
  
                 export type ${columnMapTypeName} = {
                     ${Object.values(table)
