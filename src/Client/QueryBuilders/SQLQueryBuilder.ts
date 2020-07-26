@@ -14,6 +14,7 @@ export abstract class SQLQueryBuilder<
     PartialTblRow = Partial<TblRow>
 > {
     private tableName: string;
+    private tableAlias: string;
     private softDeleteColumn?: string;
     private relationTables: TableRelations;
 
@@ -21,6 +22,7 @@ export abstract class SQLQueryBuilder<
         this.tableName = params.tableName;
         this.softDeleteColumn = params.softDeleteColumn;
         this.relationTables = params.relations;
+        this.tableAlias = `${this.tableName}_q_root`;
     }
 
     private hasSoftDelete(): boolean {
@@ -28,7 +30,15 @@ export abstract class SQLQueryBuilder<
     }
 
     private get softDeleteColumnString(): string {
-        return this.softDeleteColumn as string;
+        return `${this.tableColumnAlias(this.softDeleteColumn as string)}`;
+    }
+
+    private get aliasTableAssign(): string {
+        return `${this.tableName} as ${this.tableAlias}`;
+    }
+
+    private tableColumnAlias(column: string) {
+        return `${this.tableAlias}.${column}`;
     }
 
     /**
@@ -130,7 +140,7 @@ export abstract class SQLQueryBuilder<
         includeDeleted?: boolean;
     }): Promise<TblRow[]> {
         const { orderBy, paginate, where, includeDeleted } = params;
-        let query = knex()(this.tableName).select();
+        let query = knex()(this.aliasTableAssign).select(`${this.tableAlias}.*`);
 
         if (where) {
             WhereResolver.resolveWhereClause({
@@ -138,12 +148,15 @@ export abstract class SQLQueryBuilder<
                 queryBuilder: query,
                 relations: this.relationTables,
                 tableName: this.tableName,
+                tableAlias: this.tableAlias,
             });
         }
 
+        if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
+
         if (orderBy) {
             for (let [column, direction] of Object.entries(orderBy)) {
-                query.orderBy(column, direction);
+                query.orderBy(this.tableColumnAlias(column), direction);
             }
         }
 
@@ -154,7 +167,7 @@ export abstract class SQLQueryBuilder<
             if (afterCount) query.offset(afterCount);
             if (afterCursor) {
                 Object.entries(afterCursor).forEach(([column, value]) => {
-                    query.where(column, '>', value);
+                    query.where(this.tableColumnAlias(column), '>', value);
                 });
             }
         }
@@ -167,8 +180,6 @@ export abstract class SQLQueryBuilder<
                     );
             }
         }
-
-        if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumnString]: false });
 
         logger().debug('Executing SQL: %j', query.toSQL().sql);
         return query;
@@ -278,6 +289,7 @@ export abstract class SQLQueryBuilder<
             where,
             relations: this.relationTables,
             tableName: this.tableName,
+            tableAlias: this.tableAlias,
         });
 
         if (connection) query.connection(connection);
@@ -305,6 +317,7 @@ export abstract class SQLQueryBuilder<
             where,
             relations: this.relationTables,
             tableName: this.tableName,
+            tableAlias: this.tableAlias,
         });
         if (connection) query.connection(connection);
 

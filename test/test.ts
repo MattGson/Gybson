@@ -22,11 +22,9 @@ const main = async () => {
         where: {
             post_id: 4,
             users: {
-                existsWhere: {
-                    token: {
-                        notExistsWhere: {
-                            deleted: true
-                        }
+                innerJoinWhere: {
+                    user_id:  {
+                        not: 5
                     }
                 }
             }

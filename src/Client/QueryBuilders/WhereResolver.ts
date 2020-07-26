@@ -11,8 +11,9 @@ export class WhereResolver {
         where: TblWhere;
         relations: TableRelations;
         tableName: string;
+        tableAlias: string;
     }): QueryBuilder {
-        const { queryBuilder, where, relations, tableName } = params;
+        const { queryBuilder, where, relations, tableName, tableAlias } = params;
 
         // resolves a single where block like:
         // user_id: {
@@ -144,10 +145,13 @@ export class WhereResolver {
                     default:
                         break;
                 }
+                // TODO:- multiple relations at same query level breaks query - maybe just good error message?
+                //  TODO:- filter soft delete on relations?
                 // if a relation (join) need to recurse
                 if (relations[field]) {
                     const childTable = field;
                     const childTableAlias = childTable + depth;
+                    const aliasClause = `${childTable} as ${childTableAlias}`;
                     const joins = relations[table][childTable];
                     // @ts-ignore
                     for (let [relationFilter, clause] of Object.entries(value)) {
@@ -155,7 +159,7 @@ export class WhereResolver {
                             case RelationFilters.existsWhere:
                                 builder.whereExists(function () {
                                     // join the child table in a correlated sub-query for exists
-                                    this.select(`${childTableAlias}.*`).from(`${childTable} as ${childTableAlias}`);
+                                    this.select(`${childTableAlias}.*`).from(aliasClause);
                                     for (let { toColumn, fromColumn } of joins) {
                                         this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
                                     }
@@ -172,7 +176,7 @@ export class WhereResolver {
                             case RelationFilters.notExistsWhere:
                                 builder.whereNotExists(function () {
                                     // join the child table in a correlated sub-query for exists
-                                    this.select(`${childTableAlias}.*`).from(`${childTable} as ${childTableAlias}`);
+                                    this.select(`${childTableAlias}.*`).from(aliasClause);
                                     for (let { toColumn, fromColumn } of joins) {
                                         this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
                                     }
@@ -186,6 +190,22 @@ export class WhereResolver {
                                     });
                                 });
                                 break;
+                            case RelationFilters.innerJoinWhere:
+                                // join child table as inner join
+                                builder.innerJoin(aliasClause, function () {
+                                    for (let { toColumn, fromColumn } of joins) {
+                                        this.on(`${childTableAlias}.${toColumn}`, '=', `${tableAlias}.${fromColumn}`);
+                                    }
+                                });
+                                // resolve for child table
+                                resolveWhere({
+                                    subQuery: clause,
+                                    builder: builder,
+                                    depth: depth + 1,
+                                    table: childTable,
+                                    tableAlias: childTableAlias,
+                                });
+                                break;
                             default:
                                 break;
                         }
@@ -193,7 +213,7 @@ export class WhereResolver {
                 }
             }
         };
-        resolveWhere({ subQuery: where, builder: queryBuilder, depth: 1, table: tableName, tableAlias: tableName });
+        resolveWhere({ subQuery: where, builder: queryBuilder, depth: 1, table: tableName, tableAlias: tableAlias });
         return queryBuilder;
     }
 }
