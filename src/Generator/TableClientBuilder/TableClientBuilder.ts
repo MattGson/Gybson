@@ -7,6 +7,13 @@ import {
     TableDefinition,
 } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
+import {
+    buildOrderForTable,
+    buildPaginateForTable,
+    buildRelationFilterForTable,
+    buildWhereCombinersForTable,
+    buildWhereTypeForColumn,
+} from '../../TypeTruth/TypeTruth';
 
 interface BuilderOptions {
     rowTypeSuffix: string;
@@ -126,9 +133,11 @@ export class TableClientBuilder {
                  this.className
              } extends SQLQueryBuilder<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}> {
                     constructor() {
-                        super({ tableName: '${this.tableName}', relations, softDeleteColumn: ${
-            this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined
-        } });
+                        super({ 
+                            tableName: '${this.tableName}', 
+                            relations, 
+                            softDeleteColumn: ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined} 
+                        });
                     }
                 ${this.loaders.join(`
         
@@ -181,19 +190,6 @@ export class TableClientBuilder {
             relationFilterTypeName,
         } = this.typeNames;
 
-        const primitives = {
-            string: true,
-            number: true,
-            bigint: true,
-            boolean: true,
-            date: true,
-        };
-        const whereTypeForColumn = (col: ColumnDefinition) => {
-            // @ts-ignore - don't have where clause for special (enum) types
-            if (!col.tsType || !primitives[col.tsType]) return '';
-            return ` | ${TableClientBuilder.PascalCase(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}`;
-        };
-
         this.types = `
                 
                 // Enums
@@ -212,54 +208,34 @@ export class TableClientBuilder {
                         .join(' ')}
                 }
 
-                // Columns types
-                export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
-                export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
-                
+                //  Columns types
+                //  export type ${columnTypeName} = Extract<keyof ${rowTypeName}, string>;
+                //  export type  ${valueTypeName} = Extract<${rowTypeName}[${columnTypeName}], string | number>;
+ 
                 export type ${columnMapTypeName} = {
                     ${Object.values(table)
-                        .map((col) => {
-                            return `${col.columnName}: boolean;`;
-                        })
+                        .map((col) => `${col.columnName}: boolean;`)
                         .join(' ')}
                 }
                 
-                export type ${relationFilterTypeName} = {
-                    exists?: ${whereTypeName};
-                    notExists?: ${whereTypeName};
-                    innerJoin?: ${whereTypeName};
-                }
+                ${buildRelationFilterForTable({ relationFilterTypeName, whereTypeName })}
                 
                 // Where types
                 export type ${whereTypeName} = {
                     ${Object.values(table)
-                        .map((col) => {
-                            return `${col.columnName}?: ${col.tsType} ${whereTypeForColumn(col)};`;
-                        })
-                        .join(' ')}
-                    AND?: Enumerable<${whereTypeName}>;
-                    OR?: Enumerable<${whereTypeName}>;
-                    NOT?: Enumerable<${whereTypeName}>;
+                        .map((col) => buildWhereTypeForColumn(col))
+                        .join('; ')}
+                    ${buildWhereCombinersForTable({ whereTypeName })}
                     ${this.relatedTables.map((toTable) => {
                         return `${toTable}?: ${TableClientBuilder.getRelationFilterName(toTable)} | null`;
                     })}
                 };
                 
                 // Order by types
-                export type ${orderByTypeName} = {
-                    ${Object.values(table)
-                        .map((col) => {
-                            return `${col.columnName}?: Order;`;
-                        })
-                        .join(' ')}
-                };
+                ${buildOrderForTable({ orderByTypeName, columns: Object.values(table) })}
                 
                 //Pagination types
-                export type ${paginationTypeName} = {
-                    limit?: number;
-                    afterCursor?: Partial<${rowTypeName}>;
-                    afterCount?: number;
-                };
+                ${buildPaginateForTable({ rowTypeName, paginationTypeName })}
         `;
     }
 

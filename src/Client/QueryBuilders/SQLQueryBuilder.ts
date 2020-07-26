@@ -1,8 +1,9 @@
 import { PoolConnection } from 'promise-mysql';
-import { knex, OrderByBase, PaginateBase, WhereBase } from '../index';
+import { knex } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
+import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
 
 export interface JoinColumn {
     fromColumn: string;
@@ -16,9 +17,9 @@ export interface RelationTables {
 export abstract class SQLQueryBuilder<
     TblRow,
     TblColumnMap,
-    TblWhere extends WhereBase,
-    TblOrderBy extends OrderByBase,
-    TblPaginate extends PaginateBase,
+    TblWhere,
+    TblOrderBy extends OrderBy,
+    TblPaginate extends Paginate,
     PartialTblRow = Partial<TblRow>
 > {
     private tableName: string;

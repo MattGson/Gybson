@@ -1,50 +1,18 @@
 import { QueryBuilder } from 'knex';
-import { WhereBase } from './QueryTypes';
-import {RelationTables} from "./SQLQueryBuilder";
+import { RelationTables } from './SQLQueryBuilder';
+import { RelationFilters, Combiners, Operators, Primitives } from '../../TypeTruth/TypeTruth';
 
 export class WhereResolver {
     /**
      * Resolve a where clause
      * @param params
      */
-    public static resolveWhereClause<TblWhere extends WhereBase>(params: {
+    public static resolveWhereClause<TblWhere>(params: {
         queryBuilder: QueryBuilder;
         where: TblWhere;
         relations: RelationTables;
     }): QueryBuilder {
-        const { queryBuilder, where } = params;
-        enum operators {
-            equals = 'equals',
-            not = 'not',
-            notIn = 'notIn',
-            lt = 'lt',
-            lte = 'lte',
-            gt = 'gt',
-            gte = 'gte',
-            contains = 'contains',
-            startsWith = 'startsWith',
-            endsWith = 'endsWith',
-        }
-
-        const combiners = {
-            AND: 'AND',
-            OR: 'OR',
-            NOT: 'NOT',
-        };
-
-        const relationFilters = {
-            exists: 'exists',
-            notExists: 'notExists',
-            innerJoin: 'innerJoin',
-        };
-
-        const primitives = {
-            string: true,
-            number: true,
-            bigint: true,
-            boolean: true,
-            date: true,
-        };
+        const { queryBuilder, where, relations } = params;
 
         // resolves a single where block like:
         // user_id: {
@@ -55,50 +23,50 @@ export class WhereResolver {
         const buildWhereLeafClause = (column: string, value: any, builder: QueryBuilder) => {
             const valueType: string = typeof value;
             // @ts-ignore - can't index
-            if (primitives[valueType]) {
+            if (Primitives[valueType]) {
                 // is a primitive so use equals clause
                 builder.where(column, value);
             } else if (valueType === 'object') {
                 //is an object so need to work out operators
                 for (let [operator, val] of Object.entries(value)) {
                     switch (operator) {
-                        case operators.equals:
+                        case Operators.equals:
                             //@ts-ignore
                             builder.where(column, val);
                             break;
-                        case operators.not:
+                        case Operators.not:
                             //@ts-ignore
                             builder.whereNot(column, val);
                             break;
-                        case operators.notIn:
+                        case Operators.notIn:
                             // @ts-ignore
                             builder.whereNotIn(column, val);
                             break;
-                        case operators.lt:
+                        case Operators.lt:
                             // @ts-ignore
                             builder.where(column, '<', val);
                             break;
-                        case operators.lte:
+                        case Operators.lte:
                             // @ts-ignore
                             builder.where(column, '<=', val);
                             break;
-                        case operators.gt:
+                        case Operators.gt:
                             // @ts-ignore
                             builder.where(column, '>', val);
                             break;
-                        case operators.gte:
+                        case Operators.gte:
                             // @ts-ignore
                             builder.whereNot(column, '>=', val);
                             break;
-                        case operators.contains:
+                        case Operators.contains:
                             // @ts-ignore
                             builder.where(column, 'like', `$%{val}%`);
                             break;
-                        case operators.startsWith:
+                        case Operators.startsWith:
                             // @ts-ignore
                             builder.where(column, 'like', `${val}%`);
                             break;
-                        case operators.endsWith:
+                        case Operators.endsWith:
                             // @ts-ignore
                             builder.where(column, 'like', `$%{val}`);
                             break;
@@ -115,16 +83,16 @@ export class WhereResolver {
         // can be either a where leaf or a combiner
         // recurse the where tree
         const resolveWhere = (subQuery: any, builder: QueryBuilder) => {
-            for (let [column, value] of Object.entries(subQuery)) {
+            for (let [field, value] of Object.entries(subQuery)) {
                 // @ts-ignore
-                if (!combiners[column] && !relationFilters[column]) {
+                if (!Combiners[field] && !RelationFilters[field] && !relations[field]) {
                     // resolve leaf node
-                    buildWhereLeafClause(column, value, builder);
+                    buildWhereLeafClause(field, value, builder);
                     continue;
                 }
                 // if a combiner need to resolve each sub block recursively
-                switch (column) {
-                    case combiners.AND:
+                switch (field) {
+                    case Combiners.AND:
                         builder.where(function () {
                             // @ts-ignore
                             for (let clause of value) {
@@ -132,7 +100,7 @@ export class WhereResolver {
                             }
                         });
                         break;
-                    case combiners.OR:
+                    case Combiners.OR:
                         builder.where(function () {
                             // @ts-ignore
                             for (let clause of value) {
@@ -142,7 +110,7 @@ export class WhereResolver {
                             }
                         });
                         break;
-                    case combiners.NOT:
+                    case Combiners.NOT:
                         builder.where(function () {
                             // @ts-ignore
                             for (let clause of value) {
@@ -155,18 +123,13 @@ export class WhereResolver {
                     default:
                         break;
                 }
+                // if a relation (join) need to recurse
+                if (relations[field]) {
+                }
                 // if a relation filter need to recurse
-                switch (column) {
-                    case combiners.AND:
-                        builder.where(function () {
-                            // @ts-ignore
-                            for (let clause of value) {
-                                resolveWhere(clause, this);
-                            }
-                        });
-                        break;
-                    default:
-                        break;
+                // @ts-ignore
+                if (RelationFilters[field]) {
+
                 }
             }
         };
