@@ -142,7 +142,12 @@ export abstract class SQLQueryBuilder<
         let query = knex()(this.tableName).select();
 
         if (where) {
-            WhereResolver.resolveWhereClause({ where, queryBuilder: query, relations: this.relationTables });
+            WhereResolver.resolveWhereClause({
+                where,
+                queryBuilder: query,
+                relations: this.relationTables,
+                tableName: this.tableName,
+            });
         }
 
         if (orderBy) {
@@ -277,7 +282,12 @@ export abstract class SQLQueryBuilder<
 
         const query = knex()(this.tableName).update({ [this.softDeleteColumnString]: true });
 
-        WhereResolver.resolveWhereClause({ queryBuilder: query, where, relations: this.relationTables });
+        WhereResolver.resolveWhereClause({
+            queryBuilder: query,
+            where,
+            relations: this.relationTables,
+            tableName: this.tableName,
+        });
 
         if (connection) query.connection(connection);
 
@@ -299,7 +309,12 @@ export abstract class SQLQueryBuilder<
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
         const query = knex()(this.tableName).update(values);
-        WhereResolver.resolveWhereClause({ queryBuilder: query, where, relations: this.relationTables });
+        WhereResolver.resolveWhereClause({
+            queryBuilder: query,
+            where,
+            relations: this.relationTables,
+            tableName: this.tableName,
+        });
         if (connection) query.connection(connection);
 
         logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);

@@ -4,35 +4,47 @@ import by from '../Gen';
 Gybson.init({
     client: 'mysql',
     connection: {
-        host: '127.0.0.1',
-        port: 3306,
         database: 'komodo',
+        user: 'root',
+        password: '',
     },
-    config: {
-        logLevel: LogLevel.debug,
-    },
+    options: {
+        logLevel: LogLevel.debug
+    }
 });
+const gyb = by();
 
 const main = async () => {
 
 
-    const gyb = by();
 
-    await gyb.Users.findMany({
+    await gyb.Posts.findMany({
         where: {
-            user_id: 4,
+            post_id: 4,
+            users: {
+                existsWhere: {
+                    user_id: 4,
+                    token: {
+                        existsWhere: {
+                            deleted: false
+                        }
+                    }
+                },
+            }
         },
         orderBy: {
-            fname: 'asc',
+            datetime: 'asc',
         },
         paginate: {
             limit: 3,
             afterCount: 4,
             afterCursor: {
-                user_id: 5,
+                post_id: 5,
             },
         },
     });
 };
 
-main().then(() => console.log('done'));
+main().then(() => {
+    console.log('');
+});
