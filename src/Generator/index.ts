@@ -2,11 +2,12 @@ import path from 'path';
 // @ts-ignore - no types for prettier
 import { format } from 'prettier';
 import fs from 'fs-extra';
-import { prettier, codeGenPreferences } from './config';
+import { codeGenPreferences, prettier } from './config';
 import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder/TableClientBuilder';
 import { Introspection } from './Introspection/IntrospectionTypes';
+import { JoinsTo, TableRelations } from '../TypeTruth/TypeTruth';
 
 // TODO:- options
 
@@ -64,6 +65,16 @@ async function generateClientIndex(builders: TableClientBuilder[], outdir: strin
 }
 
 /**
+ * Get a map of how a table relates to other tables
+ * @param tableName
+ * @param db
+ */
+async function buildTableRelations(tableName: string, db: Introspection): Promise<JoinsTo> {
+    return await db.getForwardRelations(tableName);
+    // TODO:- backward relations
+}
+
+/**
  * Generate the db clients for each table
  * @param db
  * @param outdir
@@ -72,11 +83,19 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
     const builders: TableClientBuilder[] = [];
     const tables = await db.getSchemaTables();
 
+    const relations: TableRelations = {};
+
     for (let table of tables) {
+        relations[table] = await buildTableRelations(table, db);
         const builder = new TableClientBuilder({ table, dbIntrospection: db, options: codeGenPreferences });
         builders.push(builder);
         await writeTypescriptFile(await builder.build(), outdir, `${builder.className}.ts`);
     }
+    await writeTypescriptFile(
+        `export const schemaRelations = ${JSON.stringify(relations)}`,
+        outdir,
+        `schemaRelations.ts`,
+    );
 
     // BUILD ENTRY POINT
     await generateClientIndex(builders, outdir);

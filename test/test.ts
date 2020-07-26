@@ -23,13 +23,13 @@ const main = async () => {
             post_id: 4,
             users: {
                 existsWhere: {
-                    user_id: 4,
+                    user_id: 5,
                     token: {
-                        existsWhere: {
+                        notExistsWhere: {
                             deleted: false
                         }
                     }
-                },
+                }
             }
         },
         orderBy: {

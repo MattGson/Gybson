@@ -95,7 +95,7 @@ export class TableClientBuilder {
 
         await this.buildLoadersForTable(columns);
         await this.buildTableTypes(columns, enums);
-        await this.buildRelationsForTable(forwardRelations);
+        // await this.buildRelationsForTable(forwardRelations);
 
         return this.buildTemplate();
     }
@@ -118,6 +118,8 @@ export class TableClientBuilder {
                     DateWhereNullable 
                 } from 'gybson';
                 
+            import { schemaRelations } from './schemaRelations';
+                
             ${this.relatedTables
                 .map((tbl) => {
                     return `import { ${TableClientBuilder.getRelationFilterName(
@@ -126,7 +128,6 @@ export class TableClientBuilder {
                 })
                 .join(';')}
 
-            ${this.relations}
             ${this.types}
 
              export default class ${
@@ -135,7 +136,7 @@ export class TableClientBuilder {
                     constructor() {
                         super({ 
                             tableName: '${this.tableName}', 
-                            relations, 
+                            relations: schemaRelations, 
                             softDeleteColumn: ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined} 
                         });
                     }
@@ -146,11 +147,11 @@ export class TableClientBuilder {
             `;
     }
 
-    private async buildRelationsForTable(relations: RelationDefinitions) {
-        this.relations = `
-            const relations = ${JSON.stringify(relations)};
-        `;
-    }
+    // private async buildRelationsForTable(relations: RelationDefinitions) {
+    //     this.relations = `
+    //         const relations = ${JSON.stringify(relations)};
+    //     `;
+    // }
 
     private async buildLoadersForTable(columns: TableDefinition) {
         const tableKeys = await this.introspection.getTableKeys(this.tableName);

@@ -1,18 +1,9 @@
 import { PoolConnection } from 'promise-mysql';
-import { knex } from '../index';
+import { knex, TableRelations } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
 import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
-
-export interface JoinColumn {
-    fromColumn: string;
-    toColumn: string;
-}
-
-export interface RelationTables {
-    [tableName: string]: JoinColumn[];
-}
 
 export abstract class SQLQueryBuilder<
     TblRow,
@@ -24,9 +15,9 @@ export abstract class SQLQueryBuilder<
 > {
     private tableName: string;
     private softDeleteColumn?: string;
-    private relationTables: RelationTables;
+    private relationTables: TableRelations;
 
-    protected constructor(params: { tableName: string; softDeleteColumn?: string; relations: RelationTables }) {
+    protected constructor(params: { tableName: string; softDeleteColumn?: string; relations: TableRelations }) {
         this.tableName = params.tableName;
         this.softDeleteColumn = params.softDeleteColumn;
         this.relationTables = params.relations;

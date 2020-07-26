@@ -4,6 +4,20 @@
 import { ColumnDefinition } from '../Generator/Introspection/IntrospectionTypes';
 import _ from 'lodash';
 
+// relations map
+export interface JoinColumn {
+    fromColumn: string;
+    toColumn: string;
+}
+
+export interface JoinsTo {
+    [tableName: string]: JoinColumn[];
+}
+
+export interface TableRelations {
+    [tableName: string]: JoinsTo;
+}
+
 export declare type Enumerable<T> = Array<T>;
 
 // These are just for helping write the query builder

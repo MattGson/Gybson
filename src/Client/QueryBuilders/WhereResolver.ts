@@ -1,6 +1,5 @@
 import { QueryBuilder } from 'knex';
-import { RelationTables } from './SQLQueryBuilder';
-import { RelationFilters, Combiners, Operators, Primitives } from '../../TypeTruth/TypeTruth';
+import { RelationFilters, Combiners, Operators, Primitives, TableRelations } from '../../TypeTruth/TypeTruth';
 
 export class WhereResolver {
     /**
@@ -10,7 +9,7 @@ export class WhereResolver {
     public static resolveWhereClause<TblWhere>(params: {
         queryBuilder: QueryBuilder;
         where: TblWhere;
-        relations: RelationTables;
+        relations: TableRelations;
         tableName: string;
     }): QueryBuilder {
         const { queryBuilder, where, relations, tableName } = params;
@@ -85,7 +84,14 @@ export class WhereResolver {
         // can be either a where leaf or a combiner
         // recurse the where tree
         // depth is used to unique table alias'
-        const resolveWhere = (subQuery: any, builder: QueryBuilder, depth: number, tableAlias: string) => {
+        const resolveWhere = (params: {
+            subQuery: any;
+            builder: QueryBuilder;
+            depth: number;
+            table: string;
+            tableAlias: string;
+        }) => {
+            const { subQuery, builder, depth, table, tableAlias } = params;
             for (let [field, value] of Object.entries(subQuery)) {
                 // @ts-ignore
                 if (!Combiners[field] && !RelationFilters[field] && !relations[field]) {
@@ -99,7 +105,7 @@ export class WhereResolver {
                         builder.where(function () {
                             // @ts-ignore
                             for (let clause of value) {
-                                resolveWhere(clause, this, depth + 1, tableAlias);
+                                resolveWhere({ subQuery: clause, builder: this, depth: depth + 1, table, tableAlias });
                             }
                         });
                         break;
@@ -108,7 +114,13 @@ export class WhereResolver {
                             // @ts-ignore
                             for (let clause of value) {
                                 this.orWhere(function () {
-                                    resolveWhere(clause, this, depth + 1, tableAlias);
+                                    resolveWhere({
+                                        subQuery: clause,
+                                        builder: this,
+                                        depth: depth + 1,
+                                        table,
+                                        tableAlias,
+                                    });
                                 });
                             }
                         });
@@ -118,7 +130,13 @@ export class WhereResolver {
                             // @ts-ignore
                             for (let clause of value) {
                                 this.andWhereNot(function () {
-                                    resolveWhere(clause, this, depth + 1, tableAlias);
+                                    resolveWhere({
+                                        subQuery: clause,
+                                        builder: this,
+                                        depth: depth + 1,
+                                        table,
+                                        tableAlias,
+                                    });
                                 });
                             }
                         });
@@ -128,18 +146,27 @@ export class WhereResolver {
                 }
                 // if a relation (join) need to recurse
                 if (relations[field]) {
-                    const table = field;
-                    const alias = table + depth;
-                    const columns = relations[field];
+                    const childTable = field;
+                    const childTableAlias = childTable + depth;
+                    const joins = relations[table][childTable];
                     // @ts-ignore
                     for (let [relationFilter, clause] of Object.entries(value)) {
                         switch (relationFilter) {
                             case RelationFilters.existsWhere:
                                 builder.whereExists(function () {
-                                    // TODO:- probably need the parent table to alias the joins
-                                    this.select(`${alias}.*`).from(`${table} as ${alias}`);
-                                    for (let { toColumn, fromColumn } of columns) this.whereRaw(`${alias}.${toColumn} = ${tableAlias}.${fromColumn}`);
-                                    resolveWhere(clause, this, depth + 1, alias);
+                                    // join the child table in a correlated sub-query for exists
+                                    this.select(`${childTableAlias}.*`).from(`${childTable} as ${childTableAlias}`);
+                                    for (let { toColumn, fromColumn } of joins) {
+                                        this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
+                                    }
+                                    // resolve for child table
+                                    resolveWhere({
+                                        subQuery: clause,
+                                        builder: this,
+                                        depth: depth + 1,
+                                        table: childTable,
+                                        tableAlias: childTableAlias,
+                                    });
                                 });
                                 break;
                             default:
@@ -149,7 +176,7 @@ export class WhereResolver {
                 }
             }
         };
-        resolveWhere(where, queryBuilder, 1, tableName);
+        resolveWhere({ subQuery: where, builder: queryBuilder, depth: 1, table: tableName, tableAlias: tableName });
         return queryBuilder;
     }
 }
