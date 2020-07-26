@@ -4,7 +4,8 @@
 [![GitHub tag](https://img.shields.io/github/tag/MattGson/Gybson.svg)](https://github.com/MattGson/Gybson)
 [![TravisCI Build Status](https://travis-ci.org/SweetIQ/schemats.svg?branch=master)](https://travis-ci.org/SweetIQ/schemats)
 
-Gybson is a type-safe, auto-generated query client for SQL databases (MySQL and PostgreSQL).
+Gybson is a lightweight, type-safe, auto-generated query client for SQL databases (MySQL and PostgreSQL).
+
 Gybson is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps using Typescript.
 
 ### Why Gybson?
@@ -23,12 +24,18 @@ You can get started using Gybson in 5 minutes.
 Most ORMs are built for eager loading. Gybson is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
 Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests to minimise round trips.
 
+#### SQL developer friendly
+
+Gybson is built so that developers who know SQL can intuitively understand how to use it. 
+One call directly maps to one SQL query being executed.
+We use standard SQL terms where possible and we don't try to hide details such as join-tables.
+
 #### Native support for soft-deletes
 
 Managing soft deletes is hard but is a vital part of many apps. Gybson has native support for 
 soft-deletes including automatically filtering out deleted rows.
 
-
+#### IDE Auto-completion
 ![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
 
 
@@ -49,20 +56,19 @@ You can query:
 
 ```typescript
 const id = await gybson.users.insert({
-    values: {
-        user_id: 300,
+    values: [{
         username: 'name',
         password: 'secret',
         last_logon: new Date(),
-    },
+    }]
 });
 
-const user = await gybson.users.byUserId({ user_id: 31 });
+const user = await gybson.users.byUserId({ user_id: id });
 
 /* user typed as:
 
  interface users {
-   id: number;
+   user_id: number;
    username: string;
    password: string;
    last_logon: Date | null;
@@ -184,12 +190,20 @@ const user = await gybson.Post.byTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
 `findMany` loads many rows from a table. It provides a flexible query API whilst maintaining full type safety.
 Due to this flexibility, `findMany` does not perform batching or caching.
 
+With `findMany` you can filter by almost anything you can do in SQL:
+- columns (equals, less than, greater than, startsWith, contains, not equal...)
+- gates (and, or, not)
+- relations (exists, notExists, innerJoin)
+- ordering
+- pagination (offset-limit, cursor)
+
 ##### A complex example: 
 Find the first 3 users where:
  - The city is 'NY'
  - The last name does NOT start with 'P',
  - The age is less than 20
  - The favourite Pet is either a 'dog' or a 'cat'
+ - They own a dog
  - Order by first_name and last_name ascending.
  - Start from cursor 'John'
 ```typescript
@@ -210,7 +224,12 @@ const users = await gybson.Users.findMany({
         OR: [
             { favourite_pet: 'dog' },
             { favourite_pet: 'cat' }
-        ]
+        ],
+        pets: {
+            existsWhere: {
+                type: 'dog',
+            }
+        }
     },
     orderBy: {
         first_name: 'desc',
