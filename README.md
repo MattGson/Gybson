@@ -1,10 +1,13 @@
 ![Image of logo](https://github.com/MattGson/Gybson/blob/master/logo-small.png?raw=true)
 
-[![npm](https://img.shields.io/npm/v/gybson.svg)](https://www.npmjs.com/package/gybson)
-[![GitHub tag](https://img.shields.io/github/tag/MattGson/Gybson.svg)](https://github.com/MattGson/Gybson)
-[![TravisCI Build Status](https://travis-ci.org/SweetIQ/schemats.svg?branch=master)](https://travis-ci.org/SweetIQ/schemats)
+[![npm](https://img.shields.io/npm/v/gybson.svg?style=for-the-badge)](https://www.npmjs.com/package/gybson)
+[![GitHub tag](https://img.shields.io/github/tag/MattGson/Gybson.svg?style=for-the-badge)](https://github.com/MattGson/Gybson)
+[![TravisCI Build Status](https://img.shields.io/travis/SweetIQ/schemats/master?style=for-the-badge)](https://travis-ci.org/SweetIQ/schemats)
 
-Gybson is a lightweight, type-safe, auto-generated query client for SQL databases (MySQL and PostgreSQL).
+[github-star-badge]: https://img.shields.io/github/stars/MattGson/Gybson.svg?style=for-the-badge&logo=github&logoColor=ffffff
+[github-star-link]: https://github.com/MattGson/Gybson/stargazers
+
+Gybson is a lightweight, type-safe, auto-generated query client for using SQL databases (MySQL and PostgreSQL) with NodeJS.
 
 Gybson is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps using Typescript.
 
