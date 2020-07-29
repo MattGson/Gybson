@@ -13,7 +13,7 @@ import by from '../Gen';
 Gybson.init({
     client: 'mysql',
     connection: {
-        database: 'komodo',
+        database: 'db',
         user: 'root',
         password: '',
     },
@@ -84,28 +84,6 @@ const main = async () => {
         },
     });
 
-    const rpe = await gyb.RpeResponses.findMany({
-        where: {
-            session_member: {
-                innerJoinWhere: {
-                    exercise_data_points: {
-                        existsWhere: {},
-                    },
-                    session: {
-                        innerJoinWhere: {
-                            session_id: {
-                                gt: 3168,
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        orderBy: {
-            session_id: 'asc',
-        },
-    });
-    console.log(rpe);
 };
 
 main().then(() => {
