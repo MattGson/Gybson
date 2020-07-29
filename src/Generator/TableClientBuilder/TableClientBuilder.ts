@@ -3,7 +3,7 @@ import {
     ColumnDefinition,
     EnumDefinitions,
     Introspection,
-    RelationDefinitions,
+    RelationDefinition,
     TableDefinition,
 } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
@@ -38,7 +38,7 @@ export class TableClientBuilder {
     };
     public readonly className: string;
     public readonly tableName: string;
-    private relatedTables: string[] = [];
+    private relatedTables: RelationDefinition[] = [];
     private readonly options: BuilderOptions;
     private softDeleteColumn?: string;
     private loaders: string[] = [];
@@ -86,7 +86,8 @@ export class TableClientBuilder {
         const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
         const backwardRelations = await this.introspection.getBackwardRelations(this.tableName);
 
-        this.relatedTables = _.uniq(Object.keys(forwardRelations).concat(Object.keys(backwardRelations)));
+        // get the names of all related tables
+        this.relatedTables = forwardRelations.concat(backwardRelations);
 
         // if a soft delete column is given, check if it exists on the table
         this.softDeleteColumn =
@@ -122,10 +123,10 @@ export class TableClientBuilder {
                 
             ${this.relatedTables
                 .map((tbl) => {
-                    if (tbl === this.tableName) return ''; // don't import own types
+                    if (tbl.toTable === this.tableName) return ''; // don't import own types
                     return `import { ${TableClientBuilder.getRelationFilterName(
-                        tbl,
-                    )} } from "./${TableClientBuilder.PascalCase(tbl)}"`;
+                        tbl.toTable,
+                    )} } from "./${TableClientBuilder.PascalCase(tbl.toTable)}"`;
                 })
                 .join(';')}
 
@@ -218,8 +219,10 @@ export class TableClientBuilder {
                         .map((col) => buildWhereTypeForColumn(col))
                         .join('; ')}
                     ${buildWhereCombinersForTable({ whereTypeName })}
-                    ${this.relatedTables.map((toTable) => {
-                        return `${toTable}?: ${TableClientBuilder.getRelationFilterName(toTable)} | null`;
+                    ${this.relatedTables.map((relation) => {
+                        return `${relation.relationAlias}?: ${TableClientBuilder.getRelationFilterName(
+                            relation.toTable,
+                        )} | null`;
                     })}
                 };
                 

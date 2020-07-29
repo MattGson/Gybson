@@ -5,17 +5,29 @@ import { ColumnDefinition } from '../Generator/Introspection/IntrospectionTypes'
 import _ from 'lodash';
 
 // relations map
-export interface JoinColumn {
+export interface JoinDefinition {
+    // name of column to join from
     fromColumn: string;
+    // name of column to join to
     toColumn: string;
 }
 
-export interface JoinsTo {
-    [tableName: string]: JoinColumn[];
+export interface RelationDefinition {
+    // name of table to join to
+    toTable: string;
+    // name of relation i.e. posts -> users would be 'author'
+    alias: string;
+    // columns to complete the join
+    joins: JoinDefinition[];
 }
 
-export interface TableRelations {
-    [tableName: string]: JoinsTo;
+export interface TableSchemaDefinition {
+    primaryKey: string[];
+    relations: RelationDefinition[];
+}
+
+export interface DatabaseSchema {
+    [tableName: string]: TableSchemaDefinition;
 }
 
 export declare type Enumerable<T> = Array<T>;

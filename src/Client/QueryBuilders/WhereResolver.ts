@@ -1,5 +1,12 @@
 import { QueryBuilder } from 'knex';
-import { RelationFilters, Combiners, Operators, Primitives, TableRelations } from '../../TypeTruth/TypeTruth';
+import {
+    RelationFilters,
+    Combiners,
+    Operators,
+    Primitives,
+    TableRelations,
+    RelationDefinition,
+} from '../../TypeTruth/TypeTruth';
 
 export class WhereResolver {
     /**
@@ -75,6 +82,24 @@ export class WhereResolver {
     }
 
     /**
+     * Get a relation if it exists for a given table and alias
+     * @param tableName
+     * @param alias
+     * @param relations
+     */
+    private static getRelationFromAlias(
+        tableName: string,
+        alias: string,
+        relations: TableRelations,
+    ): RelationDefinition | null {
+        if (!relations[tableName]) return null;
+        for (let relation of relations[tableName]) {
+            if (relation.relationAlias === alias) return relation;
+        }
+        return null;
+    }
+
+    /**
      * Resolve a where clause
      * @param params
      */
@@ -99,9 +124,9 @@ export class WhereResolver {
         }) => {
             const { subQuery, builder, depth, table, tableAlias } = params;
             for (let [field, value] of Object.entries(subQuery)) {
-                // @ts-ignore
-                if (!Combiners[field] && !relations[field]) {
-                    // resolve leaf node
+                const possibleRelation = this.getRelationFromAlias(tableName, field, relations);
+                // @ts-ignore - not a combiner or a relation
+                if (!Combiners[field] && !possibleRelation) {
                     WhereResolver.resolveWhereLeaf(field, value, builder, tableAlias);
                     continue;
                 }
@@ -160,8 +185,8 @@ export class WhereResolver {
                 }
                 // TODO:- multiple relations at same query level breaks query - maybe just need a good error message?
                 //  TODO:- filter soft delete on relations?
-                if (relations[field]) {
-                    const childTable = field;
+                if (possibleRelation) {
+                    const childTable = possibleRelation.toTable;
                     const childTableAlias = childTable + depth;
                     const aliasClause = `${childTable} as ${childTableAlias}`;
                     const joins = relations[table][childTable];

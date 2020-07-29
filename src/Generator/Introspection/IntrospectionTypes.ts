@@ -1,8 +1,8 @@
 export interface Introspection {
     getTableTypes(table: string, enumTypes: EnumDefinitions): Promise<TableDefinition>;
     getTableKeys(table: string): Promise<KeyDefinition[]>;
-    getForwardRelations(table: string): Promise<RelationDefinitions>;
-    getBackwardRelations(table: string): Promise<RelationDefinitions>;
+    getForwardRelations(table: string): Promise<RelationDefinition[]>;
+    getBackwardRelations(table: string): Promise<RelationDefinition[]>;
     getSchemaTables(): Promise<string[]>;
     getEnumTypesForTable(table: string): Promise<EnumDefinitions>;
 }
@@ -40,11 +40,18 @@ export interface EnumDefinitions {
 //     [constraintName: string]: RelationColumn[];
 // }
 
-export interface JoinColumns {
-    fromColumn: string;
-    toColumn: string;
-}
+// export interface JoinColumns {
+//     fromColumn: string;
+//     toColumn: string;
+// }
 
-export interface RelationDefinitions {
-    [toTableName: string]: JoinColumns[];
-}
+// export interface RelationDefinition {
+//     // name of table to join to
+//     toTable: string;
+//     // name of column to join from
+//     fromColumn: string;
+//     // name of column to join to
+//     toColumn: string;
+//     // name of relation i.e. posts -> users would be 'author'
+//     relationAlias: string;
+// }

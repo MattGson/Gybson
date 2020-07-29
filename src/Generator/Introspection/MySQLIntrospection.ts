@@ -2,7 +2,6 @@ import {
     EnumDefinitions,
     Introspection,
     KeyDefinition,
-    RelationDefinitions,
     TableDefinition,
 } from './IntrospectionTypes';
 import Knex = require('knex');
@@ -170,20 +169,28 @@ export class MySQLIntrospection implements Introspection {
      * Get all relations where the given table holds the constraint (1-N)
      * @param tableName
      */
-    public async getForwardRelations(tableName: string): Promise<RelationDefinitions> {
+    public async getForwardRelations(tableName: string): Promise<RelationDefinition[]> {
         const rows = await this.knex('information_schema.key_column_usage')
             .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
             .where({ table_name: tableName, table_schema: this.schemaName });
 
-        let relations: RelationDefinitions = {};
+        let relations: RelationDefinition[] = [];
         rows.forEach((row) => {
             const { column_name, referenced_table_name, referenced_column_name } = row;
             if (referenced_table_name == null || referenced_column_name == null) return;
-            if (!relations[referenced_table_name]) relations[referenced_table_name] = [];
-            relations[referenced_table_name].push({
-                fromColumn: column_name,
+
+            relations.push({
                 toColumn: referenced_column_name,
+                fromColumn: column_name,
+                toTable: referenced_table_name,
+                relationAlias: column_name.replace('_id', '').replace('id', ''),
             });
+
+            // if (!relations[referenced_table_name]) relations[referenced_table_name] = [];
+            // relations[referenced_table_name].push({
+            //     fromColumn: column_name,
+            //     toColumn: referenced_column_name,
+            // });
         });
         return relations;
     }
@@ -195,22 +202,23 @@ export class MySQLIntrospection implements Introspection {
      * Get all relations where the given table does not hold the constraint (N-1)
      * @param tableName
      */
-    public async getBackwardRelations(tableName: string): Promise<RelationDefinitions> {
-        const rows = await this.knex('information_schema.key_column_usage')
-            .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
-            .where({ referenced_table_name: tableName, table_schema: this.schemaName });
-
-        let relations: RelationDefinitions = {};
-        rows.forEach((row) => {
-            const { column_name, table_name, referenced_column_name } = row;
-            if (table_name == null || referenced_column_name == null) return;
-            if (!relations[table_name]) relations[table_name] = [];
-            relations[table_name].push({
-                fromColumn: referenced_column_name,
-                toColumn: column_name,
-            });
-        });
-        return relations;
+    public async getBackwardRelations(_tableName: string): Promise<RelationDefinition[]> {
+        // const rows = await this.knex('information_schema.key_column_usage')
+        //     .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
+        //     .where({ referenced_table_name: tableName, table_schema: this.schemaName });
+        //
+        // let relations: RelationDefinitions = {};
+        // rows.forEach((row) => {
+        //     const { column_name, table_name, referenced_column_name } = row;
+        //     if (table_name == null || referenced_column_name == null) return;
+        //     if (!relations[table_name]) relations[table_name] = [];
+        //     relations[table_name].push({
+        //         fromColumn: referenced_column_name,
+        //         toColumn: column_name,
+        //     });
+        // });
+        // return relations;
+        return [];
     }
 
     /**

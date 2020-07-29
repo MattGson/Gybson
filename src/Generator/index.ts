@@ -6,8 +6,8 @@ import { codeGenPreferences, prettier } from './config';
 import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder/TableClientBuilder';
-import { Introspection } from './Introspection/IntrospectionTypes';
-import { JoinsTo, TableRelations } from '../TypeTruth/TypeTruth';
+import {Introspection, RelationDefinition} from './Introspection/IntrospectionTypes';
+import { TableRelations } from '../TypeTruth/TypeTruth';
 
 // TODO:- options
 
@@ -69,16 +69,11 @@ async function generateClientIndex(builders: TableClientBuilder[], outdir: strin
  * @param tableName
  * @param db
  */
-async function buildTableRelations(tableName: string, db: Introspection): Promise<JoinsTo> {
+async function buildTableRelations(tableName: string, db: Introspection): Promise<RelationDefinition[]> {
     const forward = await db.getForwardRelations(tableName);
     const backward = await db.getBackwardRelations(tableName);
 
-    // combine
-    for (let table of Object.keys(backward)) {
-        if (forward[table]) continue; // avoid duplicate issues on self relations
-        forward[table] = backward[table];
-    }
-    return forward;
+    return forward.concat(backward);
 }
 
 /**
