@@ -1,5 +1,5 @@
-import { Introspection } from '../Introspection/IntrospectionTypes';
-import { RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
+import { Introspection, TableDefinition } from '../Introspection/IntrospectionTypes';
+import { ColumnDefinition, RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
 import { CardinalityResolver } from './CardinalityResolver';
 
 export class TableSchemaBuilder {
@@ -15,10 +15,15 @@ export class TableSchemaBuilder {
      * Alias the name on relations to ensure unique keys even when the same table is joined multiple times
      * Also helps readability i.e. posts -> users would be 'posts.author'
      * @param relation
+     * @param columns
      */
-    private static aliasForwardRelationship(relation: RelationDefinition): RelationDefinition {
+    private static aliasForwardRelationship(
+        relation: RelationDefinition,
+        columns: TableDefinition,
+    ): RelationDefinition {
         if (relation.joins.length > 1) relation.alias = relation.toTable.replace(/s+$/, '');
         else relation.alias = relation.joins[0].fromColumn.replace('_id', '');
+        if (columns[relation.alias]) relation.alias += '_'; // handle any conflicts
         return relation;
     }
 
@@ -35,7 +40,7 @@ export class TableSchemaBuilder {
         return {
             primaryKey: CardinalityResolver.primaryKeys(keys).map((k) => k.columnName),
             relations: [
-                ...forwardRelations.map((r) => TableSchemaBuilder.aliasForwardRelationship(r)),
+                ...forwardRelations.map((r) => TableSchemaBuilder.aliasForwardRelationship(r, columns)),
                 ...backwardRelations,
             ],
             columns,

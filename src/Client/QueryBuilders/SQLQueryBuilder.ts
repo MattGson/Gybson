@@ -1,5 +1,5 @@
 import { PoolConnection } from 'promise-mysql';
-import {knex, TableSchemaDefinition} from '../index';
+import { DatabaseSchema, knex } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
@@ -16,9 +16,9 @@ export abstract class SQLQueryBuilder<
     private tableName: string;
     private tableAlias: string;
     private softDeleteColumn?: string;
-    private schema: TableSchemaDefinition;
+    private schema: DatabaseSchema;
 
-    protected constructor(params: { tableName: string; softDeleteColumn?: string; schema: TableSchemaDefinition }) {
+    protected constructor(params: { tableName: string; softDeleteColumn?: string; schema: DatabaseSchema }) {
         this.tableName = params.tableName;
         this.softDeleteColumn = params.softDeleteColumn;
         this.schema = params.schema;

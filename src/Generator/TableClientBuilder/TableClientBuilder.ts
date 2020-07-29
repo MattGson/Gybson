@@ -120,7 +120,7 @@ export class TableClientBuilder {
                     DateWhereNullable 
                 } from 'gybson';
                 
-            import { schemaRelations } from './schemaRelations';
+            import { schema } from './schemaRelations';
                 
             ${this.schema.relations
                 .map((tbl) => {
@@ -139,7 +139,7 @@ export class TableClientBuilder {
                     constructor() {
                         super({ 
                             tableName: '${this.tableName}', 
-                            relations: schemaRelations, 
+                            schema,
                             softDeleteColumn: ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined} 
                         });
                     }

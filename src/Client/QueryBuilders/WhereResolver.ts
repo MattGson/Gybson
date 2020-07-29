@@ -5,7 +5,7 @@ import {
     Operators,
     Primitives,
     RelationDefinition,
-    TableSchemaDefinition,
+    DatabaseSchema,
 } from '../../TypeTruth/TypeTruth';
 
 export class WhereResolver {
@@ -83,19 +83,13 @@ export class WhereResolver {
 
     /**
      * Get a relation if it exists for a given table and alias
-     * @param tableName
      * @param alias
      * @param relations
      */
-    private static getRelationFromAlias(
-        _tableName: string,
-        _alias: string,
-        _relations: RelationDefinition[],
-    ): RelationDefinition | null {
-        // if (!relations[tableName]) return null;
-        // for (let relation of relations[tableName]) {
-        //     if (relation.relationAlias === alias) return relation;
-        // }
+    private static getRelationFromAlias(alias: string, relations: RelationDefinition[]): RelationDefinition | null {
+        for (let relation of relations) {
+            if (relation.alias === alias) return relation;
+        }
         return null;
     }
 
@@ -106,7 +100,7 @@ export class WhereResolver {
     public static resolveWhereClause<TblWhere>(params: {
         queryBuilder: QueryBuilder;
         where: TblWhere;
-        schema: TableSchemaDefinition;
+        schema: DatabaseSchema;
         tableName: string;
         tableAlias: string;
     }): QueryBuilder {
@@ -124,7 +118,7 @@ export class WhereResolver {
         }) => {
             const { subQuery, builder, depth, table, tableAlias } = params;
             for (let [field, value] of Object.entries(subQuery)) {
-                const possibleRelation = this.getRelationFromAlias(tableName, field, schema.relations);
+                const possibleRelation = this.getRelationFromAlias(field, schema[table].relations);
                 // @ts-ignore - not a combiner or a relation
                 if (!Combiners[field] && !possibleRelation) {
                     WhereResolver.resolveWhereLeaf(field, value, builder, tableAlias);

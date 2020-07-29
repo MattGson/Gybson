@@ -10,52 +10,6 @@ import by from '../Gen';
  * - Multiple relation filters on the same table i.e. existsWhere and innerJoin
  */
 
-// relations map
-export interface JoinDefinition {
-    // name of column to join from
-    fromColumn: string;
-    // name of column to join to
-    toColumn: string;
-}
-
-export interface RelationDefinition {
-    // name of table to join to
-    toTable: string;
-    // name of relation i.e. posts -> users would be 'author'
-    alias: string;
-    // columns to complete the join
-    joins: JoinDefinition[];
-}
-
-export interface TableSchema {
-    [tableName: string]: {
-        primaryKey: string[];
-        relations: RelationDefinition[];
-    };
-}
-
-const relations: TableSchema = {
-    users: {
-        primaryKey: ['user_id'],
-        relations: [
-            {
-                toTable: 'tokens',
-                alias: 'email_verification_token',
-                joins: [
-                    {
-                        fromColumn: 'email_verification_token',
-                        toColumn: 'token_id',
-                    },
-                ],
-            },
-        ],
-    },
-};
-
-const a = {
-    post_replies: [{ toTable: 'posts', fromColumn: 'post_id', toColumn: 'post_id', relationAlias: 'posts' }],
-};
-
 Gybson.init({
     client: 'mysql',
     connection: {
@@ -103,12 +57,9 @@ const main = async () => {
     const post = await gyb.Posts.findMany({
         where: {
             post_id: 4,
-            users: {
-                innerJoinWhere: {
-                    user_id: {
-                        not: 5,
-                    },
-                    token: {},
+            author: {
+                existsWhere: {
+                    user_id: 4,
                 },
             },
             post_messages: {
@@ -117,6 +68,9 @@ const main = async () => {
                         lt: new Date(),
                     },
                 },
+            },
+            feedback: {
+                existsWhere: {},
             },
         },
         orderBy: {
@@ -132,12 +86,12 @@ const main = async () => {
 
     const rpe = await gyb.RpeResponses.findMany({
         where: {
-            session_members: {
+            session_member: {
                 innerJoinWhere: {
                     exercise_data_points: {
                         existsWhere: {},
                     },
-                    sessions: {
+                    session: {
                         innerJoinWhere: {
                             session_id: {
                                 gt: 3168,
