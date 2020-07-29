@@ -1,9 +1,9 @@
 import { PoolConnection } from 'promise-mysql';
-import { knex } from '../index';
+import {knex, TableSchemaDefinition} from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
-import { OrderBy, Paginate, TableRelations } from '../../TypeTruth/TypeTruth';
+import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
 
 export abstract class SQLQueryBuilder<
     TblRow,
@@ -16,12 +16,12 @@ export abstract class SQLQueryBuilder<
     private tableName: string;
     private tableAlias: string;
     private softDeleteColumn?: string;
-    private relationTables: TableRelations;
+    private schema: TableSchemaDefinition;
 
-    protected constructor(params: { tableName: string; softDeleteColumn?: string; relations: TableRelations }) {
+    protected constructor(params: { tableName: string; softDeleteColumn?: string; schema: TableSchemaDefinition }) {
         this.tableName = params.tableName;
         this.softDeleteColumn = params.softDeleteColumn;
-        this.relationTables = params.relations;
+        this.schema = params.schema;
         this.tableAlias = `${this.tableName}_q_root`;
     }
 
@@ -146,7 +146,7 @@ export abstract class SQLQueryBuilder<
             WhereResolver.resolveWhereClause({
                 where,
                 queryBuilder: query,
-                relations: this.relationTables,
+                schema: this.schema,
                 tableName: this.tableName,
                 tableAlias: this.tableAlias,
             });
@@ -287,7 +287,7 @@ export abstract class SQLQueryBuilder<
         WhereResolver.resolveWhereClause({
             queryBuilder: query,
             where,
-            relations: this.relationTables,
+            schema: this.schema,
             tableName: this.tableName,
             tableAlias: this.tableAlias,
         });
@@ -318,7 +318,7 @@ export abstract class SQLQueryBuilder<
         WhereResolver.resolveWhereClause({
             queryBuilder: query,
             where,
-            relations: this.relationTables,
+            schema: this.schema,
             tableName: this.tableName,
             tableAlias: this.tableAlias,
         });

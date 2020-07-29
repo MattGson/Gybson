@@ -1,7 +1,6 @@
 // This file holds the shared truth of types between the Generator and the Client
 // It is not strictly necessary but aids in making sure they match up when using string templating
 
-import { ColumnDefinition } from '../Generator/Introspection/IntrospectionTypes';
 import _ from 'lodash';
 
 // relations map
@@ -21,8 +20,27 @@ export interface RelationDefinition {
     joins: JoinDefinition[];
 }
 
+export interface ColumnDefinition {
+    dbType: string;
+    nullable: boolean;
+    tsType?: string;
+    columnName: string;
+}
+
+export interface EnumDefinition {
+    columnName: string;
+    enumName: string;
+    values: string[];
+}
+
 export interface TableSchemaDefinition {
     primaryKey: string[];
+    columns: {
+        [columnName: string]: ColumnDefinition;
+    };
+    enums: {
+        [enumName: string]: EnumDefinition;
+    };
     relations: RelationDefinition[];
 }
 

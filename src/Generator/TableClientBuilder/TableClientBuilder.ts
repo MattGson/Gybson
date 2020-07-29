@@ -1,11 +1,5 @@
 import _ from 'lodash';
-import {
-    ColumnDefinition,
-    EnumDefinitions,
-    Introspection,
-    RelationDefinition,
-    TableDefinition,
-} from '../Introspection/IntrospectionTypes';
+import { Introspection } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 import {
     buildOrderForTable,
@@ -13,6 +7,8 @@ import {
     buildRelationFilterForTable,
     buildWhereCombinersForTable,
     buildWhereTypeForColumn,
+    ColumnDefinition,
+    TableSchemaDefinition,
 } from '../../TypeTruth/TypeTruth';
 
 interface BuilderOptions {
@@ -38,12 +34,11 @@ export class TableClientBuilder {
     };
     public readonly className: string;
     public readonly tableName: string;
-    private relatedTables: RelationDefinition[] = [];
     private readonly options: BuilderOptions;
     private softDeleteColumn?: string;
     private loaders: string[] = [];
     private types?: string;
-    private relations?: string;
+    private schema: TableSchemaDefinition;
 
     /**
      * Get the name of a relation type
@@ -57,9 +52,15 @@ export class TableClientBuilder {
      *
      * @param params
      */
-    public constructor(params: { table: string; dbIntrospection: Introspection; options: BuilderOptions }) {
-        const { table, dbIntrospection, options } = params;
+    public constructor(params: {
+        table: string;
+        schema: TableSchemaDefinition;
+        dbIntrospection: Introspection;
+        options: BuilderOptions;
+    }) {
+        const { table, dbIntrospection, options, schema } = params;
         this.entityName = TableClientBuilder.PascalCase(table);
+        this.schema = schema;
         this.introspection = dbIntrospection;
         this.tableName = table;
         this.className = `${this.entityName}`;
@@ -81,22 +82,22 @@ export class TableClientBuilder {
     }
 
     public async build(): Promise<string> {
-        const enums = await this.introspection.getEnumTypesForTable(this.tableName);
-        const columns = await this.introspection.getTableTypes(this.tableName, enums);
-        const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
-        const backwardRelations = await this.introspection.getBackwardRelations(this.tableName);
+        // const enums = await this.introspection.getEnumTypesForTable(this.tableName);
+        // const columns = await this.introspection.getTableTypes(this.tableName, enums);
+        // const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
+        // const backwardRelations = await this.introspection.getBackwardRelations(this.tableName);
 
         // get the names of all related tables
-        this.relatedTables = forwardRelations.concat(backwardRelations);
+        // this.relatedTables = forwardRelations.concat(backwardRelations);
 
         // if a soft delete column is given, check if it exists on the table
         this.softDeleteColumn =
-            this.options.softDeleteColumn && columns[this.options.softDeleteColumn]
+            this.options.softDeleteColumn && this.schema.columns[this.options.softDeleteColumn]
                 ? this.options.softDeleteColumn
                 : undefined;
 
-        await this.buildLoadersForTable(columns);
-        await this.buildTableTypes(columns, enums);
+        await this.buildLoadersForTable();
+        await this.buildTableTypes();
 
         return this.buildTemplate();
     }
@@ -121,7 +122,7 @@ export class TableClientBuilder {
                 
             import { schemaRelations } from './schemaRelations';
                 
-            ${this.relatedTables
+            ${this.schema.relations
                 .map((tbl) => {
                     if (tbl.toTable === this.tableName) return ''; // don't import own types
                     return `import { ${TableClientBuilder.getRelationFilterName(
@@ -149,13 +150,13 @@ export class TableClientBuilder {
             `;
     }
 
-    private async buildLoadersForTable(columns: TableDefinition) {
+    private async buildLoadersForTable() {
         const tableKeys = await this.introspection.getTableKeys(this.tableName);
         const unique = CardinalityResolver.getUniqueKeys(tableKeys);
         const nonUnique = CardinalityResolver.getNonUniqueKey(tableKeys);
 
         unique.forEach((key) => {
-            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
+            const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k.columnName]);
             for (let col of keyColumns) {
                 // for now only accept loaders on string and number column types
                 if (col.tsType !== 'string' && col.tsType !== 'number') return;
@@ -165,7 +166,7 @@ export class TableClientBuilder {
         });
 
         nonUnique.forEach((key) => {
-            const keyColumns: ColumnDefinition[] = key.map((k) => columns[k.columnName]);
+            const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k.columnName]);
             for (let col of keyColumns) {
                 // for now only accept loaders on string and number column types
                 if (col.tsType !== 'string' && col.tsType !== 'number') return;
@@ -175,28 +176,28 @@ export class TableClientBuilder {
         });
     }
 
-    private buildTableTypes(table: TableDefinition, enums: EnumDefinitions) {
+    private buildTableTypes() {
         const {
             rowTypeName,
-            columnTypeName,
             columnMapTypeName,
-            valueTypeName,
             whereTypeName,
             orderByTypeName,
             paginationTypeName,
             relationFilterTypeName,
         } = this.typeNames;
 
+        const { columns, relations } = this.schema;
+
         this.types = `
                 
                 // Enums
-                ${Object.entries(enums).map(([name, values]) => {
-                    return `export type ${name} = ${values.map((v) => `'${v}'`).join(' | ')}`;
+                ${Object.entries(this.schema.enums).map(([name, def]) => {
+                    return `export type ${name} = ${def.values.map((v) => `'${v}'`).join(' | ')}`;
                 })}
                
                // Row types
                 export interface ${rowTypeName} {
-                    ${Object.entries(table)
+                    ${Object.entries(columns)
                         .map(([columnName, columnDefinition]) => {
                             let type = columnDefinition.tsType;
                             let nullable = columnDefinition.nullable ? '| null' : '';
@@ -206,7 +207,7 @@ export class TableClientBuilder {
                 }
  
                 export type ${columnMapTypeName} = {
-                    ${Object.values(table)
+                    ${Object.values(columns)
                         .map((col) => `${col.columnName}: boolean;`)
                         .join(' ')}
                 }
@@ -215,19 +216,19 @@ export class TableClientBuilder {
                 
                 // Where types
                 export type ${whereTypeName} = {
-                    ${Object.values(table)
+                    ${Object.values(columns)
                         .map((col) => buildWhereTypeForColumn(col))
                         .join('; ')}
                     ${buildWhereCombinersForTable({ whereTypeName })}
-                    ${this.relatedTables.map((relation) => {
-                        return `${relation.relationAlias}?: ${TableClientBuilder.getRelationFilterName(
+                    ${relations.map((relation) => {
+                        return `${relation.alias}?: ${TableClientBuilder.getRelationFilterName(
                             relation.toTable,
                         )} | null`;
                     })}
                 };
                 
                 // Order by types
-                ${buildOrderForTable({ orderByTypeName, columns: Object.values(table) })}
+                ${buildOrderForTable({ orderByTypeName, columns: Object.values(columns) })}
                 
                 //Pagination types
                 ${buildPaginateForTable({ rowTypeName, paginationTypeName })}

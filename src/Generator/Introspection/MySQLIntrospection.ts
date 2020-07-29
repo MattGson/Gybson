@@ -1,10 +1,6 @@
-import {
-    EnumDefinitions,
-    Introspection,
-    KeyDefinition,
-    TableDefinition,
-} from './IntrospectionTypes';
+import { EnumDefinitions, Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
 import Knex = require('knex');
+import { EnumDefinition, RelationDefinition } from '../../TypeTruth/TypeTruth';
 
 export class MySQLIntrospection implements Introspection {
     private readonly schemaName: string;
@@ -103,7 +99,7 @@ export class MySQLIntrospection implements Introspection {
      * Note: - SET type is supported as well as ENUM but should rarely be used
      */
     public async getEnumTypesForTable(tableName: string): Promise<EnumDefinitions> {
-        let enums: { [enumName: string]: string[] } = {};
+        let enums: { [enumName: string]: EnumDefinition } = {};
 
         const rawEnumRecords = await this.knex('information_schema.columns')
             .select('table_name', 'column_name', 'column_type')
@@ -112,17 +108,21 @@ export class MySQLIntrospection implements Introspection {
 
         rawEnumRecords.forEach((enumItem: { table_name: string; column_name: string; column_type: string }) => {
             const enumName = MySQLIntrospection.getEnumName(enumItem.table_name, enumItem.column_name);
-            enums[enumName] = MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type);
+            enums[enumName] = {
+                columnName: enumItem.column_name,
+                enumName,
+                values: MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type),
+            };
         });
         return enums;
     }
 
     /**
-     * Load the schema for a table
+     * Get the type definition for a table
      * @param tableName
      * @param enumTypes
      */
-    private async getTableDefinition(tableName: string, enumTypes: EnumDefinitions) {
+    public async getTableTypes(tableName: string, enumTypes: EnumDefinitions): Promise<TableDefinition> {
         let tableDefinition: TableDefinition = {};
 
         const tableColumns = await this.knex('information_schema.columns')
@@ -140,15 +140,6 @@ export class MySQLIntrospection implements Introspection {
             };
         });
         return tableDefinition;
-    }
-
-    /**
-     * Get the type definition for a table
-     * @param tableName
-     * @param enumTypes
-     */
-    public async getTableTypes(tableName: string, enumTypes: EnumDefinitions): Promise<TableDefinition> {
-        return await this.getTableDefinition(tableName, enumTypes);
     }
 
     public async getTableKeys(tableName: string): Promise<KeyDefinition[]> {
@@ -174,25 +165,25 @@ export class MySQLIntrospection implements Introspection {
             .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
             .where({ table_name: tableName, table_schema: this.schemaName });
 
-        let relations: RelationDefinition[] = [];
+        // group by constraint name to capture multiple relations to same table
+        let relations: { [constraintName: string]: RelationDefinition } = {};
+        // let relations: RelationDefinition[] = [];
         rows.forEach((row) => {
-            const { column_name, referenced_table_name, referenced_column_name } = row;
+            const { column_name, referenced_table_name, referenced_column_name, constraint_name } = row;
             if (referenced_table_name == null || referenced_column_name == null) return;
 
-            relations.push({
-                toColumn: referenced_column_name,
+            if (!relations[constraint_name])
+                relations[constraint_name] = {
+                    toTable: referenced_table_name,
+                    alias: referenced_table_name,
+                    joins: [],
+                };
+            relations[constraint_name].joins.push({
                 fromColumn: column_name,
-                toTable: referenced_table_name,
-                relationAlias: column_name.replace('_id', '').replace('id', ''),
+                toColumn: referenced_column_name,
             });
-
-            // if (!relations[referenced_table_name]) relations[referenced_table_name] = [];
-            // relations[referenced_table_name].push({
-            //     fromColumn: column_name,
-            //     toColumn: referenced_column_name,
-            // });
         });
-        return relations;
+        return Object.values(relations);
     }
 
     // TODO:- multiple relations between same tables i.e. resetToken and verificationToken on user
@@ -202,10 +193,10 @@ export class MySQLIntrospection implements Introspection {
      * Get all relations where the given table does not hold the constraint (N-1)
      * @param tableName
      */
-    public async getBackwardRelations(_tableName: string): Promise<RelationDefinition[]> {
-        // const rows = await this.knex('information_schema.key_column_usage')
-        //     .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
-        //     .where({ referenced_table_name: tableName, table_schema: this.schemaName });
+    public async getBackwardRelations(tableName: string): Promise<RelationDefinition[]> {
+        const rows = await this.knex('information_schema.key_column_usage')
+            .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
+            .where({ referenced_table_name: tableName, table_schema: this.schemaName });
         //
         // let relations: RelationDefinitions = {};
         // rows.forEach((row) => {
@@ -218,7 +209,24 @@ export class MySQLIntrospection implements Introspection {
         //     });
         // });
         // return relations;
-        return [];
+        // group by constraint name to capture multiple relations to same table
+        let relations: { [constraintName: string]: RelationDefinition } = {};
+        rows.forEach((row) => {
+            const { column_name, table_name, referenced_column_name, constraint_name } = row;
+            if (table_name == null || column_name == null) return;
+
+            if (!relations[constraint_name])
+                relations[constraint_name] = {
+                    toTable: table_name,
+                    alias: table_name,
+                    joins: [],
+                };
+            relations[constraint_name].joins.push({
+                fromColumn: referenced_column_name,
+                toColumn: column_name,
+            });
+        });
+        return Object.values(relations);
     }
 
     /**

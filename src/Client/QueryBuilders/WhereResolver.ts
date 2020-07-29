@@ -4,8 +4,8 @@ import {
     Combiners,
     Operators,
     Primitives,
-    TableRelations,
     RelationDefinition,
+    TableSchemaDefinition,
 } from '../../TypeTruth/TypeTruth';
 
 export class WhereResolver {
@@ -88,14 +88,14 @@ export class WhereResolver {
      * @param relations
      */
     private static getRelationFromAlias(
-        tableName: string,
-        alias: string,
-        relations: TableRelations,
+        _tableName: string,
+        _alias: string,
+        _relations: RelationDefinition[],
     ): RelationDefinition | null {
-        if (!relations[tableName]) return null;
-        for (let relation of relations[tableName]) {
-            if (relation.relationAlias === alias) return relation;
-        }
+        // if (!relations[tableName]) return null;
+        // for (let relation of relations[tableName]) {
+        //     if (relation.relationAlias === alias) return relation;
+        // }
         return null;
     }
 
@@ -106,11 +106,11 @@ export class WhereResolver {
     public static resolveWhereClause<TblWhere>(params: {
         queryBuilder: QueryBuilder;
         where: TblWhere;
-        relations: TableRelations;
+        schema: TableSchemaDefinition;
         tableName: string;
         tableAlias: string;
     }): QueryBuilder {
-        const { queryBuilder, where, relations, tableName, tableAlias } = params;
+        const { queryBuilder, where, schema, tableName, tableAlias } = params;
 
         // Resolve each sub-clause recursively
         // Clause can be either a where-leaf, a combiner or a relation
@@ -124,7 +124,7 @@ export class WhereResolver {
         }) => {
             const { subQuery, builder, depth, table, tableAlias } = params;
             for (let [field, value] of Object.entries(subQuery)) {
-                const possibleRelation = this.getRelationFromAlias(tableName, field, relations);
+                const possibleRelation = this.getRelationFromAlias(tableName, field, schema.relations);
                 // @ts-ignore - not a combiner or a relation
                 if (!Combiners[field] && !possibleRelation) {
                     WhereResolver.resolveWhereLeaf(field, value, builder, tableAlias);
@@ -189,8 +189,8 @@ export class WhereResolver {
                     const childTable = possibleRelation.toTable;
                     const childTableAlias = childTable + depth;
                     const aliasClause = `${childTable} as ${childTableAlias}`;
-                    const joins = relations[table][childTable];
-                    // @ts-ignore
+                    const joins = possibleRelation.joins;
+                    // @ts-ignore - this probably should not allow more than one clause
                     for (let [relationFilter, clause] of Object.entries(value)) {
                         switch (relationFilter) {
                             case RelationFilters.existsWhere:
