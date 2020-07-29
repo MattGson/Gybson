@@ -186,9 +186,6 @@ export class MySQLIntrospection implements Introspection {
         return Object.values(relations);
     }
 
-    // TODO:- multiple relations between same tables i.e. resetToken and verificationToken on user
-    // TODO:- This cardinality guarantees a single row? Maybe useful info?
-    // TODO:- also, field with same name as referenced table breaks types
     /**
      * Get all relations where the given table does not hold the constraint (N-1)
      * @param tableName
@@ -197,18 +194,7 @@ export class MySQLIntrospection implements Introspection {
         const rows = await this.knex('information_schema.key_column_usage')
             .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
             .where({ referenced_table_name: tableName, table_schema: this.schemaName });
-        //
-        // let relations: RelationDefinitions = {};
-        // rows.forEach((row) => {
-        //     const { column_name, table_name, referenced_column_name } = row;
-        //     if (table_name == null || referenced_column_name == null) return;
-        //     if (!relations[table_name]) relations[table_name] = [];
-        //     relations[table_name].push({
-        //         fromColumn: referenced_column_name,
-        //         toColumn: column_name,
-        //     });
-        // });
-        // return relations;
+
         // group by constraint name to capture multiple relations to same table
         let relations: { [constraintName: string]: RelationDefinition } = {};
         rows.forEach((row) => {
