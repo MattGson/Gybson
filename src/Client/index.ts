@@ -9,7 +9,6 @@ attachOnDuplicateUpdate();
 // INTERNAL USE
 //
 export { SQLQueryBuilder } from './QueryBuilders/SQLQueryBuilder';
-export { transaction } from './QueryBuilders/Transaction';
 export * from '../TypeTruth/TypeTruth';
 
 const state: { knex: Knex<any, unknown[]> | undefined } = {
@@ -24,6 +23,7 @@ export const knex = () => {
 //
 // EXTERNAL USE
 //
+export { transaction } from './QueryBuilders/Transaction';
 export { LogLevel } from './lib/logging';
 export interface GybsonConfig {
     logLevel?: LogLevel;

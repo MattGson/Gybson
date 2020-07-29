@@ -3,17 +3,17 @@ import by from '../Gen';
 
 // TODO:- Test cases
 /*
-* - Column with same name as a join table
-* - Two foreign keys to the same table
-* - Nested relation filters
-* - Nested combiner filters
-* - Multiple relation filters on the same table i.e. existsWhere and innerJoin
-*/
+ * - Column with same name as a join table
+ * - Two foreign keys to the same table
+ * - Nested relation filters
+ * - Nested combiner filters
+ * - Multiple relation filters on the same table i.e. existsWhere and innerJoin
+ */
 
 Gybson.init({
     client: 'mysql',
     connection: {
-        database: 'komodo',
+        database: 'db',
         user: 'root',
         password: '',
     },
@@ -40,8 +40,8 @@ const main = async () => {
             },
         ],
         updateColumns: {
-            author_id: true
-        }
+            author_id: true,
+        },
     });
 
     await gyb.Posts.update({
@@ -50,27 +50,28 @@ const main = async () => {
             datetime: new Date(),
         },
         where: {
-            post_id: 4
-        }
-    })
+            post_id: 4,
+        },
+    });
 
     const post = await gyb.Posts.findMany({
         where: {
             post_id: 4,
-            users: {
-                innerJoinWhere: {
-                    user_id: {
-                        not: 5,
-                    },
+            author: {
+                existsWhere: {
+                    user_id: 4,
                 },
             },
             post_messages: {
                 existsWhere: {
                     datetime: {
-                        lt: new Date()
-                    }
-                }
-            }
+                        lt: new Date(),
+                    },
+                },
+            },
+            feedback: {
+                existsWhere: {},
+            },
         },
         orderBy: {
             datetime: 'asc',
@@ -83,28 +84,6 @@ const main = async () => {
         },
     });
 
-    const rpe = await gyb.RpeResponses.findMany({
-        where: {
-            session_members: {
-                innerJoinWhere: {
-                    exercise_data_points: {
-                        existsWhere: {}
-                    },
-                    sessions: {
-                        innerJoinWhere: {
-                            session_id: {
-                                gt: 3168
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        orderBy: {
-            session_id: "asc"
-        }
-    });
-    console.log(rpe);
 };
 
 main().then(() => {
