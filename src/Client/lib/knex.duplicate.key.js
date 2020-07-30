@@ -1,9 +1,9 @@
 const KnexQueryBuilder = require('knex/lib/query/builder');
 
-const escapeKnexBinding = input => input.replace(/\?/g, '\\?');
+const escapeKnexBinding = (input) => input.replace(/\?/g, '\\?');
 
 exports.attachOnDuplicateUpdate = function attachOnDuplicateUpdate() {
-    KnexQueryBuilder.prototype.onDuplicateUpdate = function(...columns) {
+    KnexQueryBuilder.prototype.onDuplicateUpdate = function (...columns) {
         if (this._method !== 'insert') {
             throw new Error('onDuplicateUpdate error: should be used only with insert query.');
         }
@@ -18,7 +18,7 @@ exports.attachOnDuplicateUpdate = function attachOnDuplicateUpdate() {
                     result.placeholders.push(`??=Values(??)`);
                     result.bindings.push(column, column);
                 } else if (column && typeof column === 'object') {
-                    Object.keys(column).forEach(key => {
+                    Object.keys(column).forEach((key) => {
                         result.placeholders.push(`??=?`);
                         result.bindings.push(key, column[key]);
                     });

@@ -7,7 +7,8 @@ import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder/TableClientBuilder';
 import { Introspection } from './Introspection/IntrospectionTypes';
-import { JoinsTo, TableRelations } from '../TypeTruth/TypeTruth';
+import { DatabaseSchema, TableSchemaDefinition } from '../TypeTruth/TypeTruth';
+import { TableSchemaBuilder } from './TableClientBuilder/TableSchemaBuilder';
 
 // TODO:- options
 
@@ -65,23 +66,6 @@ async function generateClientIndex(builders: TableClientBuilder[], outdir: strin
 }
 
 /**
- * Get a map of how a table relates to other tables
- * @param tableName
- * @param db
- */
-async function buildTableRelations(tableName: string, db: Introspection): Promise<JoinsTo> {
-    const forward = await db.getForwardRelations(tableName);
-    const backward = await db.getBackwardRelations(tableName);
-
-    // combine
-    for (let table of Object.keys(backward)) {
-        if (forward[table]) continue; // avoid duplicate issues on self relations
-        forward[table] = backward[table];
-    }
-    return forward;
-}
-
-/**
  * Generate the db clients for each table
  * @param db
  * @param outdir
@@ -90,20 +74,26 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
     const builders: TableClientBuilder[] = [];
     const tables = await db.getSchemaTables();
 
-    const relations: TableRelations = {};
+    const schema: DatabaseSchema = {};
 
     for (let table of tables) {
-        relations[table] = await buildTableRelations(table, db);
-        const builder = new TableClientBuilder({ table, dbIntrospection: db, options: codeGenPreferences });
+        const tblSchema = await new TableSchemaBuilder(table, db).buildTableDefinition();
+        const builder = new TableClientBuilder({
+            table,
+            schema: tblSchema,
+            dbIntrospection: db,
+            options: codeGenPreferences,
+        });
+        schema[table] = tblSchema;
         builders.push(builder);
         await writeTypescriptFile(await builder.build(), outdir, `${builder.className}.ts`);
     }
     // ADD relation map
     await writeTypescriptFile(
         `
-        import { TableRelations } from 'gybson';
+        import { DatabaseSchema } from 'gybson';
 
-        export const schemaRelations: TableRelations = ${JSON.stringify(relations)}`,
+        export const schema: DatabaseSchema = ${JSON.stringify(schema)}`,
         outdir,
         `schemaRelations.ts`,
     );

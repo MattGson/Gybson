@@ -1,16 +1,13 @@
 dist: trusty
-sudo: required
+os: linux
 
 language: node_js
 node_js:
-  - "4"
-  - "6"
-  - "8"
+  - "10"
 
 env:
   global:
-    - POSTGRES_URL=postgres://postgres@127.0.0.1:5432/travis_ci_test
-    - MYSQL_URL=mysql://root@127.0.0.1/test
+    - VAR=val
 
 services:
   - postgresql
@@ -26,10 +23,10 @@ addons:
 
 before_install:
   - mysql -e 'SET PASSWORD FOR "root"@"localhost" = PASSWORD("");' -uroot
-  - mysql -e "create database test"
+  - mysql -e "create database gybson_test"
   - psql -c 'create database travis_ci_test;' -U postgres
 
-script: npm run coverage:ci
+script: npm run test
 
 notifications:
   email: false
