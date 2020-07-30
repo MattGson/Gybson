@@ -27,7 +27,7 @@ before_install:
   - mysql -e "create database gybson_test"
   - psql -c 'create database travis_ci_test;' -U postgres
 
-script: npm run coverage:ci
+script: npm run test
 
 notifications:
   email: false
