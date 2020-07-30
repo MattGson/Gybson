@@ -225,4 +225,80 @@ describe('MySQLIntrospection', () => {
             ]);
         });
     });
+    describe('getBackwardRelations', () => {
+        it('Loads all relations on foreign keys referencing the table', async (): Promise<void> => {
+            const rels = await intro.getBackwardRelations('teams');
+            expect(rels).toIncludeAllMembers([
+                expect.objectContaining({
+                    toTable: 'team_members',
+                    alias: 'team_members',
+                    joins: [
+                        {
+                            fromColumn: 'team_id',
+                            toColumn: 'team_id',
+                        },
+                    ],
+                }),
+            ]);
+        });
+        it('Loads multiple relations from the same table', async (): Promise<void> => {
+            const rels = await intro.getBackwardRelations('users');
+            expect(rels).toIncludeAllMembers([
+                expect.objectContaining({
+                    toTable: 'posts',
+                    alias: 'posts',
+                    joins: [
+                        {
+                            toColumn: 'author_id',
+                            fromColumn: 'user_id',
+                        },
+                    ],
+                }),
+                expect.objectContaining({
+                    toTable: 'posts',
+                    alias: 'posts',
+                    joins: [
+                        {
+                            toColumn: 'co_author',
+                            fromColumn: 'user_id',
+                        },
+                    ],
+                }),
+            ]);
+        });
+        it('Loads all joins on compound foreign relations to the table', async (): Promise<void> => {
+            const rels = await intro.getBackwardRelations('team_members');
+            expect(rels).toIncludeAllMembers([
+                expect.objectContaining({
+                    toTable: 'team_members_positions',
+                    alias: 'team_members_positions',
+                    joins: [
+                        {
+                            fromColumn: 'team_id',
+                            toColumn: 'team_id',
+                        },
+                        {
+                            fromColumn: 'user_id',
+                            toColumn: 'user_id',
+                        },
+                    ],
+                }),
+            ]);
+        });
+        it('Loads all relations on self-referencing keys for table', async (): Promise<void> => {
+            const rels = await intro.getBackwardRelations('users');
+            expect(rels).toIncludeAllMembers([
+                expect.objectContaining({
+                    toTable: 'users',
+                    alias: 'users',
+                    joins: [
+                        {
+                            toColumn: 'best_friend_id',
+                            fromColumn: 'user_id',
+                        },
+                    ],
+                }),
+            ]);
+        });
+    });
 });
