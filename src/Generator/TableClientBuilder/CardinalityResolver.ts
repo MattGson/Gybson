@@ -32,6 +32,7 @@ export class CardinalityResolver {
     /**
      * Returns the list of key combinations that DO NOT uniquely define a single row
      * // TODO:- interleave compound unique keys
+     * // TODO:- combos of compound foreign keys with more than 2 parts
      * @param allKeys
      */
     public static getNonUniqueKeyCombinations(allKeys: KeyDefinition[]): KeyDefinition[][] {
@@ -71,23 +72,5 @@ export class CardinalityResolver {
         }
 
         return keyCombinations;
-    }
-
-    /**
-     * True if key column can map to many rows in the table
-     * @deprecated - no longer required
-     */
-    public static isToMany(column: string, tableKeys: KeyDefinition[]): boolean {
-        const primary = tableKeys.filter((key) => key.constraintName === 'PRIMARY');
-        const primaryMap = _.keyBy(primary, 'columnName');
-
-        // column is singular PK so can't map to many rows
-        if (primaryMap[column] && primary.length === 1) return false;
-
-        // column is part of compound PK so should map to many rows else PK is over-specified
-        if (primaryMap[column] && primary.length > 1) return true;
-
-        // assume non-primary keys are non-unique in table
-        return true;
     }
 }

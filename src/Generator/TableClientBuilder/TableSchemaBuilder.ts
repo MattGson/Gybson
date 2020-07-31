@@ -29,6 +29,7 @@ export class TableSchemaBuilder {
 
     /**
      * Get the schema definition for a table
+     * // TODO:- multiple backwards relations from the same table causes naming collisions (may need to alias both directions)
      */
     public async buildTableDefinition(): Promise<TableSchemaDefinition> {
         const enums = await this.introspection.getEnumTypesForTable(this.tableName);

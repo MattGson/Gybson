@@ -88,11 +88,13 @@ describe('CardinalityResolver', () => {
             expect(combos).toContainEqual([expect.objectContaining({ columnName: 'user_id' })]);
             expect(combos).toContainEqual([expect.objectContaining({ columnName: 'team_id' })]);
         });
-        it('Returns the inter-leavings of ', async () => {
+        it('Returns the inter-leavings of compound primary key columns with other key columns', async () => {
             const keys = await intro.getTableKeys('team_members');
             const combos = CardinalityResolver.getNonUniqueKeyCombinations(keys);
-            expect(combos).toContainEqual([expect.objectContaining({ columnName: 'user_id' })]);
-            expect(combos).toContainEqual([expect.objectContaining({ columnName: 'team_id' })]);
+            expect(combos).toContainEqual([
+                expect.objectContaining({ columnName: 'team_id' }),
+                expect.objectContaining({ columnName: 'member_post_id' }),
+            ]);
         });
     });
 });
