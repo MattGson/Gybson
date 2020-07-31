@@ -164,7 +164,7 @@ export class MySQLIntrospection implements Introspection {
                 table_name: string;
                 constraint_name: string;
                 column_name: string;
-                constraint_type: 'PRIMARY' | 'FOREIGN' | 'UNIQUE';
+                constraint_type: 'PRIMARY KEY' | 'FOREIGN KEY' | 'UNIQUE';
             }) => {
                 return {
                     columnName: row.column_name,

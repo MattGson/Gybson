@@ -38,7 +38,7 @@ export class TableSchemaBuilder {
         const keys = await this.introspection.getTableKeys(this.tableName);
 
         return {
-            primaryKey: CardinalityResolver.primaryKeys(keys).map((k) => k.columnName),
+            primaryKey: CardinalityResolver.primaryKey(keys).map((k) => k.columnName),
             relations: [
                 ...forwardRelations.map((r) => TableSchemaBuilder.aliasForwardRelationship(r, columns)),
                 ...backwardRelations,

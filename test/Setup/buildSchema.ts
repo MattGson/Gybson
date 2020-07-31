@@ -52,8 +52,10 @@ export const buildSchema = async (knex: Knex) => {
         table.integer('team_id').unsigned().notNullable();
         table.integer('user_id').unsigned().notNullable();
         table.string('position').notNullable();
+        table.string('manager').notNullable();
         table.boolean('deleted').defaultTo(false);
 
+        table.unique(['position', 'manager']); // compound unique constraint
         table.primary(['team_id', 'user_id']);
         table.foreign(['team_id', 'user_id']).references(['team_id', 'user_id']).inTable('team_members');
     });
