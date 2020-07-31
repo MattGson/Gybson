@@ -1,5 +1,5 @@
 import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMYSQL';
+import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
 import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
 import 'jest-extended';
 // @ts-ignore - no types for prettier
