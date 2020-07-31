@@ -1,5 +1,5 @@
 import { Introspection, TableDefinition } from '../Introspection/IntrospectionTypes';
-import { ColumnDefinition, RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
+import { RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
 import { CardinalityResolver } from './CardinalityResolver';
 
 export class TableSchemaBuilder {
@@ -29,6 +29,7 @@ export class TableSchemaBuilder {
 
     /**
      * Get the schema definition for a table
+     * // TODO:- multiple backwards relations from the same table causes naming collisions (may need to alias both directions)
      */
     public async buildTableDefinition(): Promise<TableSchemaDefinition> {
         const enums = await this.introspection.getEnumTypesForTable(this.tableName);
@@ -38,7 +39,7 @@ export class TableSchemaBuilder {
         const keys = await this.introspection.getTableKeys(this.tableName);
 
         return {
-            primaryKey: CardinalityResolver.primaryKeys(keys).map((k) => k.columnName),
+            primaryKey: CardinalityResolver.primaryKey(keys).map((k) => k.columnName),
             relations: [
                 ...forwardRelations.map((r) => TableSchemaBuilder.aliasForwardRelationship(r, columns)),
                 ...backwardRelations,

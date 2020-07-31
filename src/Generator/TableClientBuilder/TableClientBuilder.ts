@@ -143,8 +143,8 @@ export class TableClientBuilder {
 
     private async buildLoadersForTable() {
         const tableKeys = await this.introspection.getTableKeys(this.tableName);
-        const unique = CardinalityResolver.getUniqueKeys(tableKeys);
-        const nonUnique = CardinalityResolver.getNonUniqueKey(tableKeys);
+        const unique = CardinalityResolver.getUniqueKeyCombinations(tableKeys);
+        const nonUnique = CardinalityResolver.getNonUniqueKeyCombinations(tableKeys);
 
         unique.forEach((key) => {
             const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k.columnName]);
@@ -184,7 +184,7 @@ export class TableClientBuilder {
                 // Enums
                 ${Object.entries(this.schema.enums).map(([name, def]) => {
                     return `export type ${name} = ${def.values.map((v) => `'${v}'`).join(' | ')}`;
-                })}
+                }).join(';')}
                
                // Row types
                 export interface ${rowTypeName} {

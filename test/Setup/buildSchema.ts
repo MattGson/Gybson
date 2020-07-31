@@ -1,10 +1,10 @@
 import * as Knex from 'knex';
 
 export const buildSchema = async (knex: Knex) => {
-    await knex.schema.dropTableIfExists('posts');
     await knex.schema.dropTableIfExists('team_members_positions');
     await knex.schema.dropTableIfExists('team_members');
     await knex.schema.dropTableIfExists('teams');
+    await knex.schema.dropTableIfExists('posts');
     await knex.schema.dropTableIfExists('users');
 
     // table with multiple enums
@@ -30,34 +30,6 @@ export const buildSchema = async (knex: Knex) => {
         table.foreign('best_friend_id').references('users.user_id');
     });
 
-    await knex.schema.createTable('teams', (table) => {
-        table.increments('team_id').unsigned().primary();
-        table.string('name', 400).notNullable();
-        table.boolean('deleted').defaultTo(false);
-    });
-
-    // join table with compound primary key
-    await knex.schema.createTable('team_members', (table) => {
-        table.integer('team_id').unsigned().notNullable();
-        table.integer('user_id').unsigned().notNullable();
-        table.boolean('deleted').defaultTo(false);
-
-        table.primary(['team_id', 'user_id']);
-        table.foreign('team_id').references('teams.team_id');
-        table.foreign('user_id').references('users.user_id');
-    });
-
-    // table with compound foreign key
-    await knex.schema.createTable('team_members_positions', (table) => {
-        table.integer('team_id').unsigned().notNullable();
-        table.integer('user_id').unsigned().notNullable();
-        table.string('position').notNullable();
-        table.boolean('deleted').defaultTo(false);
-
-        table.primary(['team_id', 'user_id']);
-        table.foreign(['team_id', 'user_id']).references(['team_id', 'user_id']).inTable('team_members');
-    });
-
     // table with multiple references to the same table (users)
     // also has conflicting naming between author and author_id
     await knex.schema.createTable('posts', (table) => {
@@ -73,5 +45,37 @@ export const buildSchema = async (knex: Knex) => {
         table.foreign('co_author').references('users.user_id');
 
         table.boolean('deleted').defaultTo(false);
+    });
+
+    await knex.schema.createTable('teams', (table) => {
+        table.increments('team_id').unsigned().primary();
+        table.string('name', 400).notNullable();
+        table.boolean('deleted').defaultTo(false);
+    });
+
+    // join table with compound primary key
+    await knex.schema.createTable('team_members', (table) => {
+        table.integer('team_id').unsigned().notNullable();
+        table.integer('user_id').unsigned().notNullable();
+        table.integer('member_post_id').unsigned().comment('Post for joining the team');
+        table.boolean('deleted').defaultTo(false);
+
+        table.primary(['team_id', 'user_id']);
+        table.foreign('team_id').references('teams.team_id');
+        table.foreign('user_id').references('users.user_id');
+        table.foreign('member_post_id').references('posts.post_id')
+    });
+
+    // table with compound foreign key
+    await knex.schema.createTable('team_members_positions', (table) => {
+        table.integer('team_id').unsigned().notNullable();
+        table.integer('user_id').unsigned().notNullable();
+        table.string('position').notNullable();
+        table.string('manager').notNullable();
+        table.boolean('deleted').defaultTo(false);
+
+        table.unique(['position', 'manager']); // compound unique constraint
+        table.primary(['team_id', 'user_id']);
+        table.foreign(['team_id', 'user_id']).references(['team_id', 'user_id']).inTable('team_members');
     });
 };
