@@ -1,5 +1,5 @@
 import { Introspection, TableDefinition } from '../Introspection/IntrospectionTypes';
-import { ColumnDefinition, RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
+import { RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
 import { CardinalityResolver } from './CardinalityResolver';
 
 export class TableSchemaBuilder {
