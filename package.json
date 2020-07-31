@@ -16,7 +16,7 @@
         "lint": "eslint ./src",
         "build": "tsc",
         "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
-        "test": "npm run lint && jest",
+        "test": "npm run lint && jest --runInBand",
         "prepublish": "npm run build"
     },
     "bin": {
