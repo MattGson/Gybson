@@ -96,6 +96,7 @@ describe('MySQLIntrospection', () => {
                 expect.objectContaining({
                     columnName: 'user_id',
                     constraintName: 'PRIMARY',
+                    constraintType: 'PRIMARY KEY',
                 }),
             ]);
             // check compound key
@@ -104,10 +105,12 @@ describe('MySQLIntrospection', () => {
                 expect.objectContaining({
                     columnName: 'user_id',
                     constraintName: 'PRIMARY',
+                    constraintType: 'PRIMARY KEY',
                 }),
                 expect.objectContaining({
                     columnName: 'team_id',
                     constraintName: 'PRIMARY',
+                    constraintType: 'PRIMARY KEY',
                 }),
             ]);
         });
@@ -116,9 +119,11 @@ describe('MySQLIntrospection', () => {
             expect(postKeys).toIncludeAllMembers([
                 expect.objectContaining({
                     columnName: 'author_id',
+                    constraintType: 'FOREIGN KEY',
                 }),
                 expect.objectContaining({
                     columnName: 'co_author',
+                    constraintType: 'FOREIGN KEY',
                 }),
             ]);
         });
@@ -127,6 +132,7 @@ describe('MySQLIntrospection', () => {
             expect(userKeys).toIncludeAllMembers([
                 expect.objectContaining({
                     columnName: 'best_friend_id',
+                    constraintType: 'FOREIGN KEY',
                 }),
             ]);
         });
@@ -135,6 +141,7 @@ describe('MySQLIntrospection', () => {
             expect(userKeys).toIncludeAllMembers([
                 expect.objectContaining({
                     columnName: 'email',
+                    constraintType: 'UNIQUE',
                 }),
             ]);
         });

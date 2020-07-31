@@ -13,6 +13,7 @@ export interface KeyDefinition {
     tableName: string;
     columnName: string;
     constraintName: string;
+    constraintType: 'PRIMARY' | 'FOREIGN' | 'UNIQUE';
 }
 
 export interface TableDefinition {

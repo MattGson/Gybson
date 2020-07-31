@@ -143,17 +143,37 @@ export class MySQLIntrospection implements Introspection {
     }
 
     public async getTableKeys(tableName: string): Promise<KeyDefinition[]> {
-        const rows = await this.knex('information_schema.key_column_usage')
-            .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
-            .where({ table_name: tableName, table_schema: this.schemaName });
+        const rows = await this.knex('information_schema.key_column_usage as key_usage')
+            .select(
+                'key_usage.table_name',
+                'key_usage.column_name',
+                'key_usage.constraint_name',
+                'constraints.constraint_type',
+            )
+            .distinct()
+            .leftJoin('information_schema.table_constraints as constraints', function () {
+                this.on('key_usage.constraint_name', '=', 'constraints.constraint_name');
+                this.andOn('key_usage.constraint_schema', '=', 'constraints.constraint_schema');
+                this.andOn('key_usage.table_name', '=', 'constraints.table_name');
+            })
 
-        return rows.map((row: { table_name: string; constraint_name: string; column_name: string }) => {
-            return {
-                columnName: row.column_name,
-                constraintName: row.constraint_name,
-                tableName: row.table_name,
-            };
-        });
+            .where({ 'key_usage.table_name': tableName, 'key_usage.table_schema': this.schemaName });
+
+        return rows.map(
+            (row: {
+                table_name: string;
+                constraint_name: string;
+                column_name: string;
+                constraint_type: 'PRIMARY' | 'FOREIGN' | 'UNIQUE';
+            }) => {
+                return {
+                    columnName: row.column_name,
+                    constraintName: row.constraint_name,
+                    tableName: row.table_name,
+                    constraintType: row.constraint_type,
+                };
+            },
+        );
     }
 
     /**
