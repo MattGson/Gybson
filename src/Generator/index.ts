@@ -96,7 +96,7 @@ async function generateClients(db: Introspection, outdir: string, libDir?: strin
 
         export const schema: DatabaseSchema = ${JSON.stringify(schema)}`,
         outdir,
-        `schemaRelations.ts`,
+        `gybson.schema.ts`,
     );
 
     // BUILD ENTRY POINT

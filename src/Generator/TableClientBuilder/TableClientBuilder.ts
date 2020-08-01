@@ -62,7 +62,7 @@ export class TableClientBuilder {
         const { rowTypeName, columnMapTypeName, whereTypeName, orderByTypeName, paginationTypeName } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
-            import { schema } from './schemaRelations';
+            import { schema } from './gybson.schema';
 
             ${this.types}
 

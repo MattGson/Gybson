@@ -252,9 +252,12 @@ export abstract class SQLQueryBuilder<
      * Will take the superset of all columns in the insert values
      * @param params
      */
-    public async insert(params: { connection?: PoolConnection; values: PartialTblRow[] }): Promise<number | null> {
+    public async insert(params: {
+        connection?: PoolConnection;
+        values: PartialTblRow | PartialTblRow[];
+    }): Promise<number | null> {
         const { values, connection } = params;
-        if (values.length < 1) return null;
+        if (!values || (Array.isArray(values) && values.length < 1)) return null;
 
         // TODO:- add returning() to support postgres
         let query = knex()(this.tableName).insert(values);
