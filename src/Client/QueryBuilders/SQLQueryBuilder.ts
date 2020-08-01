@@ -48,10 +48,9 @@ export abstract class SQLQueryBuilder<
      */
     protected async manyByCompoundColumnLoader(params: {
         keys: readonly PartialTblRow[];
-        includeSoftDeleted?: boolean;
         orderBy?: TblOrderBy;
     }): Promise<TblRow[][]> {
-        const { keys, includeSoftDeleted, orderBy } = params;
+        const { keys, orderBy } = params;
 
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
@@ -64,7 +63,6 @@ export abstract class SQLQueryBuilder<
 
         // build query
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
-        if (!includeSoftDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumn as string]: false });
 
         if (orderBy) {
             for (let [column, direction] of Object.entries(orderBy)) {
@@ -254,9 +252,12 @@ export abstract class SQLQueryBuilder<
      * Will take the superset of all columns in the insert values
      * @param params
      */
-    public async insert(params: { connection?: PoolConnection; values: PartialTblRow[] }): Promise<number | null> {
+    public async insert(params: {
+        connection?: PoolConnection;
+        values: PartialTblRow | PartialTblRow[];
+    }): Promise<number | null> {
         const { values, connection } = params;
-        if (values.length < 1) return null;
+        if (!values || (Array.isArray(values) && values.length < 1)) return null;
 
         // TODO:- add returning() to support postgres
         let query = knex()(this.tableName).insert(values);

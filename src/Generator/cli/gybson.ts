@@ -46,7 +46,7 @@ const run = async () => {
         const CURRENT = process.cwd();
         const GENERATED_DIR = path.join(CURRENT, outdir);
 
-        await generate(conn, GENERATED_DIR);
+        await generate(conn, GENERATED_DIR, 'gybson');
     } catch (e) {
         console.error(e.message);
         console.log('Use: "gybson -h" to see help');

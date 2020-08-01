@@ -16,7 +16,8 @@
         "lint": "eslint ./src",
         "build": "tsc",
         "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
-        "test": "npm run lint && jest --runInBand",
+        "test-generate": "ts-node test/Setup/build-test-client.ts --transpile-only",
+        "test": "npm run test-generate && npm run lint && jest --runInBand",
         "prepublish": "npm run build"
     },
     "bin": {

@@ -1,6 +1,6 @@
 import { EnumDefinitions, Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
+import { ColumnType, Comparable, EnumDefinition, NonComparable, RelationDefinition } from '../../TypeTruth/TypeTruth';
 import Knex = require('knex');
-import { EnumDefinition, RelationDefinition } from '../../TypeTruth/TypeTruth';
 
 export class MySQLIntrospection implements Introspection {
     private readonly schemaName: string;
@@ -19,12 +19,12 @@ export class MySQLIntrospection implements Introspection {
      * @param dbType
      * @param customTypes - enum and set types
      */
-    private static getTsTypeForColumn(
+    public getTsTypeForColumn(
         tableName: string,
         columnName: string,
         dbType: string,
         customTypes: EnumDefinitions,
-    ): string {
+    ): ColumnType {
         switch (dbType) {
             case 'char':
             case 'varchar':
@@ -36,7 +36,7 @@ export class MySQLIntrospection implements Introspection {
             case 'geometry':
                 // case 'set':
                 // case 'enum': - these are handled in the default case
-                return 'string';
+                return Comparable.string;
             case 'integer':
             case 'int':
             case 'smallint':
@@ -47,15 +47,15 @@ export class MySQLIntrospection implements Introspection {
             case 'numeric':
             case 'float':
             case 'year':
-                return 'number';
+                return Comparable.number;
             case 'tinyint':
-                return 'boolean';
+                return Comparable.boolean;
             case 'json':
-                return 'Object';
+                return NonComparable.Object;
             case 'date':
             case 'datetime':
             case 'timestamp':
-                return 'Date';
+                return Comparable.Date;
             case 'tinyblob':
             case 'mediumblob':
             case 'longblob':
@@ -63,7 +63,7 @@ export class MySQLIntrospection implements Introspection {
             case 'binary':
             case 'varbinary':
             case 'bit':
-                return 'Buffer';
+                return NonComparable.Buffer;
             default:
                 const possibleEnum = MySQLIntrospection.getEnumName(tableName, columnName);
                 if (customTypes[possibleEnum]) {
@@ -72,7 +72,7 @@ export class MySQLIntrospection implements Introspection {
                     console.log(
                         `Type [${columnName}] has been mapped to [any] because no specific type has been found.`,
                     );
-                    return 'any';
+                    return NonComparable.any;
                 }
         }
     }
@@ -136,7 +136,7 @@ export class MySQLIntrospection implements Introspection {
                 dbType,
                 nullable: schemaItem.is_nullable === 'YES',
                 columnName,
-                tsType: MySQLIntrospection.getTsTypeForColumn(tableName, columnName, dbType, enumTypes),
+                tsType: this.getTsTypeForColumn(tableName, columnName, dbType, enumTypes),
             };
         });
         return tableDefinition;

@@ -1,4 +1,4 @@
-import { ColumnDefinition, EnumDefinition, RelationDefinition } from '../../TypeTruth/TypeTruth';
+import { ColumnDefinition, ColumnType, EnumDefinition, RelationDefinition } from '../../TypeTruth/TypeTruth';
 
 export interface Introspection {
     getTableTypes(table: string, enumTypes: EnumDefinitions): Promise<TableDefinition>;
@@ -7,6 +7,7 @@ export interface Introspection {
     getBackwardRelations(table: string): Promise<RelationDefinition[]>;
     getSchemaTables(): Promise<string[]>;
     getEnumTypesForTable(table: string): Promise<EnumDefinitions>;
+    getTsTypeForColumn(tableName: string, columnName: string, dbType: string, customTypes: EnumDefinitions): ColumnType;
 }
 
 export interface KeyDefinition {

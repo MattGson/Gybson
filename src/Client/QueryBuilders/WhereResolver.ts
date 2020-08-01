@@ -3,7 +3,7 @@ import {
     RelationFilters,
     Combiners,
     Operators,
-    Primitives,
+    Comparable,
     RelationDefinition,
     DatabaseSchema,
 } from '../../TypeTruth/TypeTruth';
@@ -27,7 +27,7 @@ export class WhereResolver {
         const valueType: string = typeof value;
         const columnAlias = `${tableAlias}.${column}`;
         // @ts-ignore - can't index enum
-        if (Primitives[valueType]) {
+        if (Comparable[valueType]) {
             // is a primitive so use equals clause
             builder.where(columnAlias, value);
         } else if (valueType === 'object') {

@@ -1,8 +1,9 @@
 import Knex from 'knex';
 import { buildSchema } from './buildSchema';
+import { Connection } from '../../src/Generator';
 
 export const schemaName = 'gybson_test';
-export const connection = {
+export const connection: Connection = {
     client: 'mysql',
     connection: {
         host: 'localhost',

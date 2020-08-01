@@ -94,14 +94,28 @@ describe('TableSchemaBuilder', () => {
                     }),
                 ]);
             });
-            it('Backwards relations are not aliased', async (): Promise<void> => {
+            it('Backwards relations are aliased as the table name by default', async (): Promise<void> => {
+                const schemaBuilder = new TableSchemaBuilder('posts', intro);
+                const schema = await schemaBuilder.buildTableDefinition();
+
+                expect(schema.relations).toIncludeAllMembers([
+                    expect.objectContaining({
+                        toTable: 'team_members',
+                        alias: 'team_members',
+                        joins: [{ fromColumn: 'post_id', toColumn: 'member_post_id' }],
+                    }),
+                ]);
+            });
+            it('Backwards relations are aliased with columnName_tableName if there are multiple instances of the table', async (): Promise<
+                void
+            > => {
                 const schemaBuilder = new TableSchemaBuilder('users', intro);
                 const schema = await schemaBuilder.buildTableDefinition();
 
                 expect(schema.relations).toIncludeAllMembers([
                     expect.objectContaining({
                         toTable: 'posts',
-                        alias: 'posts',
+                        alias: 'author_posts',
                         joins: [
                             {
                                 toColumn: 'author_id',
@@ -111,13 +125,18 @@ describe('TableSchemaBuilder', () => {
                     }),
                     expect.objectContaining({
                         toTable: 'posts',
-                        alias: 'posts',
+                        alias: 'co_author_posts',
                         joins: [
                             {
                                 toColumn: 'co_author',
                                 fromColumn: 'user_id',
                             },
                         ],
+                    }),
+                    expect.objectContaining({
+                        toTable: 'team_members',
+                        alias: 'team_members',
+                        joins: [{ fromColumn: 'user_id', toColumn: 'user_id' }],
                     }),
                 ]);
             });
