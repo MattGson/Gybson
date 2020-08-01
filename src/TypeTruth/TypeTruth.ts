@@ -1,7 +1,24 @@
 // This file holds the shared truth of types between the Generator and the Client
-// It is not strictly necessary but aids in making sure they match up when using string templating
+// It is not strictly necessary to be separate but aids in making sure they match up when using string templating
 
-import _ from 'lodash';
+export enum Comparable {
+    string = 'string',
+    number = 'number',
+    bigint = 'bigint',
+    boolean = 'boolean',
+    Date = 'Date',
+}
+
+export enum NonComparable {
+    Object = 'Object',
+    Array = 'Array',
+    Buffer = 'Buffer',
+    any = 'any',
+}
+
+export type EnumType = string;
+
+export type ColumnType = NonComparable | Comparable | EnumType;
 
 // relations map
 export interface JoinDefinition {
@@ -23,7 +40,7 @@ export interface RelationDefinition {
 export interface ColumnDefinition {
     dbType: string;
     nullable: boolean;
-    tsType?: string;
+    tsType?: ColumnType;
     columnName: string;
 }
 
@@ -60,59 +77,17 @@ export type Paginate = {
 
 export type Order = 'asc' | 'desc';
 
-export const buildOrderForTable = (params: { orderByTypeName: string; columns: ColumnDefinition[] }) => {
-    const { orderByTypeName, columns } = params;
-    return `export type ${orderByTypeName} = {
-                ${columns.map((col) => `${col.columnName}?: Order;`).join(' ')}
-            };`;
-};
-
-export const buildPaginateForTable = (params: { paginationTypeName: string; rowTypeName: string }) => {
-    const { paginationTypeName, rowTypeName } = params;
-    return `export type ${paginationTypeName} = {
-                    limit?: number;
-                    afterCursor?: Partial<${rowTypeName}>;
-                    afterCount?: number;
-            };`;
-};
-
-export enum Primitives {
-    string = 'string',
-    number = 'number',
-    bigint = 'bigint',
-    boolean = 'boolean',
-    Date = 'Date',
-}
-
 export enum RelationFilters {
     existsWhere = 'existsWhere',
     notExistsWhere = 'notExistsWhere',
     innerJoinWhere = 'innerJoinWhere',
 }
 
-export const buildRelationFilterForTable = (params: { relationFilterTypeName: string; whereTypeName: string }) => {
-    const { relationFilterTypeName, whereTypeName } = params;
-    return `export type ${relationFilterTypeName} = {
-                existsWhere?: ${whereTypeName};
-                notExistsWhere?: ${whereTypeName};
-                innerJoinWhere?: ${whereTypeName};
-            }`;
-};
-
 export enum Combiners {
     AND = 'AND',
     OR = 'OR',
     NOT = 'NOT',
 }
-
-export const buildWhereCombinersForTable = (params: { whereTypeName: string }) => {
-    const { whereTypeName } = params;
-    return `
-        AND?: Enumerable<${whereTypeName}>;
-        OR?: Enumerable<${whereTypeName}>;
-        NOT?: Enumerable<${whereTypeName}>;
-    `;
-};
 
 export enum Operators {
     equals = 'equals',
@@ -126,16 +101,6 @@ export enum Operators {
     startsWith = 'startsWith',
     endsWith = 'endsWith',
 }
-
-export const buildWhereTypeForColumn = (col: ColumnDefinition) => {
-    const type = `${col.columnName}?: ${col.tsType}`;
-
-    // don't have where clause for enum and set types
-    // @ts-ignore
-    if (!col.tsType || !Primitives[col.tsType]) return type;
-    // add where options to type
-    return `${type} | ${_.upperFirst(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}`;
-};
 
 export type NumberWhere = {
     equals?: number;
