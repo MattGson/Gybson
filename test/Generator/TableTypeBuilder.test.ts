@@ -187,7 +187,7 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
             const formatted = format(result, { parser: 'typescript', ...prettier });
 
             expect(formatted).toEqual(
-                `export interface postsOrderBy {
+                `export type postsOrderBy = {
     post_id?: Order;
     author?: Order;
     author_id?: Order;
@@ -196,7 +196,7 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
     rating_average?: Order;
     created?: Order;
     deleted?: Order;
-}
+};
 `,
             );
         });

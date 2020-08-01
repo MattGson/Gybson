@@ -48,10 +48,9 @@ export abstract class SQLQueryBuilder<
      */
     protected async manyByCompoundColumnLoader(params: {
         keys: readonly PartialTblRow[];
-        includeSoftDeleted?: boolean;
         orderBy?: TblOrderBy;
     }): Promise<TblRow[][]> {
-        const { keys, includeSoftDeleted, orderBy } = params;
+        const { keys, orderBy } = params;
 
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
@@ -64,7 +63,6 @@ export abstract class SQLQueryBuilder<
 
         // build query
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
-        if (!includeSoftDeleted && this.hasSoftDelete()) query.where({ [this.softDeleteColumn as string]: false });
 
         if (orderBy) {
             for (let [column, direction] of Object.entries(orderBy)) {

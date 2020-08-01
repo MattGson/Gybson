@@ -202,7 +202,7 @@ export class TableTypeBuilder {
     public static buildOrderType(params: { orderByTypeName: string; columns: TableDefinition }) {
         const { orderByTypeName, columns } = params;
         return `
-            export interface ${orderByTypeName} {
+            export type ${orderByTypeName} = {
                 ${Object.values(columns)
                     .map((col) => `${col.columnName}?: Order;`)
                     .join(' ')}
