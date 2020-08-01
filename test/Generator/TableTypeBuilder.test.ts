@@ -48,7 +48,7 @@ describe('TableTypeBuilder', () => {
     describe('buildTypeImports', () => {
         it('Generates the imports for types with relations', async (): Promise<void> => {
             const { relations } = await new TableSchemaBuilder('users', intro).buildTableDefinition();
-            const imports = TableTypeBuilder.buildTypeImports({ tableName: 'users', relations });
+            const imports = TableTypeBuilder.buildTypeImports({ tableName: 'users', relations, libPath: 'gybson' });
             const formatted = format(imports, { parser: 'typescript', ...prettier });
 
             expect(formatted).toEqual(

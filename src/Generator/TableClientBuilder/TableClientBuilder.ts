@@ -8,6 +8,7 @@ import { BatchLoaderBuilder } from './BatchLoaderBuilder';
 interface BuilderOptions {
     rowTypeSuffix: string;
     softDeleteColumn?: string;
+    libPath: string;
 }
 
 /**
@@ -137,7 +138,11 @@ export class TableClientBuilder {
         const { columns, relations, enums } = this.schema;
 
         this.types = `
-                ${TableTypeBuilder.buildTypeImports({ tableName: this.tableName, relations })}
+                ${TableTypeBuilder.buildTypeImports({
+                    tableName: this.tableName,
+                    relations,
+                    libPath: this.options.libPath,
+                })}
                 
                 ${TableTypeBuilder.buildEnumTypes({ enums })}
                

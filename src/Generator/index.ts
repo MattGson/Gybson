@@ -7,7 +7,7 @@ import Knex from 'knex';
 import { MySQLIntrospection } from './Introspection/MySQLIntrospection';
 import { TableClientBuilder } from './TableClientBuilder/TableClientBuilder';
 import { Introspection } from './Introspection/IntrospectionTypes';
-import { DatabaseSchema, TableSchemaDefinition } from '../TypeTruth/TypeTruth';
+import { DatabaseSchema } from '../TypeTruth/TypeTruth';
 import { TableSchemaBuilder } from './TableClientBuilder/TableSchemaBuilder';
 
 // TODO:- options
@@ -69,8 +69,9 @@ async function generateClientIndex(builders: TableClientBuilder[], outdir: strin
  * Generate the db clients for each table
  * @param db
  * @param outdir
+ * @param libDir - relative location of the Gybson client lib
  */
-async function generateClients(db: Introspection, outdir: string): Promise<string[]> {
+async function generateClients(db: Introspection, outdir: string, libDir?: string): Promise<string[]> {
     const builders: TableClientBuilder[] = [];
     const tables = await db.getSchemaTables();
 
@@ -82,7 +83,7 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
             table,
             schema: tblSchema,
             dbIntrospection: db,
-            options: codeGenPreferences,
+            options: { ...codeGenPreferences, libPath: libDir || 'gybson' },
         });
         schema[table] = tblSchema;
         builders.push(builder);
@@ -91,7 +92,7 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
     // ADD relation map
     await writeTypescriptFile(
         `
-        import { DatabaseSchema } from 'gybson';
+        import { DatabaseSchema } from '${libDir}';
 
         export const schema: DatabaseSchema = ${JSON.stringify(schema)}`,
         outdir,
@@ -108,7 +109,7 @@ async function generateClients(db: Introspection, outdir: string): Promise<strin
 // Entry point
 // ****************************
 
-interface Connection {
+export interface Connection {
     client: 'mysql' | 'postgres';
     connection: {
         host: string;
@@ -116,10 +117,11 @@ interface Connection {
         user: string;
         password: string;
         database: string;
+        multipleStatements?: boolean;
     };
 }
 
-export async function generate(conn: Connection, outdir: string) {
+export async function generate(conn: Connection, outdir: string, libDir?: string) {
     console.log(`Generating client for schema: ${conn.connection.database}`);
 
     const knex = Knex(conn);
@@ -129,7 +131,7 @@ export async function generate(conn: Connection, outdir: string) {
         DB = new MySQLIntrospection(knex, conn.connection.database);
     } else throw new Error('PostgreSQL not currently supported');
 
-    const tables = await generateClients(DB, outdir);
+    const tables = await generateClients(DB, outdir, libDir);
 
     console.log(`Generated for ${tables.length} tables in ${outdir}`);
     await knex.destroy();

@@ -1,12 +1,9 @@
-# Created by .ignore support plugin (hsz.mobi)
-### Node template
 # Logs
 logs
 *.log
 npm-debug.log*
 
 # generated files
-Gen/*
 build
 build/*
 
@@ -346,4 +343,4 @@ test/actual/*
 coverage/
 *.map
 .DS_Store
-
+/test/Gen/*.ts
