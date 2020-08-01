@@ -1,7 +1,7 @@
 import { Introspection } from '../Introspection/IntrospectionTypes';
 import { CardinalityResolver } from './CardinalityResolver';
 import { ColumnDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
-import { TableTypeBuilder, TableTypeNames } from '../../TypeTruth/TableTypeBuilder';
+import { TableTypeBuilder, TableTypeNames } from './TableTypeBuilder';
 import { PascalCase } from '../lib';
 
 interface BuilderOptions {
@@ -132,7 +132,7 @@ export class TableClientBuilder {
                 
                 ${TableTypeBuilder.buildWhereType({ columns, whereTypeName, relations })}
                 
-                ${TableTypeBuilder.buildOrderType({ orderByTypeName, columns: Object.values(columns) })}
+                ${TableTypeBuilder.buildOrderType({ orderByTypeName, columns })}
                 
                 ${TableTypeBuilder.buildPaginateType({ rowTypeName, paginationTypeName })}
         `;

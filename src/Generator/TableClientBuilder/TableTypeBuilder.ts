@@ -1,13 +1,11 @@
-import { EnumDefinitions, TableDefinition } from '../Generator/Introspection/IntrospectionTypes';
-import { ColumnDefinition, Comparable, RelationDefinition } from './TypeTruth';
+import { EnumDefinitions, TableDefinition } from '../Introspection/IntrospectionTypes';
+import { ColumnDefinition, Comparable, RelationDefinition } from '../../TypeTruth/TypeTruth';
 import _ from 'lodash';
-import { PascalCase } from '../Generator/lib';
+import { PascalCase } from '../lib';
 
 export type TableTypeNames = {
     rowTypeName: string;
     columnMapTypeName: string;
-    columnTypeName: string;
-    valueTypeName: string;
     whereTypeName: string;
     orderByTypeName: string;
     paginationTypeName: string;
@@ -23,9 +21,7 @@ export class TableTypeBuilder {
         const { tableName, rowTypeSuffix } = params;
         return {
             rowTypeName: `${tableName}${rowTypeSuffix || 'Row'}`,
-            columnTypeName: `${tableName}Column`,
             columnMapTypeName: `${tableName}ColumnMap`,
-            valueTypeName: `${tableName}Value`,
             whereTypeName: `${tableName}Where`,
             orderByTypeName: `${tableName}OrderBy`,
             paginationTypeName: `${tableName}Paginate`,
@@ -54,7 +50,7 @@ export class TableTypeBuilder {
                 DateWhereNullable 
             } from 'gybson';
             
-            ${_.uniqBy(relations, r => r.toTable)
+            ${_.uniqBy(relations, (r) => r.toTable)
                 .map((tbl) => {
                     if (tbl.toTable === tableName) return ''; // don't import own types
                     return `import { ${tbl.toTable}RelationFilter } from "./${PascalCase(tbl.toTable)}"`;
@@ -70,7 +66,6 @@ export class TableTypeBuilder {
     public static buildEnumTypes(params: { enums: EnumDefinitions }) {
         const { enums } = params;
         return `
-            // Enums
             ${Object.entries(enums)
                 .map(([name, def]) => {
                     return `export type ${name} = ${def.values.map((v) => `'${v}'`).join(' | ')}`;
@@ -86,7 +81,6 @@ export class TableTypeBuilder {
     public static buildRowType(params: { table: TableDefinition; rowTypeName: string }) {
         const { table, rowTypeName } = params;
         return `
-             // Row types
             export interface ${rowTypeName} {
                 ${Object.entries(table)
                     .map(([columnName, columnDefinition]) => {
@@ -106,8 +100,7 @@ export class TableTypeBuilder {
     public static buildColumnMapType(params: { columnMapTypeName: string; columns: TableDefinition }) {
         const { columnMapTypeName, columns } = params;
         return `
-            // Column map
-            export type ${columnMapTypeName} = {
+            export interface ${columnMapTypeName} {
              ${Object.values(columns)
                  .map((col) => `${col.columnName}: boolean;`)
                  .join(' ')}
@@ -122,8 +115,7 @@ export class TableTypeBuilder {
     public static buildRelationFilterType(params: { whereTypeName: string; relationFilterTypeName: string }) {
         const { whereTypeName, relationFilterTypeName } = params;
         return `
-            // Relation
-            export type ${relationFilterTypeName} = {
+            export interface ${relationFilterTypeName} {
                 existsWhere?: ${whereTypeName};
                 notExistsWhere?: ${whereTypeName};
                 innerJoinWhere?: ${whereTypeName};
@@ -171,18 +163,6 @@ export class TableTypeBuilder {
         }
     }
 
-    // /**
-    //  * Build the where type for a column
-    //  * @param col
-    //  */
-    // private static buildWhereTypeForColumn(col: ColumnDefinition) {
-    //     const type = `${col.columnName}?: ${col.tsType}`;
-    //     // @ts-ignore - don't have where clause for enum and set types
-    //     if (!col.tsType || !Comparable[col.tsType]) return type;
-    //     // add where filter options to type
-    //     return `${type} | ${_.upperFirst(col.tsType)}Where${col.nullable ? 'Nullable | null' : ''}`;
-    // }
-
     private static buildWhereCombinersForTable = (params: { whereTypeName: string }) => {
         const { whereTypeName } = params;
         return `
@@ -203,8 +183,7 @@ export class TableTypeBuilder {
     }) {
         const { whereTypeName, columns, relations } = params;
         return `
-            // Where types
-            export type ${whereTypeName} = {
+            export interface ${whereTypeName} {
                 ${Object.values(columns)
                     .map((col) => TableTypeBuilder.whereFilterForColumn({ column: col }))
                     .join('; ')}
@@ -220,12 +199,13 @@ export class TableTypeBuilder {
      * Build order by type for table
      * @param params
      */
-    public static buildOrderType(params: { orderByTypeName: string; columns: ColumnDefinition[] }) {
+    public static buildOrderType(params: { orderByTypeName: string; columns: TableDefinition }) {
         const { orderByTypeName, columns } = params;
         return `
-            // Order by
-            export type ${orderByTypeName} = {
-                ${columns.map((col) => `${col.columnName}?: Order;`).join(' ')}
+            export interface ${orderByTypeName} {
+                ${Object.values(columns)
+                    .map((col) => `${col.columnName}?: Order;`)
+                    .join(' ')}
             };
         `;
     }
@@ -237,8 +217,7 @@ export class TableTypeBuilder {
     public static buildPaginateType(params: { paginationTypeName: string; rowTypeName: string }) {
         const { paginationTypeName, rowTypeName } = params;
         return `
-            // Paginate
-            export type ${paginationTypeName} = {
+            export interface ${paginationTypeName} {
                 limit?: number;
                 afterCursor?: Partial<${rowTypeName}>;
                 afterCount?: number;
