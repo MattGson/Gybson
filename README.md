@@ -9,10 +9,8 @@
 
 [github-star-badge]: https://img.shields.io/github/last-commit/MattGson/Gybson.svg?style=for-the-badge&logo=github&logoColor=ffffff
 [github-star-link]: https://github.com/MattGson/Gybson/stargazers
-
 [last-commit]: https://img.shields.io/github/stars/MattGson/Gybson.svg?style=for-the-badge&logo=github&logoColor=ffffff
 [last-commit-link]: https://github.com/MattGson/Gybson/commits
-
 [prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge
 [prs-link]: https://github.com/MattGson/Gybson
 
@@ -38,18 +36,18 @@ Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood t
 
 #### SQL developer friendly
 
-Gybson is built so that developers who know SQL can intuitively understand how to use it. 
+Gybson is built so that developers who know SQL can intuitively understand how to use it.
 One call directly maps to one SQL query being executed.
 We use standard SQL terms where possible and we don't try to hide details such as join-tables.
 
 #### Native support for soft-deletes
 
-Managing soft deletes is hard but is a vital part of many apps. Gybson has native support for 
+Managing soft deletes is hard but is a vital part of many apps. Gybson has native support for
 soft-deletes including automatically filtering out deleted rows.
 
 #### IDE Auto-completion
-![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
 
+![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
 
 ### Simple example
 
@@ -68,11 +66,11 @@ You can query:
 
 ```typescript
 const id = await gybson.users.insert({
-    values: [{
+    values: {
         username: 'name',
         password: 'secret',
         last_logon: new Date(),
-    }]
+    },
 });
 
 const user = await gybson.users.byUserId({ user_id: id });
@@ -166,212 +164,209 @@ Query: {
 ### API
 
 #### Loaders
+
 Loaders are methods for each table that allow super fast batched and de-duped loads on key columns.
 Loader methods are generated for each unique and non-unique key combination.
 
 Unique key loaders return a single record or null
-```typescript
 
+```typescript
 const user = await gybson.Users.byUserId({ user_id: 1 });
 
 // Return type: user | null
-
 ```
-Non-Unique key loaders return an array of records. These loaders allow an order to be specified.
-```typescript
 
-const user = await gybson.Post.byUserId({ 
-    user_id: 1, 
+Non-Unique key loaders return an array of records. These loaders allow an order to be specified.
+
+```typescript
+const user = await gybson.Post.byUserId({
+    user_id: 1,
     orderBy: {
-        first_name: 'asc'
-    } 
+        first_name: 'asc',
+    },
 });
 
 // Return type: post[]
-
 ```
-Loaders are generated for unique and non-unique key combinations as well
-```typescript
 
+Loaders are generated for unique and non-unique key combinations as well
+
+```typescript
 const user = await gybson.Post.byTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
 
 // Return type: post[]
 ```
 
 #### findMany
+
 `findMany` loads many rows from a table. It provides a flexible query API whilst maintaining full type safety.
 Due to this flexibility, `findMany` does not perform batching or caching.
 
 With `findMany` you can filter by almost anything you can do in SQL:
-- columns (equals, less than, greater than, startsWith, contains, not equal...)
-- gates (and, or, not)
-- relations (exists, notExists, innerJoin)
-- ordering
-- pagination (offset-limit, cursor)
 
-##### A complex example: 
+-   columns (equals, less than, greater than, startsWith, contains, not equal...)
+-   gates (and, or, not)
+-   relations (whereExists, whereNotExists, whereEvery)
+-   ordering (ascending, descending, multiple-columns)
+-   pagination (offset-limit, cursor)
+
+##### A complex example:
+
 Find the first 3 users where:
- - The city is 'NY'
- - The last name does NOT start with 'P',
- - The age is less than 20
- - The favourite Pet is either a 'dog' or a 'cat'
- - They own a dog
- - Order by first_name and last_name ascending.
- - Start from cursor 'John'
-```typescript
 
-const users = await gybson.Users.findMany({ 
+-   The city is 'NY'
+-   The last name does NOT start with 'P',
+-   The age is less than 20
+-   The favourite Pet is either a 'dog' or a 'cat'
+-   They own a dog
+-   Order by first_name and last_name ascending.
+-   Start from cursor 'John'
+
+```typescript
+const users = await gybson.Users.findMany({
     where: {
         city: 'NY',
         NOT: [
-            { 
+            {
                 last_name: {
-                    startsWith: 'P'
-                }
-            }
+                    startsWith: 'P',
+                },
+            },
         ],
         age: {
-            lt: 20
+            lt: 20,
         },
-        OR: [
-            { favourite_pet: 'dog' },
-            { favourite_pet: 'cat' }
-        ],
+        OR: [{ favourite_pet: 'dog' }, { favourite_pet: 'cat' }],
         pets: {
             existsWhere: {
                 type: 'dog',
-            }
-        }
+            },
+        },
     },
     orderBy: {
         first_name: 'desc',
-        last_name: 'desc'
+        last_name: 'desc',
     },
     paginate: {
         limit: 3,
         afterCursor: {
-            first_name: 'John'
-        }
-    }
+            first_name: 'John',
+        },
+    },
 });
 
 // Return type: user[]
 ```
 
-
 #### insert
-Inserts one or more rows into the database. This will automatically apply DEFAULT values for any 
+
+Inserts one or more rows into the database. This will automatically apply DEFAULT values for any
 columns that are undefined.
 
 ```typescript
-
-const users = await gybson.Users.insert({ 
+const users = await gybson.Users.insert({
     values: [
         {
             first_name: 'John',
             age: 25,
-            last_name: 'Doe'
+            last_name: 'Doe',
         },
         {
             first_name: 'Jane',
             age: 30,
-            last_name: 'Doe'
+            last_name: 'Doe',
         },
-    ]
+    ],
 });
 ```
 
 #### upsert
+
 Inserts multiple row into the database. If a row already exists with the primary key, the row will be updated.
 You can specify which columns you want to update in this case.
 You can also specify whether to reinstate (remove soft delete) on a row that has previously been soft-deleted.
 
 ```typescript
-
-const users = await gybson.Users.upsert({ 
+const users = await gybson.Users.upsert({
     values: [
         {
             first_name: 'John',
             age: 25,
-            last_name: 'Doe'
+            last_name: 'Doe',
         },
         {
             first_name: 'Jane',
             age: 30,
-            last_name: 'Doe'
+            last_name: 'Doe',
         },
     ],
     updateColumns: {
-        age: true
+        age: true,
     },
-    reinstateSoftDeletedRows: true
+    reinstateSoftDeletedRows: true,
 });
 ```
 
 #### update
+
 Update rows that match a `where` filter.
 All the `where` options from `findMany` are also available here.
 
-
 ```typescript
-
-const users = await gybson.Users.update({ 
+const users = await gybson.Users.update({
     values: {
         first_name: 'Joe',
         age: 25,
     },
     where: {
         user_id: {
-            not: 5
-        }
-    }
+            not: 5,
+        },
+    },
 });
 ```
 
 #### softDelete
+
 This is a shortcut to soft delete rows rather than using update.
 It will set the soft-delete column to true and cause the row to be filtered from future queries.
 This allows the same `where` options as `update` and `findMany`.
 
 ```typescript
-
-const users = await gybson.Users.softDelete({ 
+const users = await gybson.Users.softDelete({
     where: {
         user_id: {
-            not: 5
-        }
-    }
+            not: 5,
+        },
+    },
 });
 ```
 
 #### transaction
+
 Use `transaction` to run a set of queries as a single atomic query. This means if any
 of the queries fail then none of the changes will be committed. You can include a query in
 the transaction by passing in the `connection` argument.
 
 ```typescript
-
 import { transaction } from 'gybson';
 
 const newUser = await transaction(async (connection) => {
-
-    const users = await gybson.Users.softDelete({ 
+    const users = await gybson.Users.softDelete({
         connection,
         where: {
-            user_id: 1
-        }
+            user_id: 1,
+        },
     });
     return await gybson.Users.insert({
         connection,
-        values: [
-            { first_name: 'Steve' }
-        ]
+        values: { first_name: 'Steve' },
     });
-
 });
 ```
+
 ## Prior Art
 
-- [Knex.JS](http://knexjs.org/) - Gybson is build on top of the Knex query builder.
-- [Schemats](https://github.com/SweetIQ/schemats) - The database introspection code was inspired by Schemats.
-- [Dataloader](https://github.com/graphql/dataloader) - Gybson uses dataloader to perform batching and de-duplication.
+-   [Knex.JS](http://knexjs.org/) - Gybson is build on top of the Knex query builder.
+-   [Schemats](https://github.com/SweetIQ/schemats) - The database introspection code was inspired by Schemats.
+-   [Dataloader](https://github.com/graphql/dataloader) - Gybson uses dataloader to perform batching and de-duplication.
