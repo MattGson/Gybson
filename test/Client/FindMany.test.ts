@@ -1,7 +1,7 @@
 import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
 import gybInit from '../../src/Client';
 import gybsonRefresh, { Gybson } from '../Gen';
-import { seed, SeedIds, seedUser } from '../Setup/seed';
+import { seed, SeedIds, seedPost, seedUser } from '../Setup/seed';
 import 'jest-extended';
 
 describe('FindMany', () => {
@@ -282,6 +282,7 @@ describe('FindMany', () => {
                 expect(find).toHaveLength(0);
             });
             it('Can filter dates', async () => {
+                const p3 = await seedPost(gybson, { author_id: ids.user1Id, created: new Date(2009, 4) });
                 const find = await gybson.Posts.findMany({
                     where: {
                         created: {
@@ -292,7 +293,7 @@ describe('FindMany', () => {
                 });
                 expect(find).toContainEqual(
                     expect.objectContaining({
-                        post_id: ids.post1Id,
+                        post_id: p3,
                     }),
                 );
                 expect(find).not.toContainEqual(
@@ -326,7 +327,7 @@ describe('FindMany', () => {
             });
         });
         describe('Multiple column filters', () => {
-            it('Can filter by multiple column equals', async () => {
+            it('Can filter by multiple columns', async () => {
                 const find = await gybson.Posts.findMany({
                     where: {
                         author: {
@@ -345,6 +346,313 @@ describe('FindMany', () => {
                         post_id: ids.post1Id,
                     }),
                 );
+            });
+            it('Can filter by multiple columns', async () => {
+                await gybson.Users.findMany({
+                    where: {
+                        permissions: 'USER',
+                        first_name: {
+                            startsWith: 'john',
+                            endsWith: 'n',
+                        },
+                        token: {
+                            not: null,
+                        },
+                        subscription_level: 'GOLD',
+                        best_friend_id: {
+                            in: [5, 6],
+                        },
+                    },
+                });
+            });
+        });
+        describe('Relation filters', () => {
+            // TODO - review use of inner join, may lead to duplicates
+            it('Can filter by inner join', async () => {
+                const u2 = await seedUser(gybson);
+                await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                await seedPost(gybson, { author_id: u2, message: 'nope' });
+                const users = await gybson.Users.findMany({
+                    where: {
+                        author_posts: {
+                            innerJoinWhere: {
+                                message: {
+                                    contains: 'filter-m',
+                                },
+                            },
+                        },
+                    },
+                });
+                expect(users).toContainEqual(
+                    expect.objectContaining({
+                        user_id: u2,
+                    }),
+                );
+                expect(users).not.toContainEqual(
+                    expect.objectContaining({
+                        user_id: ids.user1Id,
+                    }),
+                );
+            });
+            it('Can filter by exists', async () => {
+                const u2 = await seedUser(gybson);
+                await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                await seedPost(gybson, { author_id: u2, message: 'not' });
+                const users = await gybson.Users.findMany({
+                    where: {
+                        author_posts: {
+                            existsWhere: {
+                                message: {
+                                    contains: 'filter-m',
+                                },
+                            },
+                        },
+                    },
+                });
+                expect(users).toContainEqual(
+                    expect.objectContaining({
+                        user_id: u2,
+                    }),
+                );
+                expect(users).not.toContainEqual(
+                    expect.objectContaining({
+                        user_id: ids.user1Id,
+                    }),
+                );
+            });
+            it('Can filter by not exists', async () => {
+                const u2 = await seedUser(gybson);
+                await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                await seedPost(gybson, { author_id: u2, message: 'not' });
+                const users = await gybson.Users.findMany({
+                    where: {
+                        author_posts: {
+                            notExistsWhere: {
+                                message: {
+                                    contains: 'filter-m',
+                                },
+                            },
+                        },
+                    },
+                });
+                expect(users).not.toContainEqual(
+                    expect.objectContaining({
+                        user_id: u2,
+                    }),
+                );
+                expect(users).toContainEqual(
+                    expect.objectContaining({
+                        user_id: ids.user1Id,
+                    }),
+                );
+            });
+        });
+        describe('Combiners (gates)', () => {
+            it('Can combine clauses with AND', async () => {
+                const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
+                const p2 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 3 });
+                const find = await gybson.Posts.findMany({
+                    where: {
+                        AND: [
+                            {
+                                message: {
+                                    contains: 'happy',
+                                },
+                            },
+                            {
+                                rating_average: {
+                                    gt: 5,
+                                },
+                            },
+                        ],
+                    },
+                });
+                expect(find).toContainEqual(
+                    expect.objectContaining({
+                        post_id: p1,
+                    }),
+                );
+                expect(find).not.toContainEqual(
+                    expect.objectContaining({
+                        post_id: p2,
+                    }),
+                );
+            });
+            it('Can combine clauses with OR', async () => {
+                const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
+                const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
+                const find = await gybson.Posts.findMany({
+                    where: {
+                        OR: [
+                            {
+                                message: {
+                                    contains: 'hip',
+                                },
+                            },
+                            {
+                                rating_average: {
+                                    gt: 5,
+                                },
+                            },
+                        ],
+                    },
+                });
+                expect(find).toContainEqual(
+                    expect.objectContaining({
+                        post_id: p1,
+                    }),
+                );
+                expect(find).toContainEqual(
+                    expect.objectContaining({
+                        post_id: p2,
+                    }),
+                );
+            });
+            it('Can combine clauses with NOT', async () => {
+                const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
+                const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
+                const find = await gybson.Posts.findMany({
+                    where: {
+                        NOT: [
+                            {
+                                message: {
+                                    contains: 'hip',
+                                },
+                            },
+                            {
+                                rating_average: {
+                                    gt: 5,
+                                },
+                            },
+                        ],
+                    },
+                });
+                expect(find).not.toContainEqual(
+                    expect.objectContaining({
+                        post_id: p1,
+                    }),
+                );
+                expect(find).not.toContainEqual(
+                    expect.objectContaining({
+                        post_id: p2,
+                    }),
+                );
+            });
+            it('Can combine more than 2 clauses', async () => {
+                const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
+                const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
+                const find = await gybson.Posts.findMany({
+                    where: {
+                        AND: [
+                            {
+                                message: {
+                                    contains: 'hap',
+                                },
+                            },
+                            {
+                                rating_average: {
+                                    gt: 5,
+                                },
+                            },
+                            {
+                                post_id: {
+                                    not: p2,
+                                },
+                            },
+                        ],
+                    },
+                });
+                expect(find).toContainEqual(
+                    expect.objectContaining({
+                        post_id: p1,
+                    }),
+                );
+                expect(find).not.toContainEqual(
+                    expect.objectContaining({
+                        post_id: p2,
+                    }),
+                );
+            });
+            it('Can nest combiners', async () => {
+                const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
+                const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
+                const find = await gybson.Posts.findMany({
+                    where: {
+                        OR: [
+                            {
+                                AND: [
+                                    {
+                                        message: {
+                                            contains: 'hip',
+                                        },
+                                    },
+                                    {
+                                        author_id: {
+                                            not: ids.user1Id,
+                                        },
+                                    },
+                                ],
+                            },
+                            {
+                                rating_average: {
+                                    gt: 10,
+                                },
+                            },
+                        ],
+                    },
+                });
+                expect(find).not.toContainEqual(
+                    expect.objectContaining({
+                        post_id: p1,
+                    }),
+                );
+                expect(find).not.toContainEqual(
+                    expect.objectContaining({
+                        post_id: p2,
+                    }),
+                );
+            });
+        });
+        it('Can nest clauses', async () => {
+            const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
+            const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
+            const p3 = await seedPost(gybson, { message: 'hipper', author_id: ids.user1Id, rating_average: 5 });
+            const find = await gybson.Posts.findMany({
+                where: {
+                    OR: [
+                        {
+                            AND: [
+                                {
+                                    message: {
+                                        contains: 'hip',
+                                    },
+                                    author_: {
+                                        notExistsWhere: {
+                                            first_name: 'steve',
+                                        },
+                                    },
+                                },
+                                {
+                                    author_id: {
+                                        not: ids.user1Id,
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            rating_average: {
+                                gt: 10,
+                            },
+                            NOT: [
+                                {
+                                    created: {
+                                        gt: new Date(),
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
             });
         });
     });

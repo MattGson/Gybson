@@ -1,5 +1,7 @@
 import { Gybson } from '../Gen';
 import faker from 'faker';
+import { usersDTO } from '../Gen/Users';
+import { postsDTO } from '../Gen/Posts';
 
 export type SeedIds = {
     user1Id: number;
@@ -8,7 +10,22 @@ export type SeedIds = {
     post2Id: number;
 };
 
-export const seedUser = async (gybson: Gybson): Promise<number> => {
+export const seedPost = async (gybson: Gybson, values?: Partial<postsDTO>): Promise<number> => {
+    const postId = await gybson.Posts.insert({
+        values: {
+            message: 'test 2',
+            author_id: faker.random.number(),
+            rating_average: 6,
+            author: 'name',
+            created: new Date(2003, 20, 4),
+            ...values,
+        },
+    });
+    if (!postId) throw new Error('Seeding post failed');
+    return postId;
+};
+
+export const seedUser = async (gybson: Gybson, values?: Partial<usersDTO>): Promise<number> => {
     const user1Id = await gybson.Users.insert({
         values: {
             first_name: 'John',
@@ -16,6 +33,7 @@ export const seedUser = async (gybson: Gybson): Promise<number> => {
             permissions: 'USER',
             email: faker.internet.email(),
             password: faker.internet.password(),
+            ...values,
         },
     });
     if (!user1Id) throw new Error('Seeding user failed');
@@ -23,15 +41,7 @@ export const seedUser = async (gybson: Gybson): Promise<number> => {
 };
 
 export const seed = async (gybson: Gybson) => {
-    const user1Id = await gybson.Users.insert({
-        values: {
-            first_name: 'John',
-            last_name: 'Doe',
-            permissions: 'USER',
-            email: faker.internet.email(),
-            password: faker.internet.password(),
-        },
-    });
+    const user1Id = await seedUser(gybson);
     const team1Id = await gybson.Teams.insert({
         values: {
             name: 'team',
@@ -39,22 +49,18 @@ export const seed = async (gybson: Gybson) => {
     });
     if (!user1Id || !team1Id) throw new Error('Seeding failed');
 
-    const post1Id = await gybson.Posts.insert({
-        values: {
-            message: 'first',
-            author_id: user1Id,
-            rating_average: 4.5,
-            author: 'name',
-        },
+    const post1Id = await seedPost(gybson, {
+        message: 'first',
+        author_id: user1Id,
+        rating_average: 4.5,
+        author: 'name',
     });
-    const post2Id = await gybson.Posts.insert({
-        values: {
-            message: 'test 2',
-            author_id: user1Id,
-            rating_average: 6,
-            author: 'name',
-            created: new Date(2003, 20, 4)
-        },
+    const post2Id = await seedPost(gybson, {
+        message: 'test 2',
+        author_id: user1Id,
+        rating_average: 6,
+        author: 'name',
+        created: new Date(2003, 20, 4),
     });
     await gybson.TeamMembers.insert({
         values: {
