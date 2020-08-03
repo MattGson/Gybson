@@ -656,6 +656,71 @@ describe('FindMany', () => {
             });
         });
     });
-    describe('order by', () => {});
+    describe('order by', () => {
+        it('Can order loaded rows ascending', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
+            const member = await gybson.Posts.findMany({
+                where: {
+                    author_id: u,
+                },
+                orderBy: {
+                    message: 'asc',
+                },
+            });
+            expect(member).toEqual([
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+            ]);
+        });
+        it('Can order loaded rows descending', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
+            const member = await gybson.Posts.findMany({
+                where: {
+                    author_id: u,
+                },
+                orderBy: {
+                    message: 'desc',
+                },
+            });
+            expect(member).toEqual([
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+            ]);
+        });
+        it('Can order loaded rows by multiple columns', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'a', author: 'b' });
+            const member = await gybson.Posts.findMany({
+                where: {
+                    author_id: u,
+                },
+                orderBy: {
+                    message: 'asc',
+                    author: 'desc',
+                },
+            });
+            expect(member).toEqual([
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+            ]);
+        });
+    });
     describe('paginate', () => {});
 });
