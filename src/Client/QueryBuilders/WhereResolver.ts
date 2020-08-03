@@ -39,8 +39,12 @@ export class WhereResolver {
                         builder.where(columnAlias, val);
                         break;
                     case Operators.not:
-                        //@ts-ignore
+                        // @ts-ignore
                         builder.whereNot(columnAlias, val);
+                        break;
+                    case Operators.in:
+                        // @ts-ignore
+                        builder.whereIn(columnAlias, val);
                         break;
                     case Operators.notIn:
                         // @ts-ignore
@@ -64,7 +68,7 @@ export class WhereResolver {
                         break;
                     case Operators.contains:
                         // @ts-ignore
-                        builder.where(columnAlias, 'like', `$%{val}%`);
+                        builder.where(columnAlias, 'like', `%${val}%`);
                         break;
                     case Operators.startsWith:
                         // @ts-ignore
@@ -72,7 +76,7 @@ export class WhereResolver {
                         break;
                     case Operators.endsWith:
                         // @ts-ignore
-                        builder.where(columnAlias, 'like', `$%{val}`);
+                        builder.where(columnAlias, 'like', `%${val}`);
                         break;
                     default:
                         break;

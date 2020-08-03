@@ -92,6 +92,7 @@ export enum Combiners {
 export enum Operators {
     equals = 'equals',
     not = 'not',
+    in = 'in',
     notIn = 'notIn',
     lt = 'lt',
     lte = 'lte',

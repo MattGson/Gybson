@@ -20,6 +20,12 @@ describe('Loaders', () => {
         await closeConnection();
         await gybInit.close();
     });
+    beforeEach(async () => {
+        gybson = gybsonRefresh();
+
+        // Seeds
+        ids = await seed(gybson);
+    });
 
     describe('one by column load', () => {
         it('Can load one from a single unique key', async () => {
@@ -30,7 +36,6 @@ describe('Loaders', () => {
                     first_name: 'John',
                     last_name: 'Doe',
                     permissions: 'USER',
-                    email: 'my@demo.com',
                 }),
             );
         });
@@ -81,7 +86,7 @@ describe('Loaders', () => {
             expect(loadMany).toContainEqual(
                 expect.objectContaining({
                     author_id: ids.user1Id,
-                    message: 'test',
+                    message: 'first',
                 }),
             );
         });
