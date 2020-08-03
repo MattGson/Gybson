@@ -7,6 +7,7 @@ import {
     RelationDefinition,
     DatabaseSchema,
 } from '../../TypeTruth/TypeTruth';
+import { knex } from '../index';
 
 export class WhereResolver {
     /**
@@ -225,20 +226,26 @@ export class WhereResolver {
                                     });
                                 });
                                 break;
-                            case RelationFilters.innerJoinWhere:
-                                // join child table as inner join
-                                builder.innerJoin(aliasClause, function () {
+                            case RelationFilters.whereEvery:
+                                // Use double negation
+                                // WHERE NOT EXISTS ( SELECT where NOT ...)
+                                builder.whereNotExists(function () {
+                                    // join the child table in a correlated sub-query for exists
+                                    this.select(`${childTableAlias}.*`).from(aliasClause);
                                     for (let { toColumn, fromColumn } of joins) {
-                                        this.on(`${childTableAlias}.${toColumn}`, '=', `${tableAlias}.${fromColumn}`);
+                                        this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
                                     }
-                                });
-                                // resolve for child table
-                                resolveWhere({
-                                    subQuery: clause,
-                                    builder: builder,
-                                    depth: depth + 1,
-                                    table: childTable,
-                                    tableAlias: childTableAlias,
+                                    const negation = {
+                                        NOT: [clause],
+                                    };
+                                    // resolve for child table
+                                    resolveWhere({
+                                        subQuery: negation,
+                                        builder: this,
+                                        depth: depth + 1,
+                                        table: childTable,
+                                        tableAlias: childTableAlias,
+                                    });
                                 });
                                 break;
                             default:

@@ -1,5 +1,5 @@
 import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
-import gybInit from '../../src/Client';
+import gybInit, { LogLevel } from '../../src/Client';
 import gybsonRefresh, { Gybson } from '../Gen';
 import { seed, SeedIds, seedPost, seedUser } from '../Setup/seed';
 import 'jest-extended';
@@ -10,7 +10,7 @@ describe('FindMany', () => {
     beforeAll(
         async (): Promise<void> => {
             await buildMySQLSchema();
-            await gybInit.init(connection);
+            await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
         },
     );
     afterAll(async () => {
@@ -367,17 +367,17 @@ describe('FindMany', () => {
             });
         });
         describe('Relation filters', () => {
-            // TODO - review use of inner join, may lead to duplicates
-            it('Can filter by inner join', async () => {
+            it('Can filter by where every related row meets a condition', async () => {
                 const u2 = await seedUser(gybson);
                 await seedPost(gybson, { author_id: u2, message: 'filter-me' });
                 await seedPost(gybson, { author_id: u2, message: 'nope' });
+                // both posts meet the condition
                 const users = await gybson.Users.findMany({
                     where: {
                         author_posts: {
-                            innerJoinWhere: {
+                            whereEvery: {
                                 message: {
-                                    contains: 'filter-m',
+                                    contains: 'e',
                                 },
                             },
                         },
@@ -388,9 +388,21 @@ describe('FindMany', () => {
                         user_id: u2,
                     }),
                 );
-                expect(users).not.toContainEqual(
+                // tighten the condition so only one post meets it
+                const users2 = await gybson.Users.findMany({
+                    where: {
+                        author_posts: {
+                            whereEvery: {
+                                message: {
+                                    contains: 'me',
+                                },
+                            },
+                        },
+                    },
+                });
+                expect(users2).not.toContainEqual(
                     expect.objectContaining({
-                        user_id: ids.user1Id,
+                        user_id: u2,
                     }),
                 );
             });

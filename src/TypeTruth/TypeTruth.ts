@@ -80,7 +80,7 @@ export type Order = 'asc' | 'desc';
 export enum RelationFilters {
     existsWhere = 'existsWhere',
     notExistsWhere = 'notExistsWhere',
-    innerJoinWhere = 'innerJoinWhere',
+    whereEvery = 'whereEvery',
 }
 
 export enum Combiners {

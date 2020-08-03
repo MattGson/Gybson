@@ -33,7 +33,7 @@ export class TableTypeBuilder {
      * Add all imports required for types
      * @param params
      */
-    public static buildTypeImports(params: { relations: RelationDefinition[]; tableName: string, libPath: string; }) {
+    public static buildTypeImports(params: { relations: RelationDefinition[]; tableName: string; libPath: string }) {
         const { relations, tableName, libPath } = params;
         return `
              import { 
@@ -118,7 +118,7 @@ export class TableTypeBuilder {
             export interface ${relationFilterTypeName} {
                 existsWhere?: ${whereTypeName};
                 notExistsWhere?: ${whereTypeName};
-                innerJoinWhere?: ${whereTypeName};
+                whereEvery?: ${whereTypeName};
             }`;
     }
 
