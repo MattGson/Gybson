@@ -132,7 +132,6 @@ export abstract class SQLQueryBuilder<
      */
     public async findMany(params: {
         where?: TblWhere;
-        limit?: number;
         paginate?: TblPaginate;
         orderBy?: TblOrderBy;
         includeDeleted?: boolean;

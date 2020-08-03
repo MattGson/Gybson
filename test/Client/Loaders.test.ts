@@ -3,7 +3,7 @@ import gybInit from '../../src/Client';
 import gybsonRefresh, { Gybson } from '../Gen';
 import { seed, SeedIds } from '../Setup/seed';
 
-describe('Query', () => {
+describe('Loaders', () => {
     let ids: SeedIds;
     let gybson: Gybson;
     beforeAll(

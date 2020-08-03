@@ -60,7 +60,7 @@ export class WhereResolver {
                         break;
                     case Operators.gte:
                         // @ts-ignore
-                        builder.whereNot(columnAlias, '>=', val);
+                        builder.where(columnAlias, '>=', val);
                         break;
                     case Operators.contains:
                         // @ts-ignore
