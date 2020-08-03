@@ -1,7 +1,7 @@
 import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
 import gybInit from '../../src/Client';
 import gybsonRefresh, { Gybson } from '../Gen';
-import { seed, SeedIds } from '../Setup/seed';
+import { seed, SeedIds, seedPost, seedUser } from '../Setup/seed';
 
 describe('Loaders', () => {
     let ids: SeedIds;
@@ -102,6 +102,25 @@ describe('Loaders', () => {
                     member_post_id: ids.post2Id,
                 }),
             );
+        });
+        it('Can order loaded rows', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
+            const member = await gybson.Posts.manyByAuthorId({
+                author_id: u,
+                orderBy: {
+                    message: 'asc',
+                },
+            });
+            expect(member).toEqual([
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+            ]);
         });
         it('Does not return deleted rows by default', async () => {
             await gybson.Posts.softDelete({

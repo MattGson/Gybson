@@ -73,10 +73,11 @@ export class BatchLoaderBuilder {
 
         return `
                 private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} orderBy?: ${orderByTypeName} }, ${rowTypeName}[]>(keys => {
-                    const [first] = keys;
+                    const [{ orderBy }] = keys;
+                    const order = { ...orderBy }; // copy to retain
                     keys.map(k => delete k.orderBy); // remove key so its not included as a load param
                     // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
-                    return this.manyByCompoundColumnLoader({ keys, orderBy: first.orderBy });
+                    return this.manyByCompoundColumnLoader({ keys, orderBy: order });
                 }, {
                     // ignore order for cache equivalency - re-assess - will this compare objects properly?
                     cacheKeyFn: (k => ({...k, orderBy: {}}))
