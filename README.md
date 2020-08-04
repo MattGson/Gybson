@@ -14,12 +14,12 @@
 [prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge
 [prs-link]: https://github.com/MattGson/Gybson
 
-> **Maximise developer productivity when building GraphQL apps in Typescript!**
+> **Maximise developer productivity when building _GraphQL_ apps in _Typescript!_**
 
 
 A type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
 
-Otimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
+Optimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
 
 Built with
  - [Knex](https://github.com/knex/knex)
