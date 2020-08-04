@@ -1,4 +1,3 @@
-import { PoolConnection } from 'promise-mysql';
 import { DatabaseSchema, knex } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
