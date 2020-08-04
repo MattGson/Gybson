@@ -346,7 +346,7 @@ await gybson.Users.softDelete({
 
 Use `transaction` to run a set of queries as a single atomic query. This means if any
 of the queries fail then none of the changes will be committed. You can include a query in
-the transaction by passing in the `transact` argument.
+the transaction by passing in the `transact` argum~~~~ent.
 
 ```typescript
 import { transaction } from 'gybson';

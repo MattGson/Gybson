@@ -16,10 +16,10 @@ services:
 addons:
   apt:
     packages:
-      - mysql-server-5.6
-      - mysql-client-core-5.6
-      - mysql-client-5.6
-  postgresql: "9.6"
+      - mysql-server-5.7
+      - mysql-client-core-5.7
+      - mysql-client-5.7
+  postgresql: "11.6"
 
 before_install:
   - mysql -e 'SET PASSWORD FOR "root"@"localhost" = PASSWORD("");' -uroot
