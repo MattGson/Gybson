@@ -14,38 +14,70 @@
 [prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge
 [prs-link]: https://github.com/MattGson/Gybson
 
-Gybson is a lightweight, type-safe, auto-generated query client for using SQL databases (MySQL and PostgreSQL) with NodeJS.
+Gybson is a type-safe, auto-generated Node.js query client for working with SQL databases in Typescript.
 
-Gybson is optimised for super fast lazy loading using batching and caching which makes it perfect for GraphQL apps using Typescript.
+Gybson is optimised for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
+
+Gybson is built with [Knex](https://github.com/knex/knex) and [DataLoader](https://github.com/graphql/dataloader) and is designed to work with MySQL (PostgreSQL comming soon).
 
 ### Why Gybson?
 
+Gybson is designed to maximise developer productivity when building modern Node.js apps in Typescript. 
+
+Just run `gybson generate` and you have a full typescript database client created for your exact schema. 
+
+---
+
+The core principle of Gybson is **Make the easiest thing to do, the right thing to do**. 
+
+Ex. "I want to get a user with the email 'abc@testemail.com'"
+
+In gybson:
+
+```Typescript
+const user: usersRow = await gybson.Users.oneByEmail({ email: 'abc@testemail.com' });
+```
+This method:
+ - Is the first option in `IDE auto-completion` when typing `gybson.Users.emai..`
+ - Makes sure the `email` argument passed is a `string` type.
+ - Performs the query on an `indexed column` to maximise speed.
+ - `Batches` the query with other queries to reduce round trips to the database.
+ - `Caches` the result so it does not need to be refetched elsewhere in a request.
+ - Returns a `typed` result with an auto-gen type `usersRow` that can be used elsewhere in the app.
+
+All of this is taken care of so developers can focus their effort elsewhere.
+
+---
+
+### Key features:
+
 #### Type-safe
 
-Gybson comes with full type safety out of the box so you know exactly what data goes in and out of your database.
+Gybson comes with automated type safety out of the box so you know exactly what data goes in and out of your database. Types are generated directly from your database schema.
 
 #### Auto-generated
 
-Gybson auto-generates a client from your database-schema. This means you don't have to define complex types in code.
+Gybson auto-generates a client from your database-schema. Unlike most ORMs you don't have to define complex types in code.
 You can get started using Gybson in 5 minutes.
 
 #### GraphQL optimized
 
-Most ORMs are built for eager loading. Gybson is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
+Gybson is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
 Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests to minimise round trips.
 
 #### SQL developer friendly
 
-Gybson is built so that developers who know SQL can intuitively understand how to use it.
-One call directly maps to one SQL query being executed.
-We use standard SQL terms where possible and we don't try to hide details such as join-tables.
+Gybson is built so that developers who use SQL can intuitively understand how to use it.
+We use standard SQL terms where possible and offer a flexible query API including `filtering on relations`.
 
 #### Native support for soft-deletes
 
-Managing soft deletes is hard but is a vital part of many apps. Gybson has native support for
+Managing soft deletes [is hard](https://medium.com/galvanize/soft-deletion-is-actually-pretty-hard-cb434e24825c) but is a vital part of many apps. Gybson has native support for
 soft-deletes including automatically filtering out deleted rows.
 
 #### IDE Auto-completion
+
+Because Gybson is fully typed, you can maximise developer efficiency with auto-completion in any IDE.
 
 ![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
 
@@ -73,7 +105,7 @@ const id = await gybson.users.insert({
     },
 });
 
-const user = await gybson.users.byUserId({ user_id: id });
+const user = await gybson.users.oneByUserId({ user_id: id });
 
 /* user typed as:
 
@@ -179,30 +211,30 @@ const user = await gybson.Users.oneByUserId({ user_id: 1 });
 Non-Unique key loaders return an array of records. These loaders allow an order to be specified.
 
 ```typescript
-const user = await gybson.Posts.manyByUserId({
+const posts = await gybson.Posts.manyByUserId({
     user_id: 1,
     orderBy: {
         first_name: 'asc',
     },
 });
 
-// Return type: post[]
+// Return type: posts[]
 ```
 
 Loaders are generated for unique and non-unique key combinations as well
 
 ```typescript
-const user = await gybson.Posts.manyByTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
+const posts = await gybson.Posts.manyByTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
 
-// Return type: post[]
+// Return type: posts[]
 ```
 
-#### findMany
+#### findMany 
 
 `findMany` loads many rows from a table. It provides a flexible query API whilst maintaining full type safety.
 Due to this flexibility, `findMany` does not perform batching or caching.
 
-With `findMany` you can filter by almost anything you can do in SQL:
+With `findMany` you can filter by many of the most common requirements:
 
 -   columns (equals, less than, greater than, startsWith, contains, not equal...)
 -   gates (and, or, not)
