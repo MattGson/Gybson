@@ -48,7 +48,7 @@ This method:
  - `Caches` the result so it does not need to be refetched elsewhere in a request.
  - Returns a `typed` result with an auto-gen type `usersRow` that can be used elsewhere in the app.
 
-All of this is taken care of so developers can focus their effort elsewhere.
+All of this is taken care of so you can focus your effort on your app, not your database.
 
 ---
 
