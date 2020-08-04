@@ -346,20 +346,20 @@ await gybson.Users.softDelete({
 
 Use `transaction` to run a set of queries as a single atomic query. This means if any
 of the queries fail then none of the changes will be committed. You can include a query in
-the transaction by passing in the `connection` argument.
+the transaction by passing in the `transact` argument.
 
 ```typescript
 import { transaction } from 'gybson';
 
-const newUser = await transaction(async (connection) => {
+const newUser = await transaction(async (trx) => {
     const users = await gybson.Users.softDelete({
-        connection,
+        transact: trx,
         where: {
             user_id: 1,
         },
     });
     return await gybson.Users.insert({
-        connection,
+        transact: trx,
         values: { first_name: 'Steve' },
     });
 });
