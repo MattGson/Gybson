@@ -4,6 +4,7 @@ import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
 import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
+import { Transaction } from 'knex';
 
 export abstract class SQLQueryBuilder<
     TblRow,
@@ -194,12 +195,12 @@ export abstract class SQLQueryBuilder<
      * @param params
      */
     public async upsert(params: {
-        connection?: PoolConnection;
+        transact?: Transaction;
         values: PartialTblRow | PartialTblRow[];
         reinstateSoftDeletedRows?: boolean;
         updateColumns: Partial<TblColumnMap>;
     }): Promise<number> {
-        const { values, connection, reinstateSoftDeletedRows, updateColumns } = params;
+        const { values, transact, reinstateSoftDeletedRows, updateColumns } = params;
 
         const columnsToUpdate: string[] = [];
         for (let [column, update] of Object.entries(updateColumns)) {
@@ -238,7 +239,7 @@ export abstract class SQLQueryBuilder<
             .insert(insertRows)
             .onDuplicateUpdate(...columnsToUpdate);
 
-        if (connection) query.connection(connection);
+        if (transact) query.transacting(transact);
 
         logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
         const result = await query;
@@ -256,11 +257,8 @@ export abstract class SQLQueryBuilder<
      * Will take the superset of all columns in the insert values
      * @param params
      */
-    public async insert(params: {
-        connection?: PoolConnection;
-        values: PartialTblRow | PartialTblRow[];
-    }): Promise<number> {
-        const { values, connection } = params;
+    public async insert(params: { transact?: Transaction; values: PartialTblRow | PartialTblRow[] }): Promise<number> {
+        const { values, transact } = params;
 
         let insertRows: PartialTblRow[];
         if (Array.isArray(values)) insertRows = values;
@@ -270,9 +268,9 @@ export abstract class SQLQueryBuilder<
             throw new Error('Insert: No values passed.');
         }
 
-        // TODO:- add returning() to support postgres
+        // TODO:- add or fake returning() to support postgres style result return
         let query = knex()(this.tableName).insert(values);
-        if (connection) query.connection(connection);
+        if (transact) query.transacting(transact);
 
         logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
         const result = await query;
@@ -287,8 +285,8 @@ export abstract class SQLQueryBuilder<
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      * @param params
      */
-    public async softDelete(params: { connection?: PoolConnection; where: TblWhere }) {
-        const { where, connection } = params;
+    public async softDelete(params: { transact?: Transaction; where: TblWhere }) {
+        const { where, transact } = params;
         if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
@@ -302,7 +300,7 @@ export abstract class SQLQueryBuilder<
             tableAlias: this.tableAlias,
         });
 
-        if (connection) query.connection(connection);
+        if (transact) query.transacting(transact);
 
         logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
 
@@ -313,8 +311,8 @@ export abstract class SQLQueryBuilder<
      * Update
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      */
-    public async update(params: { connection?: PoolConnection; values: PartialTblRow; where: TblWhere }) {
-        const { values, connection, where } = params;
+    public async update(params: { transact?: Transaction; values: PartialTblRow; where: TblWhere }) {
+        const { values, transact, where } = params;
         if (Object.keys(values).length < 1) throw new Error('Must have at least one updated column');
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
@@ -329,7 +327,7 @@ export abstract class SQLQueryBuilder<
             tableName: this.tableName,
             tableAlias: this.tableAlias,
         });
-        if (connection) query.connection(connection);
+        if (transact) query.transacting(transact);
 
         logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
 
