@@ -14,21 +14,24 @@
 [prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge
 [prs-link]: https://github.com/MattGson/Gybson
 
-Gybson is a type-safe, auto-generated Node.js query client for working with SQL databases in Typescript.
+> **Maximise developer productivity when building GraphQL apps in Typescript!**
 
-Gybson is optimised for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
 
-Gybson is built with [Knex](https://github.com/knex/knex) and [DataLoader](https://github.com/graphql/dataloader) and is designed to work with MySQL (PostgreSQL comming soon).
+A type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
+
+Otimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
+
+Built with
+ - [Knex](https://github.com/knex/knex)
+ - [DataLoader](https://github.com/graphql/dataloader)
+ 
+Works with MySQL (PostgreSQL comming soon).
 
 ### Why Gybson?
 
-Gybson is designed to maximise developer productivity when building modern Node.js apps in Typescript. 
+The core principle of Gybson is **Make the easiest thing to do, the right thing to do**. 
 
 Just run `gybson generate` and you have a full typescript database client created for your exact schema. 
-
----
-
-The core principle of Gybson is **Make the easiest thing to do, the right thing to do**. 
 
 Ex. "I want to get a user with the email 'abc@testemail.com'"
 
@@ -51,35 +54,31 @@ All of this is taken care of so developers can focus their effort elsewhere.
 
 ### Key features:
 
+#### IDE Auto-completion
+
+You can maximise developer efficiency with auto-completion in any IDE.
+
+![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
+
 #### Type-safe
 
 Gybson comes with automated type safety out of the box so you know exactly what data goes in and out of your database. Types are generated directly from your database schema.
 
 #### Auto-generated
 
-Gybson auto-generates a client from your database-schema. Unlike most ORMs you don't have to define complex types in code.
-You can get started using Gybson in 5 minutes.
+Unlike most ORMs you don't have to define complex types in code. You can get started using Gybson in 5 minutes and work purely with plain JavaScript objects.
 
 #### GraphQL optimized
 
-Gybson is optimised for lazy loading meaning you can resolve deep GraphQL queries super-fast.
 Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests to minimise round trips.
 
 #### SQL developer friendly
 
-Gybson is built so that developers who use SQL can intuitively understand how to use it.
-We use standard SQL terms where possible and offer a flexible query API including `filtering on relations`.
+Gybson uses standard SQL terms where possible and offers a flexible query API including `filtering on relations`.
 
 #### Native support for soft-deletes
 
-Managing soft deletes [is hard](https://medium.com/galvanize/soft-deletion-is-actually-pretty-hard-cb434e24825c) but is a vital part of many apps. Gybson has native support for
-soft-deletes including automatically filtering out deleted rows.
-
-#### IDE Auto-completion
-
-Because Gybson is fully typed, you can maximise developer efficiency with auto-completion in any IDE.
-
-![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
+Managing soft deletes [is hard](https://medium.com/galvanize/soft-deletion-is-actually-pretty-hard-cb434e24825c) but is a vital part of many apps. Gybson has native support for soft-deletes.
 
 ### Simple example
 
