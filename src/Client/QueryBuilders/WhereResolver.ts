@@ -7,6 +7,7 @@ import {
     RelationDefinition,
     DatabaseSchema,
 } from '../../TypeTruth/TypeTruth';
+import { knex } from '../index';
 
 export class WhereResolver {
     /**
@@ -39,8 +40,12 @@ export class WhereResolver {
                         builder.where(columnAlias, val);
                         break;
                     case Operators.not:
-                        //@ts-ignore
+                        // @ts-ignore
                         builder.whereNot(columnAlias, val);
+                        break;
+                    case Operators.in:
+                        // @ts-ignore
+                        builder.whereIn(columnAlias, val);
                         break;
                     case Operators.notIn:
                         // @ts-ignore
@@ -60,11 +65,11 @@ export class WhereResolver {
                         break;
                     case Operators.gte:
                         // @ts-ignore
-                        builder.whereNot(columnAlias, '>=', val);
+                        builder.where(columnAlias, '>=', val);
                         break;
                     case Operators.contains:
                         // @ts-ignore
-                        builder.where(columnAlias, 'like', `$%{val}%`);
+                        builder.where(columnAlias, 'like', `%${val}%`);
                         break;
                     case Operators.startsWith:
                         // @ts-ignore
@@ -72,7 +77,7 @@ export class WhereResolver {
                         break;
                     case Operators.endsWith:
                         // @ts-ignore
-                        builder.where(columnAlias, 'like', `$%{val}`);
+                        builder.where(columnAlias, 'like', `%${val}`);
                         break;
                     default:
                         break;
@@ -221,20 +226,26 @@ export class WhereResolver {
                                     });
                                 });
                                 break;
-                            case RelationFilters.innerJoinWhere:
-                                // join child table as inner join
-                                builder.innerJoin(aliasClause, function () {
+                            case RelationFilters.whereEvery:
+                                // Use double negation
+                                // WHERE NOT EXISTS ( SELECT where NOT ...)
+                                builder.whereNotExists(function () {
+                                    // join the child table in a correlated sub-query for exists
+                                    this.select(`${childTableAlias}.*`).from(aliasClause);
                                     for (let { toColumn, fromColumn } of joins) {
-                                        this.on(`${childTableAlias}.${toColumn}`, '=', `${tableAlias}.${fromColumn}`);
+                                        this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
                                     }
-                                });
-                                // resolve for child table
-                                resolveWhere({
-                                    subQuery: clause,
-                                    builder: builder,
-                                    depth: depth + 1,
-                                    table: childTable,
-                                    tableAlias: childTableAlias,
+                                    const negation = {
+                                        NOT: [clause],
+                                    };
+                                    // resolve for child table
+                                    resolveWhere({
+                                        subQuery: negation,
+                                        builder: this,
+                                        depth: depth + 1,
+                                        table: childTable,
+                                        tableAlias: childTableAlias,
+                                    });
                                 });
                                 break;
                             default:

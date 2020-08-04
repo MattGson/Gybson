@@ -1,4 +1,4 @@
-dist: trusty
+dist: xenial
 os: linux
 
 language: node_js
@@ -12,14 +12,6 @@ env:
 services:
   - postgresql
   - mysql
-
-addons:
-  apt:
-    packages:
-      - mysql-server-5.6
-      - mysql-client-core-5.6
-      - mysql-client-5.6
-  postgresql: "9.6"
 
 before_install:
   - mysql -e 'SET PASSWORD FOR "root"@"localhost" = PASSWORD("");' -uroot

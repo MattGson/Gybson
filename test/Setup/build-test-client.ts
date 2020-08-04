@@ -3,7 +3,7 @@ import { buildMySQLSchema, closeConnection, connection } from './buildMySQL';
 import path from 'path';
 
 const out = path.join(__dirname, '../Gen');
-const lib = path.join(__dirname, '../../src/Client');
+const lib = path.join('../../src/Client');
 
 // build a db and gybson client for testing
 buildMySQLSchema()

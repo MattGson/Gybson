@@ -72,6 +72,7 @@ export const buildSchema = async (knex: Knex) => {
         table.integer('user_id').unsigned().notNullable();
         table.string('position').notNullable();
         table.string('manager').notNullable();
+        table.boolean('verified').defaultTo(false);
 
         table.unique(['position', 'manager']); // compound unique constraint
         table.primary(['team_id', 'user_id']);

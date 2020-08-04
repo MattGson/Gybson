@@ -72,7 +72,8 @@ export type OrderBy = { [column: string]: Order | undefined };
 export type Paginate = {
     limit?: number;
     afterCursor?: { [column: string]: any };
-    afterCount?: number;
+    beforeCursor?: { [column: string]: any };
+    offset?: number;
 };
 
 export type Order = 'asc' | 'desc';
@@ -80,7 +81,7 @@ export type Order = 'asc' | 'desc';
 export enum RelationFilters {
     existsWhere = 'existsWhere',
     notExistsWhere = 'notExistsWhere',
-    innerJoinWhere = 'innerJoinWhere',
+    whereEvery = 'whereEvery',
 }
 
 export enum Combiners {
@@ -92,6 +93,7 @@ export enum Combiners {
 export enum Operators {
     equals = 'equals',
     not = 'not',
+    in = 'in',
     notIn = 'notIn',
     lt = 'lt',
     lte = 'lte',

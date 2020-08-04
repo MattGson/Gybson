@@ -142,7 +142,7 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
                 `export interface usersRelationFilter {
     existsWhere?: usersWhere;
     notExistsWhere?: usersWhere;
-    innerJoinWhere?: usersWhere;
+    whereEvery?: usersWhere;
 }
 `,
             );
@@ -210,7 +210,8 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
                 `export interface postsPaginate {
     limit?: number;
     afterCursor?: Partial<postsDTO>;
-    afterCount?: number;
+    beforeCursor?: Partial<postsDTO>;
+    offset?: number;
 }
 `,
             );
