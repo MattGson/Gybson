@@ -313,7 +313,7 @@ Update rows that match a `where` filter.
 All the `where` options from `findMany` are also available here.
 
 ```typescript
-const users = await gybson.Users.update({
+await gybson.Users.update({
     values: {
         first_name: 'Joe',
         age: 25,
@@ -333,7 +333,7 @@ It will set the soft-delete column to true and cause the row to be filtered from
 This allows the same `where` options as `update` and `findMany`.
 
 ```typescript
-const users = await gybson.Users.softDelete({
+await gybson.Users.softDelete({
     where: {
         user_id: {
             not: 5,
