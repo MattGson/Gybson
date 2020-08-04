@@ -13,14 +13,6 @@ services:
   - postgresql
   - mysql
 
-addons:
-  apt:
-    packages:
-      - mysql-server-5.7
-      - mysql-client-core-5.7
-      - mysql-client-5.7
-  postgresql: "11.6"
-
 before_install:
   - mysql -e 'SET PASSWORD FOR "root"@"localhost" = PASSWORD("");' -uroot
   - mysql -e "create database gybson_test"
