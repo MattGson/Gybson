@@ -123,12 +123,9 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Complex find rows from a table
+     * Find rows from a table
+     * Supports filtering, ordering, pagination
      * @param params
-     *      * // TODO:-
-     *              - cursor pagination - review limit,
-     *              - eager load?
-     *
      */
     public async findMany(params: {
         where?: TblWhere;
@@ -187,21 +184,21 @@ export abstract class SQLQueryBuilder<
         return query;
     }
     /**
-     * Type-safe multi upsert function
+     * Upsert function
      * Inserts all rows. If duplicate key then will update specified columns for that row.
      *     * Pass a constant column (usually primary key) to ignore duplicates without updating any rows.
      * Can automatically remove soft deletes if desired instead of specifying the column and values manually.
      *     * This should be set to false if the table does not support soft deletes
      * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
      * Will take the superset of all columns in the insert values
-     * @param params // TODO:- return type
+     * @param params
      */
     public async upsert(params: {
         connection?: PoolConnection;
-        values: PartialTblRow[];
+        values: PartialTblRow | PartialTblRow[];
         reinstateSoftDeletedRows?: boolean;
         updateColumns: Partial<TblColumnMap>;
-    }): Promise<number | null> {
+    }): Promise<number> {
         const { values, connection, reinstateSoftDeletedRows, updateColumns } = params;
 
         const columnsToUpdate: string[] = [];
@@ -209,14 +206,15 @@ export abstract class SQLQueryBuilder<
             if (update) columnsToUpdate.push(column);
         }
 
-        let insertRows = values;
+        let insertRows: PartialTblRow[];
+        if (Array.isArray(values)) insertRows = values;
+        else insertRows = [values];
+
         if (insertRows.length < 1) {
-            logger().warn('Persistors.upsert: No values passed.');
-            return null;
+            throw new Error('Upsert: No values passed.');
         }
         if (columnsToUpdate.length < 1 && !reinstateSoftDeletedRows) {
-            logger().warn('Persistor.upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
-            return null;
+            throw new Error('Upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
         }
 
         // add deleted column to all records
@@ -243,13 +241,15 @@ export abstract class SQLQueryBuilder<
         if (connection) query.connection(connection);
 
         logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
+        const result = await query;
 
-        // knex seems to return 0 for insertId on upsert?
-        return (await query)[0].insertId;
+        logger().debug('Upserted row %j', result[0].insertId);
+
+        return result[0].insertId;
     }
 
     /**
-     * Type-safe multi insert function
+     * Insert function
      * Inserts all rows. Fails on duplicate key error
      *     * use upsert if you wish to ignore duplicate rows
      * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
@@ -259,9 +259,16 @@ export abstract class SQLQueryBuilder<
     public async insert(params: {
         connection?: PoolConnection;
         values: PartialTblRow | PartialTblRow[];
-    }): Promise<number | null> {
+    }): Promise<number> {
         const { values, connection } = params;
-        if (!values || (Array.isArray(values) && values.length < 1)) return null;
+
+        let insertRows: PartialTblRow[];
+        if (Array.isArray(values)) insertRows = values;
+        else insertRows = [values];
+
+        if (insertRows.length < 1) {
+            throw new Error('Insert: No values passed.');
+        }
 
         // TODO:- add returning() to support postgres
         let query = knex()(this.tableName).insert(values);
@@ -269,17 +276,15 @@ export abstract class SQLQueryBuilder<
 
         logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
         const result = await query;
+        logger().debug('Inserted row %j', result[0]);
 
         // seems to return 0 for non-auto-increment inserts
         return result[0];
     }
 
     /**
-     * Type-safe soft delete function
+     * Soft delete
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
-     * Usage:
-     *      softDeleteByConditions(conn, 'users', { user_id: 3, email: 'steve' }
-     *      -> UPDATE users SET deleted = true WHERE user_id = 3 AND email = 'steve'
      * @param params
      */
     public async softDelete(params: { connection?: PoolConnection; where: TblWhere }) {
@@ -305,11 +310,8 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Type-safe update function
+     * Update
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
-     * Usage:
-     *      updateByConditions(conn, 'users', { fname: 'joe' }, { user_id: 3, email: 'steve' }
-     *      -> UPDATE users SET fname = 'joe' WHERE user_id = 3 AND email = 'steve'
      */
     public async update(params: { connection?: PoolConnection; values: PartialTblRow; where: TblWhere }) {
         const { values, connection, where } = params;

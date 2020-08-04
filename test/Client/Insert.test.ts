@@ -1,0 +1,114 @@
+import { seed, SeedIds } from '../Setup/seed';
+import gybsonRefresh, { Gybson } from '../Gen';
+import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
+import gybInit, { LogLevel } from '../../src/Client';
+import 'jest-extended';
+
+describe('Insert', () => {
+    let ids: SeedIds;
+    let gybson: Gybson;
+    beforeAll(
+        async (): Promise<void> => {
+            await buildMySQLSchema();
+            await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
+        },
+    );
+    afterAll(async () => {
+        await closeConnection();
+        await gybInit.close();
+    });
+    beforeEach(async () => {
+        gybson = gybsonRefresh();
+
+        // Seeds
+        ids = await seed(gybson);
+    });
+    describe('usage', () => {
+        it('Can insert a single row', async () => {
+            const postId = await gybson.Posts.insert({
+                values: {
+                    message: 'test 2',
+                    author_id: ids.user1Id,
+                    rating_average: 6,
+                    author: 'name',
+                    created: new Date(2003, 20, 4),
+                },
+            });
+            const post = await gybson.Posts.oneByPostId({ post_id: postId });
+            expect(post).toEqual(
+                expect.objectContaining({
+                    post_id: postId,
+                    message: 'test 2',
+                    rating_average: 6,
+                    author: 'name',
+                }),
+            );
+        });
+        it('Can insert multiple rows', async () => {
+            const postId = await gybson.Posts.insert({
+                values: [
+                    {
+                        message: 'test 2',
+                        author_id: ids.user1Id,
+                        rating_average: 6,
+                        author: 'name',
+                        created: new Date(2003, 20, 4),
+                    },
+                    {
+                        message: 'test 3',
+                        author_id: ids.user1Id,
+                        rating_average: 8,
+                        author: 'name 2',
+                        created: new Date(2005, 20, 4),
+                    },
+                ],
+            });
+            const posts = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            expect(posts).toIncludeAllMembers([
+                expect.objectContaining({
+                    post_id: postId,
+                    message: 'test 2',
+                    rating_average: 6,
+                    author: 'name',
+                }),
+                expect.objectContaining({
+                    post_id: postId + 1,
+                    message: 'test 3',
+                    author_id: ids.user1Id,
+                    rating_average: 8,
+                    author: 'name 2',
+                }),
+            ]);
+        });
+        it('Returns the id of the first inserted row', async () => {
+            const postId = await gybson.Posts.insert({
+                values: {
+                    message: 'test 2',
+                    author_id: ids.user1Id,
+                    rating_average: 6,
+                    author: 'name',
+                    created: new Date(2003, 20, 4),
+                },
+            });
+            expect(postId).toBeDefined();
+            const post = await gybson.Posts.oneByPostId({ post_id: postId });
+            expect(post).toEqual(
+                expect.objectContaining({
+                    post_id: postId,
+                }),
+            );
+        });
+        it('Throws error if the insert fails', async () => {
+            await expect(gybson.Posts.insert({
+                values: {
+                    post_id: ids.post1Id,
+                    message: 'test 2',
+                    author_id: ids.user1Id,
+                    rating_average: 6,
+                    author: 'name',
+                    created: new Date(2003, 20, 4),
+                },
+            })).rejects.toThrow(Error);
+        });
+    });
+});

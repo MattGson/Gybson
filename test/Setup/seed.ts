@@ -21,7 +21,6 @@ export const seedPost = async (gybson: Gybson, values?: Partial<postsDTO>): Prom
             ...values,
         },
     });
-    if (!postId) throw new Error('Seeding post failed');
     return postId;
 };
 
@@ -36,7 +35,6 @@ export const seedUser = async (gybson: Gybson, values?: Partial<usersDTO>): Prom
             ...values,
         },
     });
-    if (!user1Id) throw new Error('Seeding user failed');
     return user1Id;
 };
 
@@ -47,7 +45,6 @@ export const seed = async (gybson: Gybson) => {
             name: 'team',
         },
     });
-    if (!user1Id || !team1Id) throw new Error('Seeding failed');
 
     const post1Id = await seedPost(gybson, {
         message: 'first',
@@ -69,7 +66,6 @@ export const seed = async (gybson: Gybson) => {
             member_post_id: post2Id,
         },
     });
-    if (!post1Id || !post2Id) throw new Error('Seeding failed');
 
     return {
         user1Id,

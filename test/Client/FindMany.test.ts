@@ -84,7 +84,6 @@ describe('FindMany', () => {
             });
             it('Can filter by column in', async () => {
                 const user2Id = await seedUser(gybson);
-                if (!user2Id) fail();
                 const find = await gybson.Users.findMany({
                     where: {
                         user_id: {
@@ -104,7 +103,6 @@ describe('FindMany', () => {
             });
             it('Can filter by column not in', async () => {
                 const user2Id = await seedUser(gybson);
-                if (!user2Id) fail();
                 const find = await gybson.Users.findMany({
                     where: {
                         user_id: {
