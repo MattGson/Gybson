@@ -734,5 +734,115 @@ describe('FindMany', () => {
             ]);
         });
     });
-    describe('paginate', () => {});
+    describe('paginate', () => {
+        it('Can paginate rows by offset limit', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
+            const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
+            const posts = await gybson.Posts.findMany({
+                where: {
+                    author_id: u,
+                },
+                orderBy: {
+                    message: 'asc',
+                },
+                paginate: {
+                    offset: 1,
+                    limit: 1,
+                },
+            });
+            expect(posts).toHaveLength(1);
+            expect(posts).toEqual([
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+            ]);
+        });
+        it('Can paginate rows by forward cursor', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
+            const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
+            const posts = await gybson.Posts.findMany({
+                where: {
+                    author_id: u,
+                },
+                orderBy: {
+                    message: 'asc',
+                },
+                paginate: {
+                    afterCursor: {
+                        message: 'a',
+                    },
+                    limit: 2,
+                },
+            });
+            expect(posts).toHaveLength(2);
+            expect(posts).toEqual([
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+                expect.objectContaining({
+                    post_id: p3,
+                }),
+            ]);
+        });
+        it('Can paginate rows by backward cursor', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
+            const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
+            const posts = await gybson.Posts.findMany({
+                where: {
+                    author_id: u,
+                },
+                orderBy: {
+                    message: 'asc',
+                },
+                paginate: {
+                    beforeCursor: {
+                        message: 'c',
+                    },
+                    limit: 3,
+                },
+            });
+            expect(posts).toHaveLength(2);
+            expect(posts).toEqual([
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+            ]);
+        });
+        it('Can paginate rows by multi-part cursor', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'a' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
+            const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
+            const posts = await gybson.Posts.findMany({
+                where: {
+                    author_id: u,
+                },
+                orderBy: {
+                    message: 'asc',
+                },
+                paginate: {
+                    beforeCursor: {
+                        message: 'c',
+                        author: 'b',
+                    },
+                    limit: 3,
+                },
+            });
+            expect(posts).toHaveLength(1);
+            expect(posts).toEqual([
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+            ]);
+        });
+    });
 });

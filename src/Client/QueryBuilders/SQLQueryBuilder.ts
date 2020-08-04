@@ -158,13 +158,18 @@ export abstract class SQLQueryBuilder<
         }
 
         if (paginate) {
-            const { limit, afterCursor, afterCount } = paginate;
+            const { limit, afterCursor, beforeCursor, offset } = paginate;
 
             if (limit) query.limit(limit);
-            if (afterCount) query.offset(afterCount);
+            if (offset) query.offset(offset);
             if (afterCursor) {
                 Object.entries(afterCursor).forEach(([column, value]) => {
                     query.where(this.aliasedColumn(column), '>', value);
+                });
+            }
+            if (beforeCursor) {
+                Object.entries(beforeCursor).forEach(([column, value]) => {
+                    query.where(this.aliasedColumn(column), '<', value);
                 });
             }
         }

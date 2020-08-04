@@ -156,7 +156,7 @@ Then in your resolvers:
 
 Query: {
     user(parent, args, context, info) {
-        return context.gybson.Users.byUserId({ user_id: args.id });
+        return context.gybson.Users.oneByUserId({ user_id: args.id });
     }
 }
 ```
@@ -171,7 +171,7 @@ Loader methods are generated for each unique and non-unique key combination.
 Unique key loaders return a single record or null
 
 ```typescript
-const user = await gybson.Users.byUserId({ user_id: 1 });
+const user = await gybson.Users.oneByUserId({ user_id: 1 });
 
 // Return type: user | null
 ```
@@ -179,7 +179,7 @@ const user = await gybson.Users.byUserId({ user_id: 1 });
 Non-Unique key loaders return an array of records. These loaders allow an order to be specified.
 
 ```typescript
-const user = await gybson.Post.byUserId({
+const user = await gybson.Posts.manyByUserId({
     user_id: 1,
     orderBy: {
         first_name: 'asc',
@@ -192,7 +192,7 @@ const user = await gybson.Post.byUserId({
 Loaders are generated for unique and non-unique key combinations as well
 
 ```typescript
-const user = await gybson.Post.byTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
+const user = await gybson.Posts.manyByTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
 
 // Return type: post[]
 ```

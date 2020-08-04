@@ -220,7 +220,8 @@ export class TableTypeBuilder {
             export interface ${paginationTypeName} {
                 limit?: number;
                 afterCursor?: Partial<${rowTypeName}>;
-                afterCount?: number;
+                beforeCursor?: Partial<${rowTypeName}>;
+                offset?: number;
             };
             `;
     }

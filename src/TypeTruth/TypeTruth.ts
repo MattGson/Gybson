@@ -72,7 +72,8 @@ export type OrderBy = { [column: string]: Order | undefined };
 export type Paginate = {
     limit?: number;
     afterCursor?: { [column: string]: any };
-    afterCount?: number;
+    beforeCursor?: { [column: string]: any };
+    offset?: number;
 };
 
 export type Order = 'asc' | 'desc';
