@@ -8,6 +8,9 @@ module.exports = {
   organizationName: 'Komodo', // Usually your GitHub org/user name.
   projectName: 'Gybson', // Usually your repo name.
   themeConfig: {
+    prism: {
+      theme: require('prism-react-renderer/themes/dracula')
+    },
     navbar: {
       title: 'gybson',
       logo: {
@@ -63,7 +66,7 @@ module.exports = {
       {
         docs: {
           // It is recommended to set document id as docs home page (`docs/` path).
-          homePageId: 'doc1',
+          homePageId: 'introduction',
           sidebarPath: require.resolve('./sidebars.js'),
           // Please change this to your repo.
           editUrl:

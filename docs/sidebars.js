@@ -1,6 +1,9 @@
 module.exports = {
   someSidebar: {
-    Docusaurus: ['doc1', 'doc2', 'doc3'],
-    Features: ['mdx'],
+    'Introduction': ['introduction', 'installation', 'doc3'],
+    'Generating the client': ['doc2', 'doc3'],
+    'Querying': ['doc2', 'doc3'],
+    'Using with GraphQL': ['doc2', 'doc3'],
+    'Comparison to ORMs': ['doc1']
   },
 };
