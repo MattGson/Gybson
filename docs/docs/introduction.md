@@ -23,7 +23,7 @@ sidebar_label: Introduction
 
 Gybson is a type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
 
-Gybson is optimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
+Optimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
 
 Gybson is built on top of trusted open-source projects:
  - [Knex](https://github.com/knex/knex)
