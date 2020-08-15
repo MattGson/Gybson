@@ -2,7 +2,7 @@ module.exports = {
     title: 'gybson',
     tagline: 'An auto-generated, type-safe, relational database client for NodeJS',
     url: 'https://mattgson.github.io',
-    baseUrl: '/gybson/',
+    baseUrl: '/Gybson/',
     onBrokenLinks: 'throw',
     favicon: 'img/favicon.ico',
     organizationName: 'MattGson', // Usually your GitHub org/user name.
