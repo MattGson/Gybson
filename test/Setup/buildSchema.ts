@@ -63,7 +63,7 @@ export const buildSchema = async (knex: Knex) => {
         table.primary(['team_id', 'user_id']);
         table.foreign('team_id').references('teams.team_id');
         table.foreign('user_id').references('users.user_id');
-        table.foreign('member_post_id').references('posts.post_id')
+        table.foreign('member_post_id').references('posts.post_id').onDelete('CASCADE');
     });
 
     // table with compound foreign key

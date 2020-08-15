@@ -4,7 +4,7 @@ import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMyS
 import gybInit, { LogLevel } from '../../src/Client';
 import 'jest-extended';
 
-describe('Insert', () => {
+describe('Update', () => {
     let ids: SeedIds;
     let gybson: Gybson;
     beforeAll(

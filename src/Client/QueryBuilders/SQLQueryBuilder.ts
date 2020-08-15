@@ -70,7 +70,7 @@ export abstract class SQLQueryBuilder<
             }
         }
 
-        logger().debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        logger().debug('Executing loading: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 
@@ -103,7 +103,7 @@ export abstract class SQLQueryBuilder<
 
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
 
-        logger().debug('SQL executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        logger().debug('Executing loading: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 
@@ -180,7 +180,7 @@ export abstract class SQLQueryBuilder<
             }
         }
 
-        logger().debug('Executing SQL: %j', query.toSQL().sql);
+        logger().debug('Executing findMany: %s', query.toSQL().sql);
         return query;
     }
     /**
@@ -240,10 +240,8 @@ export abstract class SQLQueryBuilder<
 
         if (transact) query.transacting(transact);
 
-        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, insertRows);
+        logger().debug('Executing upsert: %s with values: %j', query.toSQL().sql, insertRows);
         const result = await query;
-
-        logger().debug('Upserted row %j', result[0].insertId);
 
         return result[0].insertId;
     }
@@ -271,10 +269,8 @@ export abstract class SQLQueryBuilder<
         let query = knex()(this.tableName).insert(values);
         if (transact) query.transacting(transact);
 
-        logger().debug('Executing SQL: %j with keys: %j', query.toSQL().sql, values);
+        logger().debug('Executing insert: %s with values: %j', query.toSQL().sql, values);
         const result = await query;
-        logger().debug('Inserted row %j', result[0]);
-
         // seems to return 0 for non-auto-increment inserts
         return result[0];
     }
@@ -301,7 +297,36 @@ export abstract class SQLQueryBuilder<
 
         if (transact) query.transacting(transact);
 
-        logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where);
+        logger().debug('Executing soft delete: %s', query.toSQL().sql);
+
+        return query;
+    }
+
+    /**
+     * Delete
+     * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
+     * @param params
+     */
+    public async delete(params: { transact?: Transaction; where: TblWhere }) {
+        const { where, transact } = params;
+        if (this.hasSoftDelete())
+            logger().warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
+        if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
+
+        const query = knex()(this.tableName).del();
+
+        // Note - can't use an alias with delete statement in knex
+        WhereResolver.resolveWhereClause({
+            queryBuilder: query,
+            where,
+            schema: this.schema,
+            tableName: this.tableName,
+            tableAlias: this.tableName,
+        });
+
+        if (transact) query.transacting(transact);
+
+        logger().debug('Executing delete: %s', query.toSQL().sql);
 
         return query;
     }
