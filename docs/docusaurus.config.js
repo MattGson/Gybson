@@ -1,6 +1,6 @@
 module.exports = {
   title: 'gybson',
-  tagline: 'A typesafe, auto-generated SQL database client for NodeJS',
+  tagline: 'An auto-generated, type-safe, relational database client for NodeJS',
   url: 'https://your-docusaurus-test-site.com',
   baseUrl: '/',
   onBrokenLinks: 'throw',
@@ -38,12 +38,12 @@ module.exports = {
           title: 'Docs',
           items: [
             {
-              label: 'Style Guide',
+              label: 'Introduction',
               to: 'docs/',
             },
             {
-              label: 'Second Doc',
-              to: 'docs/doc2/',
+              label: 'Getting started',
+              to: 'docs/installation/',
             },
           ],
         },
@@ -57,7 +57,7 @@ module.exports = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Matt Goodson, Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Matt Goodson`,
     },
   },
   presets: [

@@ -8,32 +8,30 @@ import styles from './styles.module.css';
 
 const features = [
   {
-    title: <>Easy to Use</>,
-    imageUrl: 'img/undraw_docusaurus_mountain.svg',
+    title: <>Maximise productivity</>,
+    imageUrl: 'img/productive.svg',
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+          Gybson auto-generates a Typescript client for your exact database schema
+        You no longer need to use complex proprietary modelling syntax that other ORMs rely on.
       </>
     ),
   },
   {
-    title: <>Focus on What Matters</>,
-    imageUrl: 'img/undraw_docusaurus_tree.svg',
+    title: <>Optimized for GraphQL</>,
+    imageUrl: 'img/graphql.png',
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Gybson uses batching and caching (de-duplication) to minimise round trips to the database. This makes it perfect for building GraphQL APIs.
       </>
     ),
   },
   {
-    title: <>Powered by React</>,
-    imageUrl: 'img/undraw_docusaurus_react.svg',
+    title: <>Full type-safety</>,
+    imageUrl: 'img/code-error.svg',
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Gybsons API is completely type-safe against your database schema. This also means you can benefit from IDE auto-completion.
       </>
     ),
   },
@@ -71,7 +69,7 @@ function Home() {
                 'button button--outline button--secondary button--lg',
                 styles.getStarted,
               )}
-              to={useBaseUrl('docs/')}>
+              to={useBaseUrl('docs/installation')}>
               Get Started
             </Link>
           </div>
