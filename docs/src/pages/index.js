@@ -9,17 +9,17 @@ import styles from './styles.module.css';
 const features = [
   {
     title: <>Maximise productivity</>,
-    imageUrl: 'img/productive.svg',
+    imageUrl: 'img/donut.svg',
     description: (
       <>
-          Gybson auto-generates a Typescript client for your exact database schema
-        You no longer need to use complex proprietary modelling syntax that other ORMs rely on.
+          Gybson auto-generates a Typescript client for your exact database schema.
+        Benefit from full type-safety and IDE auto-completion.
       </>
     ),
   },
   {
     title: <>Optimized for GraphQL</>,
-    imageUrl: 'img/graphql.png',
+    imageUrl: 'img/graphql.svg',
     description: (
       <>
         Gybson uses batching and caching (de-duplication) to minimise round trips to the database. This makes it perfect for building GraphQL APIs.
@@ -27,11 +27,11 @@ const features = [
     ),
   },
   {
-    title: <>Full type-safety</>,
-    imageUrl: 'img/code-error.svg',
+    title: <>Flexible query API</>,
+    imageUrl: 'img/team.svg',
     description: (
       <>
-        Gybsons API is completely type-safe against your database schema. This also means you can benefit from IDE auto-completion.
+        Gybson has an extensive and flexible query API including relation filtering. Gybson isn't opinionated about how you build your app, it just helps you work with your data.
       </>
     ),
   },
