@@ -1,4 +1,4 @@
-[![Image of logo](https://github.com/MattGson/Gybson/blob/master/logo-small.png?raw=true)](https://github.com/MattGson/Gybson)
+[![Image of logo](https://github.com/MattGson/Gybson/blob/master/logo-small.png?raw=true)](https://mattgson.github.io/Gybson/)
 
 [![npm](https://img.shields.io/npm/v/gybson.svg?style=for-the-badge)](https://www.npmjs.com/package/gybson)
 [![GitHub tag](https://img.shields.io/github/tag/MattGson/Gybson.svg?style=for-the-badge)](https://github.com/MattGson/Gybson)
@@ -17,7 +17,7 @@
 > **Maximise developer productivity when building _GraphQL_ apps in _Typescript!_**
 
 
-[Gybson](https://github.com/MattGson/Gybson) is a type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
+[Gybson](https://mattgson.github.io/Gybson/) is a type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
 
 Optimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
 
@@ -27,7 +27,7 @@ Gybson is built on top of trusted open-source projects:
  
 Works with MySQL (PostgreSQL comming soon).
 
-Full docs [here](https://github.com/MattGson/Gybson)
+Full docs [here](https://mattgson.github.io/Gybson/)
 
 ### Why Gybson?
 
