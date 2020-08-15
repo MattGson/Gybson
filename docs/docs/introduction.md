@@ -1,4 +1,11 @@
-[![Image of logo](https://github.com/MattGson/Gybson/blob/master/logo-small.png?raw=true)](https://github.com/MattGson/Gybson)
+---
+id: introduction
+title: Intro
+hide_title: true
+sidebar_label: Introduction
+---
+
+![Image of logo](https://github.com/MattGson/Gybson/blob/master/logo-small.png?raw=true)
 
 [![npm](https://img.shields.io/npm/v/gybson.svg?style=for-the-badge)](https://www.npmjs.com/package/gybson)
 [![GitHub tag](https://img.shields.io/github/tag/MattGson/Gybson.svg?style=for-the-badge)](https://github.com/MattGson/Gybson)
@@ -14,10 +21,7 @@
 [prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge
 [prs-link]: https://github.com/MattGson/Gybson
 
-> **Maximise developer productivity when building _GraphQL_ apps in _Typescript!_**
-
-
-[Gybson](https://github.com/MattGson/Gybson) is a type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
+Gybson is a type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
 
 Optimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
 
@@ -25,49 +29,70 @@ Gybson is built on top of trusted open-source projects:
  - [Knex](https://github.com/knex/knex)
  - [DataLoader](https://github.com/graphql/dataloader)
  
-Works with MySQL (PostgreSQL comming soon).
+Gybson is designed to work with MySQL and PostgreSQL databases.
 
-Full docs [here](https://github.com/MattGson/Gybson)
+:::note
 
-### Why Gybson?
+PostgreSQL support is currently in progress!
+
+:::
+
+## Why Gybson?
 
 Gybson was created to make working with relational databases in Typescript as productive as possible.
 
 The core principle of Gybson is **Make the easiest thing to do, the right thing to do**. 
 
-Just run `gybson generate` and you have a full typescript database client created for your exact schema. 
+Just run `gybson generate` and you have a fully type-safe database client created for your exact schema. 
+
+**Ex.** "I want to get a user with the email abc@testemail.com"
+
+In gybson:
+
+```typescript
+const user: users = await gybson.Users.oneByEmail({ email: 'abc@testemail.com' });
+```
+This method:
+ - Is the first option in `IDE auto-completion` when typing "gybson.Users.emai..."
+ - Makes sure the `email` argument passed is a `string` type.
+ - Performs the query on an `indexed column` to maximise speed.
+ - `Batches` the query with other queries to reduce round trips to the database.
+ - `Caches` the result so it does not need to be refetched elsewhere in a request.
+ - Returns a `typed` result with an auto-gen type `users` that can be used elsewhere in the app.
+
+All of this is taken care of so you can focus your effort on your app, not your database.
 
 ---
 
-### Key features:
+## Key features
 
-#### IDE Auto-completion
+### IDE Auto-completion
 
 You can maximise developer efficiency with auto-completion in any IDE.
 
 ![Image of demo](https://github.com/MattGson/Gybson/blob/master/demo.gif?raw=true)
 
-#### Type-safe
+### Type-safe
 
 Gybson comes with automated type safety out of the box so you know exactly what data goes in and out of your database. Types are generated directly from your database schema.
 
-#### Auto-generated
+### Auto-generated
 
-Unlike most ORMs you don't have to define complex types in code. You can get started using Gybson in 5 minutes and work purely with plain JavaScript objects.
+Unlike most ORMs you don't have to define complex types and relations in code. You can get started using Gybson in 5 minutes and work purely with plain JavaScript objects.
 
-#### GraphQL optimized
+### GraphQL optimized
 
 Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests to minimise round trips.
 
-#### SQL developer friendly
+### SQL developer friendly
 
 Gybson uses standard SQL terms where possible and offers a flexible query API including `filtering on relations`.
 
-#### Native support for soft-deletes
+### Native support for soft-deletes
 
 Managing soft deletes [is hard](https://medium.com/galvanize/soft-deletion-is-actually-pretty-hard-cb434e24825c) but is a vital part of many apps. Gybson has native support for soft-deletes.
 
-### Simple example
+## A simple example
 
 If your schema is defined as
 
@@ -103,41 +128,3 @@ console.log(user);
  }
 */
 ```
-
-### Using with GraphQL
-
-Add a new Gybson instance to your context for each request.
-
-i.e with Apollo
-
-```typescript
-import GybsonClient from './generated';
-
-// attach a client instance to the context
-new ApolloServer({
-    context: async () => {
-        return {
-            gybson: GybsonClient(),
-        };
-    },
-});
-```
-
-Then in your resolvers:
-
-```typescript
-// resolve a user query
-
-Query: {
-    user(parent, args, context, info) {
-        return context.gybson.Users.oneByUserId({ user_id: args.id });
-    }
-}
-```
-
-## Prior Art
-
--   [Knex.JS](http://knexjs.org/) - Gybson is build on top of the Knex query builder.
--   [Schemats](https://github.com/SweetIQ/schemats) - The database introspection code was inspired by Schemats.
--   [Dataloader](https://github.com/graphql/dataloader) - Gybson uses dataloader to perform batching and de-duplication.
--   [Prisma](https://github.com/graphql/dataloader) - The Gybson filtering API was inspired by prisma-client-js.

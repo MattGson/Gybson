@@ -1,5 +1,9 @@
 demo.gif
-demo2.gif
+*.gif
+*.png
 test/artifacts
 **/*[^.d$].ts
 coverage/
+src/
+docs/
+test/
