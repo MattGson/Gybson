@@ -373,6 +373,21 @@ await gybson.Users.softDelete({
 });
 ```
 
+#### delete
+
+This will delete a row permanently.
+This allows the same `where` options as `update` and `findMany`.
+
+```typescript
+await gybson.Users.delete({
+    where: {
+        user_id: {
+            not: 5,
+        },
+    },
+});
+```
+
 #### transaction
 
 Use `transaction` to run a set of queries as a single atomic query. This means if any

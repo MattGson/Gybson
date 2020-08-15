@@ -4,7 +4,7 @@ import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMyS
 import gybInit, { LogLevel } from '../../src/Client';
 import 'jest-extended';
 
-describe('SoftDelete', () => {
+describe('Delete', () => {
     let ids: SeedIds;
     let gybson: Gybson;
     beforeAll(
@@ -24,7 +24,7 @@ describe('SoftDelete', () => {
         ids = await seed(gybson);
     });
     describe('usage', () => {
-        it('Can soft delete using where filters', async () => {
+        it('Can delete using where filters', async () => {
             const post = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post).toEqual(
                 expect.objectContaining({
@@ -32,7 +32,7 @@ describe('SoftDelete', () => {
                 }),
             );
 
-            await gybson.Posts.softDelete({
+            await gybson.Posts.delete({
                 where: {
                     rating_average: {
                         gt: 4,
