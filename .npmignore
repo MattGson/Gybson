@@ -7,3 +7,10 @@ coverage/
 src/
 docs/
 test/
+.idea
+jest.config.js
+gybson-config.json
+*.md
+.travis.yml
+.prettierrc.js
+.eslintrc.js

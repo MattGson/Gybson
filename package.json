@@ -18,7 +18,7 @@
         "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
         "test-generate": "ts-node test/Setup/build-test-client.ts --transpile-only",
         "test": "npm run test-generate && npm run lint && jest --runInBand",
-        "prepublish": "npm run build"
+        "prepare": "npm run build"
     },
     "bin": {
         "gybson": "build/src/Generator/cli/gybson.js"
