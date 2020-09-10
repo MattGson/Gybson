@@ -11,7 +11,7 @@ export class CardinalityResolver {
     }
 
     /**
-     * Get the unique columns from a tables keys
+     * Get the columns part of unique constraints from a tables keys
      * @param allKeys in the table
      */
     public static uniqueColumns(allKeys: KeyDefinition[]): KeyDefinition[] {
@@ -23,9 +23,9 @@ export class CardinalityResolver {
      * @param allKeys
      */
     public static getUniqueKeyCombinations(allKeys: KeyDefinition[]): KeyDefinition[][] {
-        let keys = [CardinalityResolver.primaryKey(allKeys)];
+        let keys = [this.primaryKey(allKeys)];
         // support compound unique constraints
-        const unique = _.groupBy(CardinalityResolver.uniqueColumns(allKeys), (k) => k.constraintName);
+        const unique = _.groupBy(this.uniqueColumns(allKeys), (k) => k.constraintName);
         return [...keys, ...Object.values(unique)];
     }
 
@@ -39,12 +39,23 @@ export class CardinalityResolver {
         // get primary and unique keys to check against
         const primaryKeys = this.primaryKey(allKeys);
         const primaryMap = _.keyBy(primaryKeys, (k) => k.columnName);
-        const uniqueColumns = this.uniqueColumns(allKeys);
-        const uniqueMap = _.keyBy(uniqueColumns, (k) => k.columnName);
+
+        // non-compound unique keys
+        const uniqueKeys = this.getUniqueKeyCombinations(allKeys);
+        const singleUniqueKeys = _.flatten(uniqueKeys.filter((cols) => cols.length === 1));
+        const singleUniqueKeyMap = _.keyBy(singleUniqueKeys, (k) => k.columnName);
 
         // get non unique individual key columns (not PRIMARY, not UNIQUE)
         const nonUniqueSingleKeys = _.uniqBy(
-            allKeys.filter((key) => !primaryMap[key.columnName] && !uniqueMap[key.columnName]),
+            allKeys.filter((key) => {
+                // is part of primary key so not unique
+                if (primaryMap[key.columnName]) return false;
+
+                // is a single unique constraint
+                if (singleUniqueKeyMap[key.columnName]) return false;
+
+                return true;
+            }),
             (k) => k.columnName,
         );
 
