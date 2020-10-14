@@ -1,7 +1,13 @@
-import { seed, SeedIds } from '../Setup/seed';
-import gybsonRefresh, { Gybson } from '../Gen';
-import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
-import gybInit, { LogLevel } from '../../src/Client';
+import {seed, SeedIds} from '../Setup/seed';
+import gybsonRefresh, {Gybson} from '../Gen';
+import {
+    buildMySQLSchema,
+    closeConnection,
+    closePoolConnection,
+    connection,
+    getPoolConnection
+} from '../Setup/buildMySQL';
+import gybInit, {LogLevel} from '../../src/Client';
 import 'jest-extended';
 
 describe('Insert', () => {
@@ -99,16 +105,33 @@ describe('Insert', () => {
             );
         });
         it('Throws error if the insert fails', async () => {
-            await expect(gybson.Posts.insert({
+            await expect(
+                gybson.Posts.insert({
+                    values: {
+                        post_id: ids.post1Id, // conflicting id
+                        message: 'test 2',
+                        author_id: ids.user1Id,
+                        rating_average: 6,
+                        author: 'name',
+                        created: new Date(2003, 20, 4),
+                    },
+                }),
+            ).rejects.toThrow(Error);
+        });
+        it('Can use an external connection', async () => {
+            const connection = await getPoolConnection();
+            const postId = await gybson.Posts.insert({
+                connection,
                 values: {
-                    post_id: ids.post1Id,
                     message: 'test 2',
                     author_id: ids.user1Id,
                     rating_average: 6,
                     author: 'name',
                     created: new Date(2003, 20, 4),
                 },
-            })).rejects.toThrow(Error);
+            });
+            await closePoolConnection(connection);
+            expect(postId).toBeDefined();
         });
     });
 });

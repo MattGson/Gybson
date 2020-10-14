@@ -4,6 +4,9 @@ import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
 import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
 import { Transaction } from 'knex';
+import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
+import { Connection as MySQLConn } from 'promise-mysql';
+type Connection = PGConn | MySQLConn;
 
 export abstract class SQLQueryBuilder<
     TblRow,
@@ -195,11 +198,12 @@ export abstract class SQLQueryBuilder<
      */
     public async upsert(params: {
         transact?: Transaction;
+        connection?: Connection;
         values: PartialTblRow | PartialTblRow[];
         reinstateSoftDeletedRows?: boolean;
         updateColumns: Partial<TblColumnMap>;
     }): Promise<number> {
-        const { values, transact, reinstateSoftDeletedRows, updateColumns } = params;
+        const { values, transact, connection, reinstateSoftDeletedRows, updateColumns } = params;
 
         const columnsToUpdate: string[] = [];
         for (let [column, update] of Object.entries(updateColumns)) {
@@ -238,6 +242,7 @@ export abstract class SQLQueryBuilder<
             .insert(insertRows)
             .onDuplicateUpdate(...columnsToUpdate);
 
+        if (connection) query.connection(connection);
         if (transact) query.transacting(transact);
 
         logger().debug('Executing upsert: %s with values: %j', query.toSQL().sql, insertRows);
@@ -254,8 +259,12 @@ export abstract class SQLQueryBuilder<
      * Will take the superset of all columns in the insert values
      * @param params
      */
-    public async insert(params: { transact?: Transaction; values: PartialTblRow | PartialTblRow[] }): Promise<number> {
-        const { values, transact } = params;
+    public async insert(params: {
+        transact?: Transaction;
+        connection?: Connection;
+        values: PartialTblRow | PartialTblRow[];
+    }): Promise<number> {
+        const { values, transact, connection } = params;
 
         let insertRows: PartialTblRow[];
         if (Array.isArray(values)) insertRows = values;
@@ -267,6 +276,7 @@ export abstract class SQLQueryBuilder<
 
         // TODO:- add or fake returning() to support postgres style result return
         let query = knex()(this.tableName).insert(values);
+        if (connection) query.connection(connection);
         if (transact) query.transacting(transact);
 
         logger().debug('Executing insert: %s with values: %j', query.toSQL().sql, values);
@@ -280,8 +290,8 @@ export abstract class SQLQueryBuilder<
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      * @param params
      */
-    public async softDelete(params: { transact?: Transaction; where: TblWhere }) {
-        const { where, transact } = params;
+    public async softDelete(params: { transact?: Transaction; connection?: Connection; where: TblWhere }) {
+        const { where, transact, connection } = params;
         if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
@@ -296,6 +306,7 @@ export abstract class SQLQueryBuilder<
         });
 
         if (transact) query.transacting(transact);
+        if (connection) query.connection(connection);
 
         logger().debug('Executing soft delete: %s', query.toSQL().sql);
 
@@ -307,8 +318,8 @@ export abstract class SQLQueryBuilder<
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      * @param params
      */
-    public async delete(params: { transact?: Transaction; where: TblWhere }) {
-        const { where, transact } = params;
+    public async delete(params: { transact?: Transaction; connection?: Connection; where: TblWhere }) {
+        const { where, transact, connection } = params;
         if (this.hasSoftDelete())
             logger().warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
@@ -323,7 +334,7 @@ export abstract class SQLQueryBuilder<
             tableName: this.tableName,
             tableAlias: this.tableName,
         });
-
+        if (connection) query.connection(connection);
         if (transact) query.transacting(transact);
 
         logger().debug('Executing delete: %s', query.toSQL().sql);
@@ -335,8 +346,13 @@ export abstract class SQLQueryBuilder<
      * Update
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      */
-    public async update(params: { transact?: Transaction; values: PartialTblRow; where: TblWhere }) {
-        const { values, transact, where } = params;
+    public async update(params: {
+        transact?: Transaction;
+        connection?: Connection;
+        values: PartialTblRow;
+        where: TblWhere;
+    }) {
+        const { values, transact, connection, where } = params;
         if (Object.keys(values).length < 1) throw new Error('Must have at least one updated column');
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
@@ -351,6 +367,7 @@ export abstract class SQLQueryBuilder<
             tableName: this.tableName,
             tableAlias: this.tableAlias,
         });
+        if (connection) query.connection(connection);
         if (transact) query.transacting(transact);
 
         logger().debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);

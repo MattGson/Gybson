@@ -1,6 +1,12 @@
 import { seed, SeedIds } from '../Setup/seed';
 import gybsonRefresh, { Gybson } from '../Gen';
-import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
+import {
+    buildMySQLSchema,
+    closeConnection,
+    closePoolConnection,
+    connection,
+    getPoolConnection,
+} from '../Setup/buildMySQL';
 import gybInit, { LogLevel } from '../../src/Client';
 import 'jest-extended';
 
@@ -101,7 +107,7 @@ describe('Upsert', () => {
                     message: 'new message',
                     rating_average: 6,
                     author: 'name',
-                    author_id: ids.user1Id
+                    author_id: ids.user1Id,
                 },
                 updateColumns: {
                     message: true,
@@ -233,5 +239,23 @@ describe('Upsert', () => {
                 }),
             ).rejects.toThrow(Error);
         });
+    });
+    it('Can use an external connection', async () => {
+        const connection = await getPoolConnection();
+        const postId = await gybson.Posts.upsert({
+            connection,
+            values: {
+                message: 'test 2',
+                author_id: ids.user1Id,
+                rating_average: 6,
+                author: 'name',
+                created: new Date(2003, 20, 4),
+            },
+            updateColumns: {
+                message: true,
+            },
+        });
+        expect(postId).toBeDefined();
+        await closePoolConnection(connection);
     });
 });
