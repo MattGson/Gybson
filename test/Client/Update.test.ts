@@ -1,6 +1,12 @@
 import { seed, SeedIds, seedPost } from '../Setup/seed';
 import gybsonRefresh, { Gybson } from '../Gen';
-import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
+import {
+    buildMySQLSchema,
+    closeConnection,
+    closePoolConnection,
+    connection,
+    getPoolConnection,
+} from '../Setup/buildMySQL';
 import gybInit, { LogLevel } from '../../src/Client';
 import 'jest-extended';
 
@@ -44,6 +50,23 @@ describe('Update', () => {
                     message: 'message 2',
                 }),
             );
+        });
+        it('Can use an external connection', async () => {
+            const connection = await getPoolConnection();
+            await seedPost(gybson, { message: 'message 1', author_id: ids.user1Id });
+
+            await gybson.Posts.update({
+                connection,
+                values: {
+                    message: 'message 2',
+                },
+                where: {
+                    message: {
+                        startsWith: 'mes',
+                    },
+                },
+            });
+            await closePoolConnection(connection);
         });
     });
 });

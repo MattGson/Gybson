@@ -1,6 +1,6 @@
 {
     "name": "gybson",
-    "version": "0.6.2",
+    "version": "0.6.3",
     "description": "Generate a type-safe database client from a SQL database",
     "keywords": [
         "postgres",

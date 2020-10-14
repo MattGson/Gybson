@@ -1,6 +1,12 @@
 import { seed, SeedIds } from '../Setup/seed';
 import gybsonRefresh, { Gybson } from '../Gen';
-import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
+import {
+    buildMySQLSchema,
+    closeConnection,
+    closePoolConnection,
+    connection,
+    getPoolConnection,
+} from '../Setup/buildMySQL';
 import gybInit, { LogLevel } from '../../src/Client';
 import 'jest-extended';
 
@@ -41,6 +47,27 @@ describe('SoftDelete', () => {
             });
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
+        });
+        it('Can use an external connection', async () => {
+            const connection = await getPoolConnection();
+            const post = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            expect(post).toEqual(
+                expect.objectContaining({
+                    post_id: ids.post1Id,
+                }),
+            );
+
+            await gybson.Posts.softDelete({
+                connection,
+                where: {
+                    rating_average: {
+                        gt: 4,
+                    },
+                },
+            });
+            const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            expect(post2).toEqual(null);
+            await closePoolConnection(connection);
         });
     });
 });

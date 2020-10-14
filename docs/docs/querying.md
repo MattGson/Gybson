@@ -332,3 +332,26 @@ const newUser = await transaction(async (trx) => {
     });
 });
 ```
+
+## Manual connection handling
+
+Most query functions allow an optional `connection` argument. You can pass a MySQL or PG connection
+and the query will use it instead of the internal connection.
+
+This can be useful for apps with existing connection handling or more complex transaction handling requirements.
+
+Example with `insert` and MySQL:
+```typescript
+import { insert } from 'gybson';
+import mysql from 'promise-mysql';
+
+const poolConn = mysql.getPoolConnection();
+
+return await gybson.Users.insert({
+    connection: poolConn,
+    values: { first_name: 'Steve' },
+});
+
+poolConn.close();
+
+```
