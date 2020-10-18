@@ -5,7 +5,7 @@ import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
 import { Connection as MySQLConn } from 'promise-mysql';
 type PoolConnection = PGConn | MySQLConn;
 
-export const schemaName = 'komodo';
+export const schemaName = 'gybson_test';
 export const connection: Connection = {
     client: 'mysql',
     connection: {
