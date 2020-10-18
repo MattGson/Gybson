@@ -17,83 +17,135 @@ describe('TableSchemaBuilder', () => {
     });
     describe('buildTableDefinition', () => {
         describe('key constraints', () => {
-            it('Gets unique key constraints for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('users', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            describe('Primary key', () => {
+                it('Gets the primary key for a table', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.keys).toIncludeAllMembers([
-                    expect.objectContaining({
-                        columnNames: ['email'],
-                        constraintType: 'UNIQUE',
-                    }),
-                    expect.objectContaining({
-                        columnNames: ['token'],
-                        constraintType: 'UNIQUE',
-                    }),
-                ]);
+                    expect(schema.primaryKey).toEqual(
+                        expect.objectContaining({
+                            columnNames: ['user_id'],
+                        }),
+                    );
+                });
+                it('Gets a compound primary key for a table', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.primaryKey).toEqual(
+                        expect.objectContaining({
+                            columnNames: ['team_id', 'user_id'],
+                        }),
+                    );
+                });
             });
-            it('Gets compound unique key constraints for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            describe('Unique keys', () => {
+                it('Gets unique key constraints for a table', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.keys).toIncludeAllMembers([
-                    expect.objectContaining({
-                        columnNames: ['position', 'manager'],
-                        constraintType: 'UNIQUE',
-                    }),
-                ]);
+                    expect(schema.keys).toIncludeAllMembers([
+                        expect.objectContaining({
+                            columnNames: ['email'],
+                            constraintType: 'UNIQUE',
+                        }),
+                        expect.objectContaining({
+                            columnNames: ['token'],
+                            constraintType: 'UNIQUE',
+                        }),
+                    ]);
+                });
+
+                it('Gets compound unique key constraints for a table', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.keys).toIncludeAllMembers([
+                        expect.objectContaining({
+                            columnNames: ['position', 'manager'],
+                            constraintType: 'UNIQUE',
+                        }),
+                    ]);
+                });
             });
-            it('Gets foreign key constraints for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('team_members', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            describe('Foreign keys', () => {
+                it('Gets foreign key constraints for a table', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.keys).toIncludeAllMembers([
-                    expect.objectContaining({
-                        columnNames: ['team_id'],
-                        constraintType: 'FOREIGN KEY',
-                    }),
-                    expect.objectContaining({
-                        columnNames: ['user_id'],
-                        constraintType: 'FOREIGN KEY',
-                    }),
-                    expect.objectContaining({
-                        columnNames: ['member_post_id'],
-                        constraintType: 'FOREIGN KEY',
-                    }),
-                ]);
-            });
-            it('Gets compound foreign key constraints for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+                    expect(schema.keys).toIncludeAllMembers([
+                        expect.objectContaining({
+                            columnNames: ['team_id'],
+                            constraintType: 'FOREIGN KEY',
+                        }),
+                        expect.objectContaining({
+                            columnNames: ['user_id'],
+                            constraintType: 'FOREIGN KEY',
+                        }),
+                        expect.objectContaining({
+                            columnNames: ['member_post_id'],
+                            constraintType: 'FOREIGN KEY',
+                        }),
+                    ]);
+                });
+                it('Gets compound foreign key constraints for a table', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.keys).toIncludeAllMembers([
-                    expect.objectContaining({
-                        columnNames: ['team_id', 'user_id'],
-                        constraintType: 'FOREIGN KEY',
-                    }),
-                ]);
+                    expect(schema.keys).toIncludeAllMembers([
+                        expect.objectContaining({
+                            columnNames: ['team_id', 'user_id'],
+                            constraintType: 'FOREIGN KEY',
+                        }),
+                    ]);
+                });
             });
         });
-        describe('Primary key', () => {
-            it('Gets the primary key for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('users', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.primaryKey).toEqual(
-                    expect.objectContaining({
-                        columnNames: ['user_id'],
-                    }),
-                );
+        describe('key combinations', () => {
+            describe('uniqueKeyCombinations', () => {
+                it('Gets minimal key column combinations that uniquely define a row for a table', async (): Promise<
+                    void
+                > => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.uniqueKeyCombinations).toIncludeAllMembers([['email'], ['token'], ['user_id']]);
+
+                    // with compound keys
+                    const schemaBuilder2 = new TableSchemaBuilder('team_members_positions', intro);
+                    const schema2 = await schemaBuilder2.buildTableDefinition();
+
+                    expect(schema2.uniqueKeyCombinations).toIncludeAllMembers([
+                        ['position', 'manager'],
+                        ['team_id', 'user_id'],
+                    ]);
+                });
             });
-            it('Gets a compound primary key for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('team_members', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            describe('nonUniqueKeyCombinations', () => {
+                it('Gets key column combinations that DO NOT uniquely define a row for a table', async (): Promise<
+                    void
+                > => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.primaryKey).toEqual(
-                    expect.objectContaining({
-                        columnNames: ['team_id', 'user_id'],
-                    }),
-                );
+                    expect(schema.nonUniqueKeyCombinations).toIncludeAllMembers([['best_friend_id']]);
+                });
+                it('Permutes compound unique keys to form non-unique keys', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.nonUniqueKeyCombinations).toIncludeAllMembers([
+                        ['team_id'],
+                        ['user_id'],
+                        ['team_id', 'position'],
+                        ['user_id', 'position'],
+                        ['team_id', 'manager'],
+                        ['user_id', 'manager'],
+                        ['position'],
+                        ['manager'],
+                    ]);
+                });
             });
         });
         describe('Columns', () => {
