@@ -1,6 +1,6 @@
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
-import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
-import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
+import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
+import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
+import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import 'jest-extended';
 
 describe('MySQLIntrospection', () => {

@@ -1,5 +1,5 @@
-import { Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
-import { ConstraintDefinition, RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
+import { Introspection, TableDefinition } from './IntrospectionTypes';
+import { RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
 import { CardinalityResolver } from './CardinalityResolver';
 import _ from 'lodash';
 
@@ -59,25 +59,25 @@ export class TableSchemaBuilder {
     /**
      * Build a list of key constraints on the table
      * Group into objects by the constraint name
-     */
-    public buildTableKeyConstraints(allKeys: KeyDefinition[]): ConstraintDefinition[] {
-        const columnMap = _.groupBy(allKeys, (k) => k.constraintName);
-        const constraintMap = _.keyBy(allKeys, (k) => k.constraintName);
-
-        const constraintDefinitions: ConstraintDefinition[] = [];
-
-        Object.values(constraintMap).forEach((constraint) => {
-            const { constraintType, constraintName } = constraint;
-            const columns = columnMap[constraintName];
-
-            constraintDefinitions.push({
-                constraintName,
-                constraintType,
-                columnNames: columns.map((c) => c.columnName),
-            });
-        });
-        return constraintDefinitions;
-    }
+    //  */
+    // public buildTableKeyConstraints(allKeys: KeyDefinition[]): ConstraintDefinition[] {
+    //     const columnMap = _.groupBy(allKeys, (k) => k.constraintName);
+    //     const constraintMap = _.keyBy(allKeys, (k) => k.constraintName);
+    //
+    //     const constraintDefinitions: ConstraintDefinition[] = [];
+    //
+    //     Object.values(constraintMap).forEach((constraint) => {
+    //         const { constraintType, constraintName } = constraint;
+    //         const columns = columnMap[constraintName];
+    //
+    //         constraintDefinitions.push({
+    //             constraintName,
+    //             constraintType,
+    //             columnNames: columns.map((c) => c.columnName),
+    //         });
+    //     });
+    //     return constraintDefinitions;
+    // }
     /**
      * Get the schema definition for a table
      */
@@ -86,8 +86,8 @@ export class TableSchemaBuilder {
         const columns = await this.introspection.getTableTypes(this.tableName, enums);
         const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
         const backwardRelations = await this.introspection.getBackwardRelations(this.tableName);
-        const allKeys = await this.introspection.getTableKeys(this.tableName);
-        const constraints = await this.buildTableKeyConstraints(allKeys);
+        const constraints = await this.introspection.getTableConstraints(this.tableName);
+        // const constraints = await this.buildTableKeyConstraints(allKeys);
 
         const uniqueKeyCombinations = CardinalityResolver.getUniqueKeyCombinations(constraints);
         const nonUniqueKeyCombinations = CardinalityResolver.getNonUniqueKeyCombinations(constraints);

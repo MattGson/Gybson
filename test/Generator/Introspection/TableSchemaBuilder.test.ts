@@ -1,7 +1,7 @@
-import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
-import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
-import { TableSchemaBuilder } from '../../src/Generator/Introspection/TableSchemaBuilder';
+import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
+import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
+import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
+import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
 
 describe('TableSchemaBuilder', () => {

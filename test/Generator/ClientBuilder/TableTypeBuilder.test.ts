@@ -1,12 +1,12 @@
-import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
-import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
-import { TableSchemaBuilder } from '../../src/Generator/Introspection/TableSchemaBuilder';
+import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
+import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
+import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
+import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
 // @ts-ignore - no types for prettier
 import { format } from 'prettier';
-import { TableTypeBuilder } from '../../src/Generator/TableClientBuilder/TableTypeBuilder';
-import { prettier } from '../../src/Generator/config';
+import { TableTypeBuilder } from '../../../src/Generator/TableClientBuilder/TableTypeBuilder';
+import { prettier } from '../../../src/Generator/config';
 
 describe('TableTypeBuilder', () => {
     let intro: Introspection;
@@ -48,7 +48,11 @@ describe('TableTypeBuilder', () => {
     describe('buildTypeImports', () => {
         it('Generates the imports for types with relations', async (): Promise<void> => {
             const { relations } = await new TableSchemaBuilder('users', intro).buildTableDefinition();
-            const imports = TableTypeBuilder.buildTypeImports({ tableName: 'users', relations, libPath: 'gybson' });
+            const imports = TableTypeBuilder.buildTypeImports({
+                tableName: 'users',
+                relations,
+                gybsonLibPath: 'gybson',
+            });
             const formatted = format(imports, { parser: 'typescript', ...prettier });
 
             expect(formatted).toEqual(
@@ -135,7 +139,10 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
     });
     describe('buildRelationFilterType', () => {
         it('Generates a filter for relation queries for the table', async (): Promise<void> => {
-            const result = TableTypeBuilder.buildRelationFilterType({ whereTypeName: 'usersWhere', relationFilterTypeName: 'usersRelationFilter' });
+            const result = TableTypeBuilder.buildRelationFilterType({
+                whereTypeName: 'usersWhere',
+                relationFilterTypeName: 'usersRelationFilter',
+            });
             const formatted = format(result, { parser: 'typescript', ...prettier });
 
             expect(formatted).toEqual(
@@ -203,7 +210,10 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
     });
     describe('buildPaginateType', () => {
         it('Generates a filter for relation queries for the table', async (): Promise<void> => {
-            const result = TableTypeBuilder.buildPaginateType({ paginationTypeName: 'postsPaginate', rowTypeName: 'postsDTO' });
+            const result = TableTypeBuilder.buildPaginateType({
+                paginationTypeName: 'postsPaginate',
+                rowTypeName: 'postsDTO',
+            });
             const formatted = format(result, { parser: 'typescript', ...prettier });
 
             expect(formatted).toEqual(
