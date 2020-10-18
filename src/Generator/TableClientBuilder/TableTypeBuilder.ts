@@ -33,8 +33,12 @@ export class TableTypeBuilder {
      * Add all imports required for types
      * @param params
      */
-    public static buildTypeImports(params: { relations: RelationDefinition[]; tableName: string; libPath: string }) {
-        const { relations, tableName, libPath } = params;
+    public static buildTypeImports(params: {
+        relations: RelationDefinition[];
+        tableName: string;
+        gybsonLibPath: string;
+    }) {
+        const { relations, tableName, gybsonLibPath } = params;
         return `
              import { 
                 SQLQueryBuilder,
@@ -48,7 +52,7 @@ export class TableTypeBuilder {
                 BooleanWhereNullable, 
                 DateWhere, 
                 DateWhereNullable 
-            } from '${libPath}';
+            } from '${gybsonLibPath}';
             
             ${_.uniqBy(relations, (r) => r.toTable)
                 .map((tbl) => {

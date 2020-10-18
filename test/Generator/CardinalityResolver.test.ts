@@ -1,7 +1,7 @@
 import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
 import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
 import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
-import { CardinalityResolver } from '../../src/Generator/TableClientBuilder/CardinalityResolver';
+import { CardinalityResolver } from '../../src/Generator/Introspection/CardinalityResolver';
 import 'jest-extended';
 
 describe('CardinalityResolver', () => {

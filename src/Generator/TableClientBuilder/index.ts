@@ -1,0 +1,35 @@
+import { DatabaseSchema } from '../../TypeTruth/TypeTruth';
+import { TableClientBuilder } from './TableClientBuilder';
+import { codeGenPreferences } from '../config';
+
+export interface TableClient {
+    code: string;
+    name: string;
+}
+
+/**
+ * Build client from database schema
+ * @param params
+ */
+export const buildClient = async (params: {
+    schema: DatabaseSchema;
+    gybsonLibPath: string;
+}): Promise<TableClient[]> => {
+    const { schema, gybsonLibPath } = params;
+
+    const clients: TableClient[] = [];
+
+    for (const [table, tableSchema] of Object.entries(schema)) {
+        const builder = new TableClientBuilder({
+            table,
+            schema: tableSchema,
+            options: { ...codeGenPreferences, gybsonLibPath },
+        });
+
+        clients.push({
+            code: await builder.build(),
+            name: builder.className,
+        });
+    }
+    return clients;
+};

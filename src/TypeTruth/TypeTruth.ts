@@ -50,8 +50,19 @@ export interface EnumDefinition {
     values: string[];
 }
 
+export type ConstraintType = 'PRIMARY KEY' | 'FOREIGN KEY' | 'UNIQUE';
+
+export interface ConstraintDefinition {
+    columnNames: string[];
+    constraintName: string;
+    constraintType: ConstraintType;
+}
+
 export interface TableSchemaDefinition {
-    primaryKey: string[];
+    primaryKey?: ConstraintDefinition;
+    keys: ConstraintDefinition[];
+    uniqueKeyCombinations: string[][];
+    nonUniqueKeyCombinations: string[][];
     columns: {
         [columnName: string]: ColumnDefinition;
     };

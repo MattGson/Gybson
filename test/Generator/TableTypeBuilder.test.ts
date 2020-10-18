@@ -1,7 +1,7 @@
 import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
 import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
 import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
-import { TableSchemaBuilder } from '../../src/Generator/TableClientBuilder/TableSchemaBuilder';
+import { TableSchemaBuilder } from '../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
 // @ts-ignore - no types for prettier
 import { format } from 'prettier';

@@ -1,9 +1,11 @@
 import Knex from 'knex';
 import { buildSchema } from './buildSchema';
-import { Connection } from '../../src/Generator';
+import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
+import { Connection as MySQLConn } from 'promise-mysql';
+type Connection = PGConn | MySQLConn;
 
 export const schemaName = 'gybson_test';
-export const connection: Connection = {
+export const connection = {
     client: 'mysql',
     connection: {
         host: 'localhost',
