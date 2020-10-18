@@ -57,28 +57,6 @@ export class TableSchemaBuilder {
     }
 
     /**
-     * Build a list of key constraints on the table
-     * Group into objects by the constraint name
-    //  */
-    // public buildTableKeyConstraints(allKeys: KeyDefinition[]): ConstraintDefinition[] {
-    //     const columnMap = _.groupBy(allKeys, (k) => k.constraintName);
-    //     const constraintMap = _.keyBy(allKeys, (k) => k.constraintName);
-    //
-    //     const constraintDefinitions: ConstraintDefinition[] = [];
-    //
-    //     Object.values(constraintMap).forEach((constraint) => {
-    //         const { constraintType, constraintName } = constraint;
-    //         const columns = columnMap[constraintName];
-    //
-    //         constraintDefinitions.push({
-    //             constraintName,
-    //             constraintType,
-    //             columnNames: columns.map((c) => c.columnName),
-    //         });
-    //     });
-    //     return constraintDefinitions;
-    // }
-    /**
      * Get the schema definition for a table
      */
     public async buildTableDefinition(): Promise<TableSchemaDefinition> {
