@@ -9,6 +9,7 @@ describe('TableSchemaBuilder', () => {
     beforeAll(
         async (): Promise<void> => {
             await buildMySQLSchema();
+            // TODO:- repeat all with different introspections
             intro = new MySQLIntrospection(knex(), schemaName);
         },
     );
