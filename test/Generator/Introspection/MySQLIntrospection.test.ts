@@ -1,6 +1,6 @@
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
-import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
-import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
+import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
+import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
+import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import 'jest-extended';
 
 describe('MySQLIntrospection', () => {
@@ -91,56 +91,51 @@ describe('MySQLIntrospection', () => {
     });
     describe('getTableKeys', () => {
         it('Loads all primary key columns for table', async (): Promise<void> => {
-            const userKeys = await intro.getTableKeys('users');
+            const userKeys = await intro.getTableConstraints('users');
             expect(userKeys).toIncludeAllMembers([
                 expect.objectContaining({
-                    columnName: 'user_id',
+                    columnNames: ['user_id'],
                     constraintName: 'PRIMARY',
                     constraintType: 'PRIMARY KEY',
                 }),
             ]);
             // check compound key
-            const teamMemberKeys = await intro.getTableKeys('team_members');
+            const teamMemberKeys = await intro.getTableConstraints('team_members');
             expect(teamMemberKeys).toIncludeAllMembers([
                 expect.objectContaining({
-                    columnName: 'user_id',
-                    constraintName: 'PRIMARY',
-                    constraintType: 'PRIMARY KEY',
-                }),
-                expect.objectContaining({
-                    columnName: 'team_id',
+                    columnNames: ['team_id', 'user_id'],
                     constraintName: 'PRIMARY',
                     constraintType: 'PRIMARY KEY',
                 }),
             ]);
         });
         it('Loads all foreign key columns for table', async (): Promise<void> => {
-            const postKeys = await intro.getTableKeys('posts');
+            const postKeys = await intro.getTableConstraints('posts');
             expect(postKeys).toIncludeAllMembers([
                 expect.objectContaining({
-                    columnName: 'author_id',
+                    columnNames: ['author_id'],
                     constraintType: 'FOREIGN KEY',
                 }),
                 expect.objectContaining({
-                    columnName: 'co_author',
+                    columnNames: ['co_author'],
                     constraintType: 'FOREIGN KEY',
                 }),
             ]);
         });
         it('loads self relation keys', async () => {
-            const userKeys = await intro.getTableKeys('users');
+            const userKeys = await intro.getTableConstraints('users');
             expect(userKeys).toIncludeAllMembers([
                 expect.objectContaining({
-                    columnName: 'best_friend_id',
+                    columnNames: ['best_friend_id'],
                     constraintType: 'FOREIGN KEY',
                 }),
             ]);
         });
         it('loads unique keys', async () => {
-            const userKeys = await intro.getTableKeys('users');
+            const userKeys = await intro.getTableConstraints('users');
             expect(userKeys).toIncludeAllMembers([
                 expect.objectContaining({
-                    columnName: 'email',
+                    columnNames: ['email'],
                     constraintType: 'UNIQUE',
                 }),
             ]);

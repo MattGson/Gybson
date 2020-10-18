@@ -1,7 +1,11 @@
-import { Introspection, TableDefinition } from '../Introspection/IntrospectionTypes';
+import { Introspection, TableDefinition } from './IntrospectionTypes';
 import { RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
 import { CardinalityResolver } from './CardinalityResolver';
+import _ from 'lodash';
 
+/**
+ * Build a js schema that describes the table and relationships
+ */
 export class TableSchemaBuilder {
     private readonly tableName: string;
     private introspection: Introspection;
@@ -54,17 +58,22 @@ export class TableSchemaBuilder {
 
     /**
      * Get the schema definition for a table
-     * // TODO:- multiple backwards relations from the same table causes naming collisions (may need to alias both directions)
      */
     public async buildTableDefinition(): Promise<TableSchemaDefinition> {
         const enums = await this.introspection.getEnumTypesForTable(this.tableName);
         const columns = await this.introspection.getTableTypes(this.tableName, enums);
         const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
         const backwardRelations = await this.introspection.getBackwardRelations(this.tableName);
-        const keys = await this.introspection.getTableKeys(this.tableName);
+        const constraints = await this.introspection.getTableConstraints(this.tableName);
+
+        const uniqueKeyCombinations = CardinalityResolver.getUniqueKeyCombinations(constraints);
+        const nonUniqueKeyCombinations = CardinalityResolver.getNonUniqueKeyCombinations(constraints);
 
         return {
-            primaryKey: CardinalityResolver.primaryKey(keys).map((k) => k.columnName),
+            primaryKey: CardinalityResolver.primaryKey(constraints),
+            keys: constraints,
+            uniqueKeyCombinations,
+            nonUniqueKeyCombinations,
             relations: [
                 ...forwardRelations.map((r) => TableSchemaBuilder.aliasForwardRelationship(r, columns)),
                 ...backwardRelations.map((r) =>

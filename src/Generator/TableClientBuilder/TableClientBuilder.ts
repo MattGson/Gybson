@@ -1,5 +1,3 @@
-import { Introspection } from '../Introspection/IntrospectionTypes';
-import { CardinalityResolver } from './CardinalityResolver';
 import { ColumnDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
 import { TableTypeBuilder, TableTypeNames } from './TableTypeBuilder';
 import { PascalCase } from '../lib';
@@ -8,14 +6,13 @@ import { BatchLoaderBuilder } from './BatchLoaderBuilder';
 interface BuilderOptions {
     rowTypeSuffix: string;
     softDeleteColumn?: string;
-    libPath: string;
+    gybsonLibPath: string;
 }
 
 /**
  * Builds db client methods for a table
  */
 export class TableClientBuilder {
-    private readonly introspection: Introspection;
     public readonly entityName: string;
     public readonly typeNames: TableTypeNames;
     public readonly className: string;
@@ -30,16 +27,10 @@ export class TableClientBuilder {
      *
      * @param params
      */
-    public constructor(params: {
-        table: string;
-        schema: TableSchemaDefinition;
-        dbIntrospection: Introspection;
-        options: BuilderOptions;
-    }) {
-        const { table, dbIntrospection, options, schema } = params;
+    public constructor(params: { table: string; schema: TableSchemaDefinition; options: BuilderOptions }) {
+        const { table, options, schema } = params;
         this.entityName = PascalCase(table);
         this.schema = schema;
-        this.introspection = dbIntrospection;
         this.tableName = table;
         this.className = `${this.entityName}`;
         this.options = options;
@@ -84,14 +75,14 @@ export class TableClientBuilder {
     }
 
     private async buildLoadersForTable() {
-        const tableKeys = await this.introspection.getTableKeys(this.tableName);
-        const unique = CardinalityResolver.getUniqueKeyCombinations(tableKeys);
-        const nonUnique = CardinalityResolver.getNonUniqueKeyCombinations(tableKeys);
         const { rowTypeName, orderByTypeName } = this.typeNames;
+
+        const unique = this.schema.uniqueKeyCombinations;
+        const nonUnique = this.schema.nonUniqueKeyCombinations;
 
         // build single row loaders
         unique.forEach((key) => {
-            const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k.columnName]);
+            const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k]);
             for (let col of keyColumns) {
                 // for now only accept loaders on string and number column types
                 if (col.tsType !== 'string' && col.tsType !== 'number') return;
@@ -108,7 +99,7 @@ export class TableClientBuilder {
 
         // build multi-row loaders
         nonUnique.forEach((key) => {
-            const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k.columnName]);
+            const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k]);
             for (let col of keyColumns) {
                 // for now only accept loaders on string and number column types
                 if (col.tsType !== 'string' && col.tsType !== 'number') return;
@@ -141,7 +132,7 @@ export class TableClientBuilder {
                 ${TableTypeBuilder.buildTypeImports({
                     tableName: this.tableName,
                     relations,
-                    libPath: this.options.libPath,
+                    gybsonLibPath: this.options.gybsonLibPath,
                 })}
                 
                 ${TableTypeBuilder.buildEnumTypes({ enums })}

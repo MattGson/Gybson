@@ -1,8 +1,8 @@
-import { Introspection } from '../../src/Generator/Introspection/IntrospectionTypes';
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../Setup/buildMySQL';
-import { MySQLIntrospection } from '../../src/Generator/Introspection/MySQLIntrospection';
+import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
+import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
+import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
 import 'jest-extended';
-import { BatchLoaderBuilder } from '../../src/Generator/TableClientBuilder/BatchLoaderBuilder';
+import { BatchLoaderBuilder } from '../../../src/Generator/TableClientBuilder/BatchLoaderBuilder';
 
 describe('BatchLoaderBuilder', () => {
     let intro: Introspection;

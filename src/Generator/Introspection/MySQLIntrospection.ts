@@ -1,6 +1,14 @@
-import { EnumDefinitions, Introspection, KeyDefinition, TableDefinition } from './IntrospectionTypes';
-import { ColumnType, Comparable, EnumDefinition, NonComparable, RelationDefinition } from '../../TypeTruth/TypeTruth';
+import { EnumDefinitions, Introspection, TableDefinition } from './IntrospectionTypes';
+import {
+    ColumnType,
+    Comparable,
+    ConstraintDefinition,
+    EnumDefinition,
+    NonComparable,
+    RelationDefinition,
+} from '../../TypeTruth/TypeTruth';
 import Knex = require('knex');
+import _ from 'lodash';
 
 export class MySQLIntrospection implements Introspection {
     private readonly schemaName: string;
@@ -142,7 +150,7 @@ export class MySQLIntrospection implements Introspection {
         return tableDefinition;
     }
 
-    public async getTableKeys(tableName: string): Promise<KeyDefinition[]> {
+    public async getTableConstraints(tableName: string): Promise<ConstraintDefinition[]> {
         const rows = await this.knex('information_schema.key_column_usage as key_usage')
             .select(
                 'key_usage.table_name',
@@ -159,21 +167,23 @@ export class MySQLIntrospection implements Introspection {
 
             .where({ 'key_usage.table_name': tableName, 'key_usage.table_schema': this.schemaName });
 
-        return rows.map(
-            (row: {
-                table_name: string;
-                constraint_name: string;
-                column_name: string;
-                constraint_type: 'PRIMARY KEY' | 'FOREIGN KEY' | 'UNIQUE';
-            }) => {
-                return {
-                    columnName: row.column_name,
-                    constraintName: row.constraint_name,
-                    tableName: row.table_name,
-                    constraintType: row.constraint_type,
-                };
-            },
-        );
+        // group by constraint name
+        const columnMap = _.groupBy(rows, (k) => k.constraint_name);
+        const constraintMap = _.keyBy(rows, (k) => k.constraint_name);
+
+        const constraintDefinitions: ConstraintDefinition[] = [];
+
+        Object.values(constraintMap).forEach((constraint) => {
+            const { constraint_type, constraint_name } = constraint;
+            const columns = columnMap[constraint_name];
+
+            constraintDefinitions.push({
+                constraintName: constraint_name,
+                constraintType: constraint_type,
+                columnNames: columns.map((c) => c.column_name),
+            });
+        });
+        return constraintDefinitions;
     }
 
     /**
@@ -187,7 +197,6 @@ export class MySQLIntrospection implements Introspection {
 
         // group by constraint name to capture multiple relations to same table
         let relations: { [constraintName: string]: RelationDefinition } = {};
-        // let relations: RelationDefinition[] = [];
         rows.forEach((row) => {
             const { column_name, referenced_table_name, referenced_column_name, constraint_name } = row;
             if (referenced_table_name == null || referenced_column_name == null) return;
