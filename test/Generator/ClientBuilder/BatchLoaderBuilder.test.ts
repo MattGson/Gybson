@@ -25,7 +25,14 @@ describe('BatchLoaderBuilder', () => {
                     columnName: 'user_id',
                 },
             ];
-            const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns, softDeleteColumn: 'deleted' });
+            const softDelete = {
+                dbType: 'tinyint',
+                nullable: false,
+                tsType: 'boolean',
+                columnName: 'deleted',
+            };
+
+            const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns, softDeleteColumn: softDelete });
             expect(params).toEqual({
                 loadKeyType: 'user_id: number;',
                 methodParamType: 'user_id: number;includeDeleted?: boolean;',
