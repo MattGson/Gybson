@@ -65,7 +65,6 @@ export class TableSchemaBuilder {
         const forwardRelations = await this.introspection.getForwardRelations(this.tableName);
         const backwardRelations = await this.introspection.getBackwardRelations(this.tableName);
         const constraints = await this.introspection.getTableConstraints(this.tableName);
-        // const constraints = await this.buildTableKeyConstraints(allKeys);
 
         const uniqueKeyCombinations = CardinalityResolver.getUniqueKeyCombinations(constraints);
         const nonUniqueKeyCombinations = CardinalityResolver.getNonUniqueKeyCombinations(constraints);
