@@ -29,47 +29,6 @@ async function generateEntryPoint(builders: TableClient[], outdir: string) {
     await writeTypescriptFile(index, outdir, 'index.ts');
 }
 
-// /**
-//  * Generate the db clients for each table
-//  * @param db
-//  * @param outdir
-//  * @param libDir - relative location of the Gybson client lib
-//  */
-// async function generateClients(db: Introspection, outdir: string, libDir?: string): Promise<string[]> {
-//     const builders: TableClientBuilder[] = [];
-//     const tables = await db.getSchemaTables();
-//
-//     const schema: DatabaseSchema = {};
-//
-//     // for (let table of tables) {
-//     //     //     Only keys seem to be missing right now.
-//     //     const tblSchema = await new TableSchemaBuilder(table, db).buildTableDefinition();
-//     //     const builder = new TableClientBuilder({
-//     //         table,
-//     //         schema: tblSchema,
-//     //         dbIntrospection: db,
-//     //         options: { ...codeGenPreferences, gybsonLibPath: libDir || 'gybson' },
-//     //     });
-//     //     schema[table] = tblSchema;
-//     //     builders.push(builder);
-//     //     await writeTypescriptFile(await builder.build(), outdir, `${builder.className}.ts`);
-//     // }
-//     // ADD relation map
-//     await writeTypescriptFile(
-//     //     `
-//     //     import { DatabaseSchema } from '${libDir}';
-//     //
-//     //     export const schema: DatabaseSchema = ${JSON.stringify(schema)}`,
-//     //     outdir,
-//     //     `gybson.schema.ts`,
-//     // );
-//
-//     // BUILD ENTRY POINT
-//     await generateEntryPoint(builders, outdir);
-//
-//     return tables;
-// }
-
 // ****************************
 // Entry point
 // ****************************
