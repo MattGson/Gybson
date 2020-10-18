@@ -5,7 +5,6 @@ import { BatchLoaderBuilder } from './BatchLoaderBuilder';
 
 interface BuilderOptions {
     rowTypeSuffix: string;
-    softDeleteColumn?: string;
     gybsonLibPath: string;
 }
 
@@ -18,7 +17,6 @@ export class TableClientBuilder {
     public readonly className: string;
     public readonly tableName: string;
     private readonly options: BuilderOptions;
-    private softDeleteColumn?: string;
     private loaders: string[] = [];
     private types?: string;
     private readonly schema: TableSchemaDefinition;
@@ -37,13 +35,11 @@ export class TableClientBuilder {
         this.typeNames = TableTypeBuilder.typeNamesForTable({ tableName: table, rowTypeSuffix: options.rowTypeSuffix });
     }
 
-    public async build(): Promise<string> {
-        // if a soft delete column is given, check if it exists on the table
-        this.softDeleteColumn =
-            this.options.softDeleteColumn && this.schema.columns[this.options.softDeleteColumn]
-                ? this.options.softDeleteColumn
-                : undefined;
+    private get softDeleteColumn() {
+        return this.schema.softDelete;
+    }
 
+    public async build(): Promise<string> {
         await this.buildLoadersForTable();
         await this.buildTableTypes();
         return this.buildTemplate();
@@ -64,7 +60,6 @@ export class TableClientBuilder {
                         super({ 
                             tableName: '${this.tableName}', 
                             schema,
-                            softDeleteColumn: ${this.softDeleteColumn ? `'${this.softDeleteColumn}'` : undefined} 
                         });
                     }
                 ${this.loaders.join(`
@@ -92,7 +87,7 @@ export class TableClientBuilder {
                 BatchLoaderBuilder.getOneByColumnLoader({
                     loadColumns: keyColumns,
                     rowTypeName,
-                    softDeleteColumn: this.softDeleteColumn,
+                    softDeleteColumn: this.softDeleteColumn || undefined,
                 }),
             );
         });
@@ -110,7 +105,7 @@ export class TableClientBuilder {
                     loadColumns: keyColumns,
                     rowTypeName,
                     orderByTypeName,
-                    softDeleteColumn: this.softDeleteColumn,
+                    softDeleteColumn: this.softDeleteColumn || undefined,
                 }),
             );
         });

@@ -25,7 +25,7 @@ export const buildSchema = async (knex: Knex) => {
         table
             .enum('subscription_level', ['BRONZE', 'SILVER', 'GOLD'])
             .comment('The package subscription the user has purchased');
-        table.boolean('deleted').defaultTo(false);
+        table.dateTime('deleted_at');
 
         table.foreign('best_friend_id').references('users.user_id');
     });
