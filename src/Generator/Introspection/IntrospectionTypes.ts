@@ -3,7 +3,7 @@ import {
     ColumnType,
     ConstraintDefinition,
     EnumDefinition,
-    RelationDefinition
+    RelationDefinition,
 } from '../../TypeTruth/TypeTruth';
 
 export interface Introspection {
@@ -15,13 +15,6 @@ export interface Introspection {
     getEnumTypesForTable(table: string): Promise<EnumDefinitions>;
     getTsTypeForColumn(tableName: string, columnName: string, dbType: string, customTypes: EnumDefinitions): ColumnType;
 }
-
-// export interface KeyDefinition {
-//     tableName: string;
-//     columnName: string;
-//     constraintName: string;
-//     constraintType: 'PRIMARY KEY' | 'FOREIGN KEY' | 'UNIQUE';
-// }
 
 export interface TableDefinition {
     [columnName: string]: ColumnDefinition;

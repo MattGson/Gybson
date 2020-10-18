@@ -184,21 +184,6 @@ export class MySQLIntrospection implements Introspection {
             });
         });
         return constraintDefinitions;
-        // return rows.map(
-        //     (row: {
-        //         table_name: string;
-        //         constraint_name: string;
-        //         column_name: string;
-        //         constraint_type: 'PRIMARY KEY' | 'FOREIGN KEY' | 'UNIQUE';
-        //     }) => {
-        //         return {
-        //             columnName: row.column_name,
-        //             constraintName: row.constraint_name,
-        //             tableName: row.table_name,
-        //             constraintType: row.constraint_type,
-        //         };
-        //     },
-        // );
     }
 
     /**
