@@ -223,13 +223,14 @@ describe('Upsert', () => {
             );
         });
         it('Throws error if the upsert fails', async () => {
-            // missing entry for 'author' no default value
+            // author_id is non existing
             await expect(
                 gybson.Posts.upsert({
                     values: {
                         post_id: ids.post1Id,
                         message: 'test 2',
-                        author_id: ids.user1Id,
+                        author_id: 50000,
+                        author: 'sgdsags',
                         rating_average: 6,
                         created: new Date(2003, 20, 4),
                     },

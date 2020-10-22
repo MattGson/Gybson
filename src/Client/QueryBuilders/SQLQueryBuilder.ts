@@ -14,7 +14,8 @@ export abstract class SQLQueryBuilder<
     TblWhere,
     TblOrderBy extends OrderBy,
     TblPaginate extends Paginate,
-    PartialTblRow = Partial<TblRow>
+    RequiredTblRow,
+    PartialTblRow = Partial<TblRow>,
 > {
     private readonly tableName: string;
     private readonly tableAlias: string;
@@ -215,7 +216,7 @@ export abstract class SQLQueryBuilder<
     public async upsert(params: {
         transact?: Transaction;
         connection?: Connection;
-        values: PartialTblRow | PartialTblRow[];
+        values: RequiredTblRow | RequiredTblRow[];
         reinstateSoftDeletedRows?: boolean;
         updateColumns: Partial<TblColumnMap>;
     }): Promise<number> {
@@ -226,7 +227,7 @@ export abstract class SQLQueryBuilder<
             if (update) columnsToUpdate.push(column);
         }
 
-        let insertRows: PartialTblRow[];
+        let insertRows: RequiredTblRow[];
         if (Array.isArray(values)) insertRows = values;
         else insertRows = [values];
 
@@ -279,11 +280,11 @@ export abstract class SQLQueryBuilder<
     public async insert(params: {
         transact?: Transaction;
         connection?: Connection;
-        values: PartialTblRow | PartialTblRow[];
+        values: RequiredTblRow | RequiredTblRow[];
     }): Promise<number> {
         const { values, transact, connection } = params;
 
-        let insertRows: PartialTblRow[];
+        let insertRows: RequiredTblRow[];
         if (Array.isArray(values)) insertRows = values;
         else insertRows = [values];
 

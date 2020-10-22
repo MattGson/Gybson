@@ -40,6 +40,7 @@ export interface RelationDefinition {
 export interface ColumnDefinition {
     dbType: string;
     nullable: boolean;
+    columnDefault: string | null;
     tsType?: ColumnType;
     columnName: string;
 }

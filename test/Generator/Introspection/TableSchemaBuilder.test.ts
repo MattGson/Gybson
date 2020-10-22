@@ -162,12 +162,14 @@ describe('TableSchemaBuilder', () => {
                             nullable: false,
                             tsType: 'number',
                             columnName: 'user_id',
+                            columnDefault: 'auto_increment',
                         },
                         permissions: {
                             dbType: 'enum',
                             nullable: true,
                             tsType: 'users_permissions',
                             columnName: 'permissions',
+                            columnDefault: 'USER',
                         },
                     }),
                 );

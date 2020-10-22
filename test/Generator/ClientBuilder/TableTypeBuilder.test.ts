@@ -25,6 +25,7 @@ describe('TableTypeBuilder', () => {
 
             expect(typeNames).toEqual({
                 rowTypeName: `usersRow`,
+                requiredRowTypeName: `usersRequiredRow`,
                 columnMapTypeName: `usersColumnMap`,
                 whereTypeName: `usersWhere`,
                 orderByTypeName: `usersOrderBy`,
@@ -37,6 +38,7 @@ describe('TableTypeBuilder', () => {
 
             expect(typeNames).toEqual({
                 rowTypeName: `usersDTO`,
+                requiredRowTypeName: `usersRequiredRow`,
                 columnMapTypeName: `usersColumnMap`,
                 whereTypeName: `usersWhere`,
                 orderByTypeName: `usersOrderBy`,

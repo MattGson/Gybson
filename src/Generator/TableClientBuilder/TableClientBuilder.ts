@@ -46,7 +46,14 @@ export class TableClientBuilder {
     }
 
     private buildTemplate() {
-        const { rowTypeName, columnMapTypeName, whereTypeName, orderByTypeName, paginationTypeName } = this.typeNames;
+        const {
+            rowTypeName,
+            columnMapTypeName,
+            whereTypeName,
+            orderByTypeName,
+            paginationTypeName,
+            requiredRowTypeName,
+        } = this.typeNames;
         return `
             import DataLoader = require('dataloader');
             import { schema } from './gybson.schema';
@@ -55,7 +62,7 @@ export class TableClientBuilder {
 
              export default class ${
                  this.className
-             } extends SQLQueryBuilder<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}> {
+             } extends SQLQueryBuilder<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}, ${requiredRowTypeName}> {
                     constructor() {
                         super({ 
                             tableName: '${this.tableName}', 
@@ -119,6 +126,7 @@ export class TableClientBuilder {
             orderByTypeName,
             paginationTypeName,
             relationFilterTypeName,
+            requiredRowTypeName,
         } = this.typeNames;
 
         const { columns, relations, enums } = this.schema;
@@ -133,6 +141,8 @@ export class TableClientBuilder {
                 ${TableTypeBuilder.buildEnumTypes({ enums })}
                
                 ${TableTypeBuilder.buildRowType({ table: columns, rowTypeName })}
+                
+                ${TableTypeBuilder.buildRequiredRowType({ table: columns, requiredRowTypeName })}
  
                 ${TableTypeBuilder.buildColumnMapType({ columnMapTypeName, columns })}
                 

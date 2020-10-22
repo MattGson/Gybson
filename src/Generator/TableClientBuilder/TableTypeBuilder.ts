@@ -5,6 +5,7 @@ import { PascalCase } from '../lib';
 
 export type TableTypeNames = {
     rowTypeName: string;
+    requiredRowTypeName: string;
     columnMapTypeName: string;
     whereTypeName: string;
     orderByTypeName: string;
@@ -21,6 +22,7 @@ export class TableTypeBuilder {
         const { tableName, rowTypeSuffix } = params;
         return {
             rowTypeName: `${tableName}${rowTypeSuffix || 'Row'}`,
+            requiredRowTypeName: `${tableName}RequiredRow`,
             columnMapTypeName: `${tableName}ColumnMap`,
             whereTypeName: `${tableName}Where`,
             orderByTypeName: `${tableName}OrderBy`,
@@ -91,6 +93,28 @@ export class TableTypeBuilder {
                         let type = columnDefinition.tsType;
                         let nullable = columnDefinition.nullable ? '| null' : '';
                         return `${columnName}: ${type}${nullable};`;
+                    })
+                    .join(' ')}
+            }
+        `;
+    }
+
+    /**
+     * Build row type for table with all non-required insert values optional
+     * @param params
+     */
+    public static buildRequiredRowType(params: { table: TableDefinition; requiredRowTypeName: string }) {
+        const { table, requiredRowTypeName } = params;
+        return `
+            export interface ${requiredRowTypeName} {
+                ${Object.entries(table)
+                    .map(([columnName, columnDefinition]) => {
+                        let type = columnDefinition.tsType;
+                        if (columnDefinition.nullable) type = `${type} | null`;
+                        if (columnDefinition.nullable || columnDefinition.columnDefault) {
+                            return `${columnName}?: ${type};`;
+                        }
+                        return `${columnName}: ${type};`;
                     })
                     .join(' ')}
             }

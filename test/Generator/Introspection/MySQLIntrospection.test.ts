@@ -62,30 +62,35 @@ describe('MySQLIntrospection', () => {
                 nullable: false,
                 tsType: 'number',
                 columnName: 'user_id',
+                columnDefault: 'auto_increment'
             });
             expect(types['email']).toEqual({
                 dbType: 'varchar',
                 nullable: false,
                 tsType: 'string',
                 columnName: 'email',
+                columnDefault: null
             });
             expect(types['first_name']).toEqual({
                 dbType: 'varchar',
                 nullable: true,
                 tsType: 'string',
                 columnName: 'first_name',
+                columnDefault: null
             });
             expect(types['permissions']).toEqual({
                 dbType: 'enum',
                 nullable: true,
                 tsType: 'users_permissions',
                 columnName: 'permissions',
+                columnDefault: 'USER'
             });
             expect(types['deleted_at']).toEqual({
                 dbType: 'datetime',
                 nullable: true,
                 tsType: 'Date',
                 columnName: 'deleted_at',
+                columnDefault: null
             });
         });
     });
