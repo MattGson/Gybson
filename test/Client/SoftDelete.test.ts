@@ -48,6 +48,38 @@ describe('SoftDelete', () => {
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
         });
+        it('Can soft delete using a boolean column', async () => {
+            const post = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            expect(post).toEqual(
+                expect.objectContaining({
+                    post_id: ids.post1Id,
+                }),
+            );
+
+            await gybson.Posts.softDelete({
+                where: {
+                    post_id: ids.post1Id,
+                },
+            });
+            const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            expect(post2).toEqual(null);
+        });
+        it('Can soft delete using a Date column', async () => {
+            const user = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            expect(user).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                }),
+            );
+
+            await gybson.Users.softDelete({
+                where: {
+                    user_id: ids.user1Id,
+                },
+            });
+            const user2 = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            expect(user2).toEqual(null);
+        });
         it('Can use an external connection', async () => {
             const connection = await getPoolConnection();
             const post = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });

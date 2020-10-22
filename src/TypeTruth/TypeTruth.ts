@@ -66,6 +66,7 @@ export interface TableSchemaDefinition {
     columns: {
         [columnName: string]: ColumnDefinition;
     };
+    softDelete: ColumnDefinition | null;
     enums: {
         [enumName: string]: EnumDefinition;
     };

@@ -81,11 +81,11 @@ describe('MySQLIntrospection', () => {
                 tsType: 'users_permissions',
                 columnName: 'permissions',
             });
-            expect(types['deleted']).toEqual({
-                dbType: 'tinyint',
+            expect(types['deleted_at']).toEqual({
+                dbType: 'datetime',
                 nullable: true,
-                tsType: 'boolean',
-                columnName: 'deleted',
+                tsType: 'Date',
+                columnName: 'deleted_at',
             });
         });
     });

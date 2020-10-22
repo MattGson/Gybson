@@ -1,4 +1,4 @@
-import { DatabaseSchema, knex } from '../index';
+import { ColumnDefinition, Comparable, DatabaseSchema, knex } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
@@ -16,24 +16,14 @@ export abstract class SQLQueryBuilder<
     TblPaginate extends Paginate,
     PartialTblRow = Partial<TblRow>
 > {
-    private tableName: string;
-    private tableAlias: string;
-    private softDeleteColumn?: string;
-    private schema: DatabaseSchema;
+    private readonly tableName: string;
+    private readonly tableAlias: string;
+    private readonly schema: DatabaseSchema;
 
-    protected constructor(params: { tableName: string; softDeleteColumn?: string; schema: DatabaseSchema }) {
+    protected constructor(params: { tableName: string; schema: DatabaseSchema }) {
         this.tableName = params.tableName;
-        this.softDeleteColumn = params.softDeleteColumn;
         this.schema = params.schema;
         this.tableAlias = `${this.tableName}_q_root`;
-    }
-
-    private hasSoftDelete(): boolean {
-        return this.softDeleteColumn != null;
-    }
-
-    private get aliasedSoftDeleteColumn(): string {
-        return `${this.aliasedColumn(this.softDeleteColumn as string)}`;
     }
 
     private get aliasedTable(): string {
@@ -42,6 +32,32 @@ export abstract class SQLQueryBuilder<
 
     private aliasedColumn(column: string) {
         return `${this.tableAlias}.${column}`;
+    }
+
+    private get softDeleteColumn(): ColumnDefinition | null {
+        return this.schema[this.tableName].softDelete;
+    }
+
+    private get hasSoftDelete(): boolean {
+        return this.softDeleteColumn != null;
+    }
+
+    private get aliasedSoftDeleteColumn(): string | null {
+        const column = this.softDeleteColumn;
+        if (!column) return null;
+        return `${this.aliasedColumn(column.columnName)}`;
+    }
+
+    private softDeleteFilter(alias: boolean = false): Record<string, Date | boolean | null> {
+        const colAlias = this.aliasedSoftDeleteColumn;
+        const column = this.softDeleteColumn;
+        if (!colAlias || !column) return {};
+
+        let colName = alias ? colAlias : column.columnName;
+        const type = column?.tsType;
+        if (type === Comparable.Date) return { [colName]: null };
+        if (type === Comparable.boolean) return { [colName]: false };
+        return {};
     }
 
     /**
@@ -149,7 +165,7 @@ export abstract class SQLQueryBuilder<
             });
         }
 
-        if (!includeDeleted && this.hasSoftDelete()) query.where({ [this.aliasedSoftDeleteColumn]: false });
+        if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
 
         if (orderBy) {
             for (let [column, direction] of Object.entries(orderBy)) {
@@ -222,12 +238,13 @@ export abstract class SQLQueryBuilder<
         }
 
         // add deleted column to all records
-        if (reinstateSoftDeletedRows && this.hasSoftDelete()) {
-            columnsToUpdate.push(this.softDeleteColumn as string);
+        if (reinstateSoftDeletedRows && this.softDeleteColumn) {
+            columnsToUpdate.push(this.softDeleteColumn.columnName);
             insertRows = insertRows.map((value) => {
                 return {
                     ...value,
-                    [this.softDeleteColumn as string]: false,
+                    // set soft delete value back to default
+                    ...this.softDeleteFilter(false),
                 };
             });
         }
@@ -292,10 +309,16 @@ export abstract class SQLQueryBuilder<
      */
     public async softDelete(params: { transact?: Transaction; connection?: Connection; where: TblWhere }) {
         const { where, transact, connection } = params;
-        if (!this.hasSoftDelete()) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
+        if (!this.hasSoftDelete) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
-        const query = knex()(this.aliasedTable).update({ [this.aliasedSoftDeleteColumn]: true });
+        const query = knex()(this.aliasedTable);
+
+        // support both soft delete types
+        const colAlias = this.aliasedSoftDeleteColumn;
+        const type = this.softDeleteColumn?.tsType;
+        if (type === Comparable.Date) query.update({ [colAlias!]: new Date() });
+        if (type === Comparable.boolean) query.update({ [colAlias!]: true });
 
         WhereResolver.resolveWhereClause({
             queryBuilder: query,
@@ -320,7 +343,7 @@ export abstract class SQLQueryBuilder<
      */
     public async delete(params: { transact?: Transaction; connection?: Connection; where: TblWhere }) {
         const { where, transact, connection } = params;
-        if (this.hasSoftDelete())
+        if (this.hasSoftDelete)
             logger().warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 

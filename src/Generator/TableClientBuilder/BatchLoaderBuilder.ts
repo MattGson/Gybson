@@ -6,7 +6,7 @@ export class BatchLoaderBuilder {
      * Get the loader configuration for a column combination
      * @param params
      */
-    public static getLoadParams(params: { loadColumns: ColumnDefinition[]; softDeleteColumn?: string }) {
+    public static getLoadParams(params: { loadColumns: ColumnDefinition[]; softDeleteColumn?: ColumnDefinition }) {
         const { loadColumns: columns, softDeleteColumn } = params;
 
         const colNames = columns.map((col) => col.columnName);
@@ -34,7 +34,7 @@ export class BatchLoaderBuilder {
     public static getOneByColumnLoader(params: {
         loadColumns: ColumnDefinition[];
         rowTypeName: string;
-        softDeleteColumn?: string;
+        softDeleteColumn?: ColumnDefinition;
     }): string {
         const { rowTypeName, softDeleteColumn } = params;
         const { loadKeyType, methodParamType, methodParamSpread, loaderName } = BatchLoaderBuilder.getLoadParams(
@@ -49,7 +49,7 @@ export class BatchLoaderBuilder {
                  public async oneBy${loaderName}(params: { ${methodParamType} }) {
                     const { ${methodParamSpread} } = params;
                     const row = await this.by${loaderName}Loader.load({ ${methodParamSpread} });
-                    ${softDeleteColumn ? `if (row?.${softDeleteColumn} && !params.includeDeleted) return null;` : ''}
+                    ${softDeleteColumn ? `if (row?.${softDeleteColumn.columnName} && !params.includeDeleted) return null;` : ''}
                     return row;
                 }
             `;
@@ -63,7 +63,7 @@ export class BatchLoaderBuilder {
     public static getManyByColumnLoader(params: {
         loadColumns: ColumnDefinition[];
         rowTypeName: string;
-        softDeleteColumn?: string;
+        softDeleteColumn?: ColumnDefinition;
         orderByTypeName: string;
     }): string {
         const { rowTypeName, softDeleteColumn, orderByTypeName } = params;
@@ -90,7 +90,7 @@ export class BatchLoaderBuilder {
                         softDeleteColumn
                             ? `
                     if (params.includeDeleted) return rows;
-                    return rows.filter(row => !row.${softDeleteColumn});`
+                    return rows.filter(row => !row.${softDeleteColumn.columnName});`
                             : 'return rows;'
                     }
                 }

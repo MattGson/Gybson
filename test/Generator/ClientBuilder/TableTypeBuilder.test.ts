@@ -107,7 +107,7 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
     token: string | null;
     permissions: users_permissions | null;
     subscription_level: users_subscription_level | null;
-    deleted: boolean | null;
+    deleted_at: Date | null;
 }
 `,
             );
@@ -131,7 +131,7 @@ export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
     token: boolean;
     permissions: boolean;
     subscription_level: boolean;
-    deleted: boolean;
+    deleted_at: boolean;
 }
 `,
             );

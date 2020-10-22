@@ -1,5 +1,5 @@
 import { Introspection, TableDefinition } from './IntrospectionTypes';
-import { RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
+import { ColumnDefinition, Comparable, RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
 import { CardinalityResolver } from './CardinalityResolver';
 import _ from 'lodash';
 
@@ -57,6 +57,25 @@ export class TableSchemaBuilder {
     }
 
     /**
+     * Get a column to use for soft deletes if it exists
+     * @param columns
+     */
+    private static getSoftDeleteColumn(columns: TableDefinition): ColumnDefinition | null {
+        let candidate: ColumnDefinition | undefined;
+        for (let column of Object.values(columns)) {
+            if (
+                column.columnName === 'deleted' ||
+                column.columnName === 'deleted_at' ||
+                column.columnName === 'deletedAt'
+            ) {
+                candidate = column;
+            }
+        }
+        if (candidate?.tsType === Comparable.boolean || candidate?.tsType === Comparable.Date) return candidate;
+        return null;
+    }
+
+    /**
      * Get the schema definition for a table
      */
     public async buildTableDefinition(): Promise<TableSchemaDefinition> {
@@ -68,6 +87,8 @@ export class TableSchemaBuilder {
 
         const uniqueKeyCombinations = CardinalityResolver.getUniqueKeyCombinations(constraints);
         const nonUniqueKeyCombinations = CardinalityResolver.getNonUniqueKeyCombinations(constraints);
+
+        const softDelete = TableSchemaBuilder.getSoftDeleteColumn(columns);
 
         return {
             primaryKey: CardinalityResolver.primaryKey(constraints),
@@ -81,6 +102,7 @@ export class TableSchemaBuilder {
                 ),
             ],
             columns,
+            softDelete,
             enums,
         };
     }
