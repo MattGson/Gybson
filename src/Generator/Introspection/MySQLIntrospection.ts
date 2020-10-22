@@ -134,19 +134,29 @@ export class MySQLIntrospection implements Introspection {
         let tableDefinition: TableDefinition = {};
 
         const tableColumns = await this.knex('information_schema.columns')
-            .select('column_name', 'data_type', 'is_nullable')
+            .select('column_name', 'data_type', 'is_nullable', 'column_default', 'extra')
             .where({ table_name: tableName, table_schema: this.schemaName });
 
-        tableColumns.map((schemaItem: { column_name: string; data_type: string; is_nullable: string }) => {
-            const columnName = schemaItem.column_name;
-            const dbType = schemaItem.data_type;
-            tableDefinition[columnName] = {
-                dbType,
-                nullable: schemaItem.is_nullable === 'YES',
-                columnName,
-                tsType: this.getTsTypeForColumn(tableName, columnName, dbType, enumTypes),
-            };
-        });
+        tableColumns.map(
+            (schemaItem: {
+                column_name: string;
+                data_type: string;
+                is_nullable: string;
+                column_default: string | null;
+                extra: string;
+            }) => {
+                const columnName = schemaItem.column_name;
+                const dbType = schemaItem.data_type;
+                const extra = schemaItem.extra === '' ? null : schemaItem.extra;
+                tableDefinition[columnName] = {
+                    dbType,
+                    columnDefault: schemaItem.column_default || extra,
+                    nullable: schemaItem.is_nullable === 'YES',
+                    columnName,
+                    tsType: this.getTsTypeForColumn(tableName, columnName, dbType, enumTypes),
+                };
+            },
+        );
         return tableDefinition;
     }
 

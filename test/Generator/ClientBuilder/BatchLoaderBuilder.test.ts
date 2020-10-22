@@ -23,6 +23,7 @@ describe('BatchLoaderBuilder', () => {
                     nullable: false,
                     tsType: 'number',
                     columnName: 'user_id',
+                    columnDefault: null,
                 },
             ];
             const softDelete = {
@@ -30,6 +31,7 @@ describe('BatchLoaderBuilder', () => {
                 nullable: false,
                 tsType: 'boolean',
                 columnName: 'deleted',
+                columnDefault: '0',
             };
 
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns, softDeleteColumn: softDelete });
@@ -47,6 +49,7 @@ describe('BatchLoaderBuilder', () => {
                     nullable: false,
                     tsType: 'number',
                     columnName: 'user_id',
+                    columnDefault: null
                 },
             ];
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns });
@@ -64,12 +67,14 @@ describe('BatchLoaderBuilder', () => {
                     nullable: false,
                     tsType: 'number',
                     columnName: 'user_id',
+                    columnDefault: null
                 },
                 {
                     dbType: 'varchar',
                     nullable: true,
                     tsType: 'string',
                     columnName: 'first_name',
+                    columnDefault: null
                 },
             ];
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns });

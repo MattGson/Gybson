@@ -72,11 +72,12 @@ describe('Transaction', () => {
                                 password: 'my password',
                             },
                         });
-                        // missing team id will fail
+                        // non existing team_id will fail
                         const tm = await gybson.TeamMembers.insert({
                             transact: trx,
                             values: {
                                 user_id: userId,
+                                team_id: 30000,
                             },
                         });
                         return userId;
