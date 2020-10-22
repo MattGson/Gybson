@@ -74,9 +74,9 @@ export abstract class SQLQueryBuilder<
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
 
-        // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [user_id, post_id], [3, 5]
+        // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [3, 5]
         const loadValues = keys.map<(string | number)[]>((k) => {
-            // @ts-ignore
+            // @ts-ignore - k[col] typing
             return columns.map((col) => k[col]);
         });
 
@@ -96,10 +96,21 @@ export abstract class SQLQueryBuilder<
         // join multiple keys into a unique string to allow mapping to dictionary
         // again map columns to make sure order is preserved
         // @ts-ignore
-        const sortKeys = keys.map((k) => columns.map((col) => k[col]).join(':'));
+        const sortKeys = keys.map((k) =>
+            columns
+                // @ts-ignore
+                .map((col) => k[col])
+                .join(':')
+                .toLowerCase(),
+        );
 
-        // map rows back to input keys ensuring order is preserved
-        const grouped = _.groupBy(rows, (row) => columns.map((col) => row[col]).join(':'));
+        // map rows back to input keys to ensure order is preserved as required by data-loader
+        const grouped = _.groupBy(rows, (row) =>
+            columns
+                .map((col) => row[col])
+                .join(':')
+                .toLowerCase(),
+        );
         return sortKeys.map((key) => grouped[key] || []);
     }
 
@@ -114,7 +125,7 @@ export abstract class SQLQueryBuilder<
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
 
-        // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [user_id, post_id], [3, 5]
+        // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [3, 5]
         const loadValues = keys.map<(string | number)[]>((k) => {
             // @ts-ignore
             return columns.map((col) => k[col]);
@@ -128,10 +139,21 @@ export abstract class SQLQueryBuilder<
 
         // join multiple keys into a unique string to allow mapping to dictionary
         // again map columns to make sure order is preserved
-        // @ts-ignore
-        const sortKeys = keys.map((k) => columns.map((col) => k[col]).join(':'));
-        // map rows to dictionary against the same key strings - again preserving key order
-        const keyed = _.keyBy(rows, (row) => columns.map((col) => row[col]).join(':'));
+        const sortKeys = keys.map((k) =>
+            columns
+                // @ts-ignore
+                .map((col) => k[col])
+                .join(':')
+                .toLowerCase(),
+        );
+        // map rows to dictionary against the same key strings - again preserving key column order
+        // -> Notice that keys are compared case-insensitive
+        const keyed = _.keyBy(rows, (row) =>
+            columns
+                .map((col) => row[col])
+                .join(':')
+                .toLowerCase(),
+        );
 
         // map rows back to key order
         return sortKeys.map((k) => {
