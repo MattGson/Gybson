@@ -73,6 +73,23 @@ describe('Loaders', () => {
                 }),
             );
         });
+        it('Loads are case-insensitive on alphabetical keys', async () => {
+            await gybson.Users.update({
+                values: {
+                    email: 'Cased@gmail.com',
+                },
+                where: {
+                    user_id: ids.user1Id,
+                },
+            });
+            const user = await gybson.Users.oneByEmail({ email: 'cased@gmail.com' });
+            expect(user).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    email: 'Cased@gmail.com',
+                }),
+            );
+        });
     });
     describe('many by column load', () => {
         it('Can load many from a single non-unique key', async () => {
@@ -139,6 +156,22 @@ describe('Loaders', () => {
             });
             const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id, includeDeleted: true });
             expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
+        });
+        it('Loads are case-insensitive on alphabetical keys', async () => {
+            await gybson.TeamMembersPositions.insert({
+                values: {
+                    manager: 'CasedManager',
+                    team_id: ids.team1Id,
+                    user_id: ids.user1Id,
+                    position: 'A position'
+                },
+            });
+            const members = await gybson.TeamMembersPositions.manyByManager({ manager: 'casedManager' });
+            expect(members).toContainEqual(
+                expect.objectContaining({
+                    manager: 'CasedManager',
+                }),
+            );
         });
     });
 });
