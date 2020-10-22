@@ -19,7 +19,7 @@ export const buildSchema = async (knex: Knex) => {
         table.string('password', 200).notNullable();
         table.string('token', 200).unique();
         table
-            .enum('permissions', ['USER', 'ADMIN'])
+            .enum('permissions', ['USER', 'ADMIN'], { useNative: true, enumName: 'user_permissions' })
             .defaultTo('USER')
             .comment('The permissions the user has access to');
         table
