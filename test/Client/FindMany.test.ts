@@ -321,7 +321,6 @@ describe('FindMany', () => {
                     expect.objectContaining({
                         team_id: ids.team1Id,
                         user_id: ids.user1Id,
-                        verified: 1,
                     }),
                 );
             });

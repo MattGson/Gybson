@@ -1,6 +1,6 @@
 {
     "name": "gybson",
-    "version": "0.6.4",
+    "version": "0.7.0",
     "description": "Generate a type-safe database client from a SQL database",
     "keywords": [
         "postgres",
@@ -18,7 +18,6 @@
         "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
         "test-pg": "DB=pg ts-node ./test/Setup/build-test-client.ts --transpile-only && DB=pg jest --runInBand",
         "test-mysql": "DB=mysql ts-node ./test/Setup/build-test-client.ts --transpile-only && DB=mysql jest --runInBand",
-        "test": "DB=pg npm run lint && DB=pg jest --runInBand",
         "prepare": "npm run build"
     },
     "bin": {

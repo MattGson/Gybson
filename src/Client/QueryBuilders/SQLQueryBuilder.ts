@@ -327,8 +327,8 @@ export abstract class SQLQueryBuilder<
             throw new Error('Insert: No values passed.');
         }
 
-        // TODO:- add or fake returning() to support postgres style result return
-        let query = knex()(this.tableName).insert(values).returning(this.primaryKey);
+        let query = knex()(this.tableName).insert(values);
+        if (engine() === 'pg') query.returning(this.primaryKey);
         if (connection) query.connection(connection);
         if (transact) query.transacting(transact);
 

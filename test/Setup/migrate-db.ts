@@ -8,7 +8,7 @@ export const migrateDb = async (knex: Knex, pg = false) => {
     await knex.schema.dropTableIfExists('users');
 
     if (pg) {
-        await knex.raw(`DROP TYPE IF EXISTS user_permissions`);
+        await knex.raw(`DROP TYPE IF EXISTS permissions`);
         await knex.raw(`DROP TYPE IF EXISTS subscription_level`);
     }
     // table with multiple enums
@@ -23,7 +23,7 @@ export const migrateDb = async (knex: Knex, pg = false) => {
         table.string('password', 200).notNullable();
         table.string('token', 200).unique();
         table
-            .enum('permissions', ['USER', 'ADMIN'], { useNative: true, enumName: 'user_permissions' })
+            .enum('permissions', ['USER', 'ADMIN'], { useNative: true, enumName: 'permissions' })
             .defaultTo('USER')
             .comment('The permissions the user has access to');
         table

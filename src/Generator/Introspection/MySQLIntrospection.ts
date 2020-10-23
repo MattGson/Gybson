@@ -119,7 +119,7 @@ export class MySQLIntrospection implements Introspection {
             enums[enumName] = {
                 columnName: enumItem.column_name,
                 enumName,
-                values: MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type),
+                values: MySQLIntrospection.parseMysqlEnumeration(enumItem.column_type).sort(),
             };
         });
         return enums;
@@ -190,7 +190,7 @@ export class MySQLIntrospection implements Introspection {
             constraintDefinitions.push({
                 constraintName: constraint_name,
                 constraintType: constraint_type,
-                columnNames: columns.map((c) => c.column_name),
+                columnNames: columns.map((c) => c.column_name).sort(),
             });
         });
         return constraintDefinitions;

@@ -128,7 +128,7 @@ export class PostgresIntrospection implements Introspection {
             const enumName = PostgresIntrospection.getEnumName(tableName, enum_name);
             enums[enumName] = {
                 enumName,
-                values: values.map((v) => v.value),
+                values: values.map((v) => v.value).sort(),
                 columnName: '', // TODO:- how to link to table? info schema udt_name ?
             };
         }
@@ -198,7 +198,7 @@ export class PostgresIntrospection implements Introspection {
             constraintDefinitions.push({
                 constraintName: constraint_name,
                 constraintType: constraint_type,
-                columnNames: columns.map((c) => c.column_name),
+                columnNames: columns.map((c) => c.column_name).sort(),
             });
         });
         return constraintDefinitions;
@@ -216,18 +216,21 @@ export class PostgresIntrospection implements Introspection {
             referenced_table_name: string;
             referenced_column_name: string;
         };
+
         const result: { rows: rowType[] } = await this.knex.raw(`
-            SELECT
-                tc.constraint_name, tc.table_name, kcu.column_name, 
-                ccu.table_name AS referenced_table_name,
-                ccu.column_name AS referenced_column_name 
-            FROM 
-                information_schema.table_constraints AS tc 
-            JOIN information_schema.key_column_usage AS kcu
-              ON tc.constraint_name = kcu.constraint_name
-            JOIN information_schema.constraint_column_usage AS ccu
-              ON ccu.constraint_name = tc.constraint_name
-            WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='${tableName}';
+            select c.constraint_name
+                , x.table_name
+                , x.column_name
+                , y.table_name as referenced_table_name
+                , y.column_name as referenced_column_name
+            from information_schema.referential_constraints c
+            join information_schema.key_column_usage x
+                on x.constraint_name = c.constraint_name
+            join information_schema.key_column_usage y
+                on y.ordinal_position = x.position_in_unique_constraint
+                and y.constraint_name = c.unique_constraint_name
+            WHERE x.table_name = '${tableName}'
+            order by c.constraint_name, x.ordinal_position
         `);
 
         // group by constraint name to capture multiple relations to same table
@@ -262,18 +265,21 @@ export class PostgresIntrospection implements Introspection {
             referenced_table_name: string;
             referenced_column_name: string;
         };
+
         const result: { rows: rowType[] } = await this.knex.raw(`
-            SELECT
-                tc.constraint_name, tc.table_name, kcu.column_name, 
-                ccu.table_name AS referenced_table_name,
-                ccu.column_name AS referenced_column_name 
-            FROM 
-                information_schema.table_constraints AS tc 
-            JOIN information_schema.key_column_usage AS kcu
-              ON tc.constraint_name = kcu.constraint_name
-            JOIN information_schema.constraint_column_usage AS ccu
-              ON ccu.constraint_name = tc.constraint_name
-            WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='${tableName}';
+            select c.constraint_name
+                , x.table_name
+                , x.column_name
+                , y.table_name as referenced_table_name
+                , y.column_name as referenced_column_name
+            from information_schema.referential_constraints c
+            join information_schema.key_column_usage x
+                on x.constraint_name = c.constraint_name
+            join information_schema.key_column_usage y
+                on y.ordinal_position = x.position_in_unique_constraint
+                and y.constraint_name = c.unique_constraint_name
+            WHERE y.table_name = '${tableName}'
+            order by c.constraint_name, x.ordinal_position
         `);
 
         // group by constraint name to capture multiple relations to same table

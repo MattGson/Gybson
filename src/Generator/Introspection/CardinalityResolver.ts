@@ -101,6 +101,6 @@ export class CardinalityResolver {
                 nonUnique = _.unionWith(nonUnique, [perm], _.isEqual);
             }
         }
-        return nonUnique.map((perm) => Array.from(perm));
+        return nonUnique.map((perm) => Array.from(perm).sort());
     }
 }

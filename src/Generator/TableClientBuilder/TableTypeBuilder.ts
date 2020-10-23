@@ -76,6 +76,7 @@ export class TableTypeBuilder {
                 .map(([name, def]) => {
                     return `export type ${name} = ${def.values.map((v) => `'${v}'`).join(' | ')}`;
                 })
+                .sort()
                 .join(';')}
         `;
     }

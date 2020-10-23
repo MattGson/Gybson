@@ -2,7 +2,8 @@ import { Introspection } from '../../../src/Generator/Introspection/Introspectio
 import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
 import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
-import { getIntrospection } from '../../Setup/test.env';
+import { DB, getIntrospection } from '../../Setup/test.env';
+import { itif } from '../../Setup/helpers';
 
 describe('TableSchemaBuilder', () => {
     let intro: Introspection;
@@ -62,7 +63,7 @@ describe('TableSchemaBuilder', () => {
 
                     expect(schema.keys).toIncludeAllMembers([
                         expect.objectContaining({
-                            columnNames: ['position', 'manager'],
+                            columnNames: ['manager', 'position'],
                             constraintType: 'UNIQUE',
                         }),
                     ]);
@@ -117,7 +118,7 @@ describe('TableSchemaBuilder', () => {
                     const schema2 = await schemaBuilder2.buildTableDefinition();
 
                     expect(schema2.uniqueKeyCombinations).toIncludeAllMembers([
-                        ['position', 'manager'],
+                        ['manager', 'position'],
                         ['team_id', 'user_id'],
                     ]);
                 });
@@ -138,10 +139,10 @@ describe('TableSchemaBuilder', () => {
                     expect(schema.nonUniqueKeyCombinations).toIncludeAllMembers([
                         ['team_id'],
                         ['user_id'],
-                        ['team_id', 'position'],
-                        ['user_id', 'position'],
-                        ['team_id', 'manager'],
-                        ['user_id', 'manager'],
+                        ['position', 'team_id'],
+                        ['position', 'user_id'],
+                        ['manager', 'team_id'],
+                        ['manager', 'user_id'],
                         ['position'],
                         ['manager'],
                     ]);
@@ -149,52 +150,89 @@ describe('TableSchemaBuilder', () => {
             });
         });
         describe('Columns', () => {
-            it('Gets the columns for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('users', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            itif(DB() === 'mysql')(
+                'Gets the columns for a table',
+                async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                // just smoke test as the introspection takes care of this
-                expect(schema.columns).toEqual(
-                    expect.objectContaining({
-                        user_id: {
-                            dbType: 'int',
-                            nullable: false,
-                            tsType: 'number',
-                            columnName: 'user_id',
-                            columnDefault: 'auto_increment',
-                        },
-                        permissions: {
-                            dbType: 'enum',
-                            nullable: true,
-                            tsType: 'users_permissions',
-                            columnName: 'permissions',
-                            columnDefault: 'USER',
-                        },
-                    }),
-                );
-            });
+                    // just smoke test as the introspection takes care of this
+                    expect(schema.columns).toEqual(
+                        expect.objectContaining({
+                            user_id: {
+                                dbType: 'int',
+                                nullable: false,
+                                tsType: 'number',
+                                columnName: 'user_id',
+                                columnDefault: 'auto_increment',
+                            },
+                        }),
+                    );
+                },
+            );
+            itif(DB() === 'pg')(
+                'Gets the columns for a table',
+                async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    // just smoke test as the introspection takes care of this
+                    expect(schema.columns).toEqual(
+                        expect.objectContaining({
+                            user_id: {
+                                dbType: 'int4',
+                                nullable: false,
+                                tsType: 'number',
+                                columnName: 'user_id',
+                                columnDefault: `nextval('users_user_id_seq'::regclass)`,
+                            },
+                        }),
+                    );
+                },
+            );
         });
         describe('Enums', () => {
-            it('Gets the enums for a table', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('users', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            itif(DB() == 'mysql')(
+                'Gets the enums for a table',
+                async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                // just smoke test as the introspection takes care of this
-                expect(schema.enums).toEqual(
-                    expect.objectContaining({
-                        users_permissions: {
-                            columnName: 'permissions',
-                            enumName: 'users_permissions',
-                            values: ['USER', 'ADMIN'],
-                        },
-                        users_subscription_level: {
-                            columnName: 'subscription_level',
-                            enumName: 'users_subscription_level',
-                            values: ['BRONZE', 'SILVER', 'GOLD'],
-                        },
-                    }),
-                );
-            });
+                    // just smoke test as the introspection takes care of this
+                    expect(schema.enums).toEqual(
+                        expect.objectContaining({
+                            users_permissions: {
+                                columnName: 'permissions',
+                                enumName: 'users_permissions',
+                                values: ['ADMIN', 'USER'],
+                            },
+                            users_subscription_level: {
+                                columnName: 'subscription_level',
+                                enumName: 'users_subscription_level',
+                                values: ['BRONZE', 'GOLD', 'SILVER'],
+                            },
+                        }),
+                    );
+                },
+            );
+            itif(DB() == 'pg')(
+                'Gets the enums for a table',
+                async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    // just smoke test as the introspection takes care of this
+                    expect(schema.enums).toEqual(
+                        expect.objectContaining({
+                            users_permissions: {
+                                columnName: '',
+                                enumName: 'users_permissions',
+                                values: ['ADMIN', 'USER'],
+                            },
+                        }),
+                    );
+                },
+            );
         });
         describe('Relations', () => {
             it('Forwards relations are aliased by column name with `id` stripped', async (): Promise<void> => {

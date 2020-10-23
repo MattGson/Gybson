@@ -85,8 +85,8 @@ import { team_membersRelationFilter } from './TeamMembers';
             const formatted = format(result, { parser: 'typescript', ...prettier });
 
             expect(formatted).toEqual(
-                `export type users_permissions = 'USER' | 'ADMIN';
-export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
+                `export type users_permissions = 'ADMIN' | 'USER';
+export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
 `,
             );
         });

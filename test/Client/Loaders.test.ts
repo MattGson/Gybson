@@ -94,21 +94,8 @@ describe('Loaders', () => {
                 }),
             );
         });
-        itif(DB() === 'pg')('Can load many from a compound non-unique key', async () => {
+        it('Can load many from a compound non-unique key', async () => {
             const member = await gybson.TeamMembers.manyByMemberPostIdAndTeamId({
-                team_id: ids.team1Id,
-                member_post_id: ids.post2Id,
-            });
-            expect(member).toContainEqual(
-                expect.objectContaining({
-                    user_id: ids.user1Id,
-                    team_id: ids.team1Id,
-                    member_post_id: ids.post2Id,
-                }),
-            );
-        });
-        itif(DB() === 'mysql')('Can load many from a compound non-unique key', async () => {
-            const member = await gybson.TeamMembers.manyByTeamIdAndMemberPostId({
                 team_id: ids.team1Id,
                 member_post_id: ids.post2Id,
             });
