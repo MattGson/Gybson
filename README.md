@@ -25,7 +25,7 @@ Gybson is built on top of trusted open-source projects:
  - [Knex](https://github.com/knex/knex)
  - [DataLoader](https://github.com/graphql/dataloader)
  
-Works with MySQL (PostgreSQL comming soon).
+Works with MySQL and PostgreSQL.
 
 Full docs [here](https://mattgson.github.io/Gybson/)
 

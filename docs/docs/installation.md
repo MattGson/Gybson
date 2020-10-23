@@ -28,7 +28,7 @@ We never recommend running the code gen against your production database. Instea
 
 Define a config file `gybson-config.json` in the root directory of your project.
 This file is only used for code-gen, not for connecting during run-time.
-Change the contents of the file to connect to your data-base.
+Change the contents of the file to connect to your database.
 
 The `outdir` option specifies where the Typescript files will be output.
 This should be inside of your project source so that the files are transpiled as part of your build.
@@ -68,7 +68,7 @@ import Gybson from 'gybson';
 Gybson.init({
     client: 'mysql',
     connection: {
-        database: 'komodo',
+        database: 'users',
         user: 'root',
         password: '',
     },
