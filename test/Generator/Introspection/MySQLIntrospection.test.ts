@@ -2,6 +2,7 @@ import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/b
 import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import 'jest-extended';
+import { getIntrospection } from '../../Setup/test.env';
 
 describe('MySQLIntrospection', () => {
     let intro: Introspection;
@@ -9,7 +10,7 @@ describe('MySQLIntrospection', () => {
     beforeAll(
         async (): Promise<void> => {
             await buildDBSchemas();
-            intro = new MySQLIntrospection(knex(), schemaName);
+            intro = getIntrospection(knex(), schemaName);
         },
     );
     afterAll(async () => {
@@ -62,35 +63,35 @@ describe('MySQLIntrospection', () => {
                 nullable: false,
                 tsType: 'number',
                 columnName: 'user_id',
-                columnDefault: 'auto_increment'
+                columnDefault: 'auto_increment',
             });
             expect(types['email']).toEqual({
                 dbType: 'varchar',
                 nullable: false,
                 tsType: 'string',
                 columnName: 'email',
-                columnDefault: null
+                columnDefault: null,
             });
             expect(types['first_name']).toEqual({
                 dbType: 'varchar',
                 nullable: true,
                 tsType: 'string',
                 columnName: 'first_name',
-                columnDefault: null
+                columnDefault: null,
             });
             expect(types['permissions']).toEqual({
                 dbType: 'enum',
                 nullable: true,
                 tsType: 'users_permissions',
                 columnName: 'permissions',
-                columnDefault: 'USER'
+                columnDefault: 'USER',
             });
             expect(types['deleted_at']).toEqual({
                 dbType: 'datetime',
                 nullable: true,
                 tsType: 'Date',
                 columnName: 'deleted_at',
-                columnDefault: null
+                columnDefault: null,
             });
         });
     });

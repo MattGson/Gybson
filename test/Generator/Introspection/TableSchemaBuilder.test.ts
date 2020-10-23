@@ -1,16 +1,15 @@
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
-import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
 import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
+import { getIntrospection } from '../../Setup/test.env';
 
 describe('TableSchemaBuilder', () => {
     let intro: Introspection;
     beforeAll(
         async (): Promise<void> => {
             await buildDBSchemas();
-            // TODO:- repeat all with different introspections
-            intro = new MySQLIntrospection(knex(), schemaName);
+            intro = getIntrospection(knex(), schemaName);
         },
     );
     afterAll(async () => {

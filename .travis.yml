@@ -22,5 +22,12 @@ before_install:
 
 script: npm run test
 
+jobs:
+  include:
+    - stage: test MySQL
+      script: npm run test-mysql
+    - stage: test PG
+      script: npm run test-pg
+
 notifications:
   email: false

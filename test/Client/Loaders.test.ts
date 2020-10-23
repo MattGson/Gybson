@@ -4,6 +4,7 @@ import gybsonRefresh, { Gybson } from '../Gen';
 import { seed, SeedIds, seedPost, seedUser } from '../Setup/seed';
 import { buildDBSchemas } from '../Setup/build-test-db';
 import { DB } from '../Setup/test.env';
+import { itif } from '../Setup/helpers';
 
 describe('Loaders', () => {
     let ids: SeedIds;
@@ -93,8 +94,21 @@ describe('Loaders', () => {
                 }),
             );
         });
-        it('Can load many from a compound non-unique key', async () => {
+        itif(DB() === 'pg')('Can load many from a compound non-unique key', async () => {
             const member = await gybson.TeamMembers.manyByMemberPostIdAndTeamId({
+                team_id: ids.team1Id,
+                member_post_id: ids.post2Id,
+            });
+            expect(member).toContainEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    team_id: ids.team1Id,
+                    member_post_id: ids.post2Id,
+                }),
+            );
+        });
+        itif(DB() === 'mysql')('Can load many from a compound non-unique key', async () => {
+            const member = await gybson.TeamMembers.manyByTeamIdAndMemberPostId({
                 team_id: ids.team1Id,
                 member_post_id: ids.post2Id,
             });
@@ -143,7 +157,27 @@ describe('Loaders', () => {
             const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id, includeDeleted: true });
             expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
-        it('Loads are case-insensitive on alphabetical keys', async () => {
+    });
+    describe('MySQL only', () => {
+        itif(DB() === 'mysql')('Loads are case-insensitive on alphabetical keys on single loaders', async () => {
+            console.log(DB());
+            await gybson.Users.update({
+                values: {
+                    email: 'Cased@gmail.com',
+                },
+                where: {
+                    user_id: ids.user1Id,
+                },
+            });
+            const user = await gybson.Users.oneByEmail({ email: 'cased@gmail.com' });
+            expect(user).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    email: 'Cased@gmail.com',
+                }),
+            );
+        });
+        itif(DB() === 'mysql')('Loads are case-insensitive on alphabetical keys on many loaders', async () => {
             await gybson.TeamMembersPositions.insert({
                 values: {
                     manager: 'CasedManager',
@@ -159,26 +193,5 @@ describe('Loaders', () => {
                 }),
             );
         });
-    });
-    describe('MySQL only', () => {
-        if (DB() === 'mysql') {
-            it('Loads are case-insensitive on alphabetical keys', async () => {
-                await gybson.Users.update({
-                    values: {
-                        email: 'Cased@gmail.com',
-                    },
-                    where: {
-                        user_id: ids.user1Id,
-                    },
-                });
-                const user = await gybson.Users.oneByEmail({ email: 'cased@gmail.com' });
-                expect(user).toEqual(
-                    expect.objectContaining({
-                        user_id: ids.user1Id,
-                        email: 'Cased@gmail.com',
-                    }),
-                );
-            });
-        }
     });
 });

@@ -1,15 +1,15 @@
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
-import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
 import 'jest-extended';
 import { BatchLoaderBuilder } from '../../../src/Generator/TableClientBuilder/BatchLoaderBuilder';
+import {getIntrospection} from "../../Setup/test.env";
 
 describe('BatchLoaderBuilder', () => {
     let intro: Introspection;
     beforeAll(
         async (): Promise<void> => {
             await buildDBSchemas();
-            intro = new MySQLIntrospection(knex(), schemaName);
+            intro = getIntrospection(knex(), schemaName);
         },
     );
     afterAll(async () => {

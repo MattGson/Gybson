@@ -1,6 +1,6 @@
 import * as Knex from 'knex';
 
-export const buildTestSchema = async (knex: Knex, pg = false) => {
+export const migrateDb = async (knex: Knex, pg = false) => {
     await knex.schema.dropTableIfExists('team_members_positions');
     await knex.schema.dropTableIfExists('team_members');
     await knex.schema.dropTableIfExists('teams');
@@ -8,8 +8,8 @@ export const buildTestSchema = async (knex: Knex, pg = false) => {
     await knex.schema.dropTableIfExists('users');
 
     if (pg) {
-        await knex.raw(`DROP TYPE user_permissions`);
-        await knex.raw(`DROP TYPE subscription_level`);
+        await knex.raw(`DROP TYPE IF EXISTS user_permissions`);
+        await knex.raw(`DROP TYPE IF EXISTS subscription_level`);
     }
     // table with multiple enums
     // with self-relation

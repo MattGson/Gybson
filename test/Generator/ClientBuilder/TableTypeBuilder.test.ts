@@ -1,19 +1,19 @@
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
-import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
 import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
 // @ts-ignore - no types for prettier
 import { format } from 'prettier';
 import { TableTypeBuilder } from '../../../src/Generator/TableClientBuilder/TableTypeBuilder';
 import { prettier } from '../../../src/Generator/config';
+import { getIntrospection } from '../../Setup/test.env';
 
 describe('TableTypeBuilder', () => {
     let intro: Introspection;
     beforeAll(
         async (): Promise<void> => {
             await buildDBSchemas();
-            intro = new MySQLIntrospection(knex(), schemaName);
+            intro = getIntrospection(knex(), schemaName);
         },
     );
     afterAll(async () => {

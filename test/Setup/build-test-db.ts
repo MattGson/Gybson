@@ -1,5 +1,5 @@
 import Knex from 'knex';
-import { buildTestSchema } from './build-test-schema';
+import { migrateDb } from './migrate-db';
 import { Connection } from '../../src/Generator/Introspection';
 import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
 import { Connection as MySQLConn } from 'promise-mysql';
@@ -45,12 +45,12 @@ export const closeConnection = async () => state.knex.destroy();
 export const buildDBSchemas = async (): Promise<Connection> => {
     if (DB() === 'pg') {
         state.knex = Knex(pgConnection);
-        await buildTestSchema(state.knex, true);
+        await migrateDb(state.knex, true);
         return pgConnection;
     }
     if (DB() === 'mysql') {
         state.knex = Knex(mysqlConnection);
-        await buildTestSchema(state.knex, false);
+        await migrateDb(state.knex, false);
         return mysqlConnection;
     }
     throw new Error('No db specified');
