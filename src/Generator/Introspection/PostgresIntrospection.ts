@@ -101,21 +101,25 @@ export class PostgresIntrospection implements Introspection {
     }
 
     // TODO:- need to support native enums and allowed values ideally
+    /**
+     * Get the enum types used by a table
+     * @param tableName
+     */
     public async getEnumTypesForTable(tableName: string): Promise<EnumDefinitions> {
         type rowType = {
             enum_name: string;
             value: string;
             oid: number;
         };
-        const rowsq = this.knex('pg_type')
-            .join('pg_enum e', 't.oid', '=', 'e.enumtypid')
-            .join('pg_catalog.pg_namespace n', 'n.oid', '=', 't.typnamespace')
-            .select('t.typname as enum_name', 'e.enumlabel as value', 't.oid');
-            // .where('n.nspname', '=', this.schemaName);
+        const result = await this.knex.raw(`
+            select t.typname as enum_name, e.enumlabel as value, t.oid 
+            from pg_type t
+            inner join pg_enum e ON (t.oid = e.enumtypid) 
+            inner join pg_catalog.pg_namespace n ON (n.oid = t.typnamespace) 
+            where n.nspname = '${this.schemaName}';
+        `);
 
-        console.log(rowsq.toSQL().sql);
-
-        const rows: rowType[] = await rowsq;
+        const rows: rowType[] = result.rows;
         const enumRows = _.groupBy(rows, (r) => r.oid);
 
         let enums: EnumDefinitions = {};
@@ -128,7 +132,6 @@ export class PostgresIntrospection implements Introspection {
                 columnName: '', // TODO:- how to link to table? info schema udt_name ?
             };
         }
-
         return enums;
     }
 
@@ -206,13 +209,30 @@ export class PostgresIntrospection implements Introspection {
      * @param tableName
      */
     public async getForwardRelations(tableName: string): Promise<RelationDefinition[]> {
-        const rows = await this.knex('information_schema.key_column_usage')
-            .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
-            .where({ table_name: tableName, table_schema: this.schemaName });
+        type rowType = {
+            constraint_name: string;
+            table_name: string;
+            column_name: string;
+            referenced_table_name: string;
+            referenced_column_name: string;
+        };
+        const result: { rows: rowType[] } = await this.knex.raw(`
+            SELECT
+                tc.constraint_name, tc.table_name, kcu.column_name, 
+                ccu.table_name AS referenced_table_name,
+                ccu.column_name AS referenced_column_name 
+            FROM 
+                information_schema.table_constraints AS tc 
+            JOIN information_schema.key_column_usage AS kcu
+              ON tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.constraint_column_usage AS ccu
+              ON ccu.constraint_name = tc.constraint_name
+            WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='${tableName}';
+        `);
 
         // group by constraint name to capture multiple relations to same table
         let relations: { [constraintName: string]: RelationDefinition } = {};
-        rows.forEach((row) => {
+        result.rows.forEach((row) => {
             const { column_name, referenced_table_name, referenced_column_name, constraint_name } = row;
             if (referenced_table_name == null || referenced_column_name == null) return;
 
@@ -235,13 +255,30 @@ export class PostgresIntrospection implements Introspection {
      * @param tableName
      */
     public async getBackwardRelations(tableName: string): Promise<RelationDefinition[]> {
-        const rows = await this.knex('information_schema.key_column_usage')
-            .select('table_name', 'column_name', 'constraint_name', 'referenced_table_name', 'referenced_column_name')
-            .where({ referenced_table_name: tableName, table_schema: this.schemaName });
+        type rowType = {
+            constraint_name: string;
+            table_name: string;
+            column_name: string;
+            referenced_table_name: string;
+            referenced_column_name: string;
+        };
+        const result: { rows: rowType[] } = await this.knex.raw(`
+            SELECT
+                tc.constraint_name, tc.table_name, kcu.column_name, 
+                ccu.table_name AS referenced_table_name,
+                ccu.column_name AS referenced_column_name 
+            FROM 
+                information_schema.table_constraints AS tc 
+            JOIN information_schema.key_column_usage AS kcu
+              ON tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.constraint_column_usage AS ccu
+              ON ccu.constraint_name = tc.constraint_name
+            WHERE constraint_type = 'FOREIGN KEY' AND ccu.table_name='${tableName}';
+        `);
 
         // group by constraint name to capture multiple relations to same table
         let relations: { [constraintName: string]: RelationDefinition } = {};
-        rows.forEach((row) => {
+        result.rows.forEach((row) => {
             const { column_name, table_name, referenced_column_name, constraint_name } = row;
             if (table_name == null || column_name == null) return;
 
@@ -263,14 +300,11 @@ export class PostgresIntrospection implements Introspection {
      * Get a list of all table names in schema
      */
     public async getSchemaTables(): Promise<string[]> {
-        const schemaTables = this.knex('information_schema.columns')
+        const schemaTables = await this.knex('information_schema.columns')
             .select('table_name')
             .where({ table_schema: this.schemaName })
             .groupBy('table_name');
 
-        console.log(schemaTables.toSQL().sql);
-
-        const t = await schemaTables;
-        return t.map((schemaItem: { table_name: string }) => schemaItem.table_name);
+        return schemaTables.map((schemaItem: { table_name: string }) => schemaItem.table_name);
     }
 }

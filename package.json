@@ -16,8 +16,9 @@
         "lint": "eslint ./src",
         "build": "tsc",
         "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
-        "test-generate": "ts-node test/Setup/build-test-client.ts --transpile-only",
-        "test": "npm run test-generate && npm run lint && jest --runInBand",
+        "test-gen-pg": "DB=pg ts-node ./test/Setup/build-test-client.ts --transpile-only",
+        "test-gen-mysql": "DB=mysql ts-node ./test/Setup/build-test-client.ts --transpile-only",
+        "test": "DB=pg npm run lint && DB=pg jest --runInBand",
         "prepare": "npm run build"
     },
     "bin": {

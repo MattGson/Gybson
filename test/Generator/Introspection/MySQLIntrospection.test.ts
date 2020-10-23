@@ -1,4 +1,4 @@
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
+import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
 import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import 'jest-extended';
@@ -8,7 +8,7 @@ describe('MySQLIntrospection', () => {
 
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
+            await buildDBSchemas();
             intro = new MySQLIntrospection(knex(), schemaName);
         },
     );

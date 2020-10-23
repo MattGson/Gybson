@@ -1,9 +1,11 @@
 import Knex = require('knex');
 import { attachOnDuplicateUpdate } from './lib/knex.duplicate.key';
+import { attachOnConflictUpdate } from './lib/knex.conflict';
 import { buildLogger, LogLevel } from './lib/logging';
 import { ConnectionOptions } from 'tls';
 
 attachOnDuplicateUpdate();
+attachOnConflictUpdate();
 
 //
 // INTERNAL USE
@@ -11,14 +13,17 @@ attachOnDuplicateUpdate();
 export { SQLQueryBuilder } from './QueryBuilders/SQLQueryBuilder';
 export * from '../TypeTruth/TypeTruth';
 
-const state: { knex: Knex<any, unknown[]> | undefined } = {
+const state: { knex: Knex<any, unknown[]> | undefined; engine: 'pg' | 'mysql' } = {
     knex: undefined,
+    engine: 'pg',
 };
 
 export const knex = () => {
     if (!state.knex) throw new Error('Gybson must be configured with a knex instance');
     return state.knex;
 };
+
+export const engine = () => state.engine;
 
 //
 // EXTERNAL USE
@@ -70,7 +75,7 @@ export interface PostgresConnection {
 }
 
 const init = (config: {
-    client: 'mysql' | 'postgres';
+    client: 'mysql' | 'pg';
     connection?: MYSQLConnection | PostgresConnection;
     options?: GybsonConfig;
 }) => {
@@ -83,6 +88,7 @@ const init = (config: {
         client: config.client,
         connection: config.connection,
     });
+    state.engine = config.client;
     logger.info('Initialising Gybson...');
 };
 

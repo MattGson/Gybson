@@ -3,6 +3,7 @@ import { buildTestSchema } from './build-test-schema';
 import { Connection } from '../../src/Generator/Introspection';
 import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
 import { Connection as MySQLConn } from 'promise-mysql';
+import { DB } from './test.env';
 type PoolConnection = PGConn | MySQLConn;
 
 export const schemaName = 'gybson_test';
@@ -23,7 +24,7 @@ export const pgConnection: Connection = {
     connection: {
         host: 'localhost',
         port: 5432,
-        user: 'mattgoodson',
+        user: 'postgres',
         password: '',
         database: schemaName,
     },
@@ -41,10 +42,16 @@ export const closePoolConnection = async (connection: PoolConnection) =>
 export const knex = (): Knex => state.knex;
 export const closeConnection = async () => state.knex.destroy();
 
-export const buildDBSchemas = async () => {
-    const mysqlKnex = Knex(mysqlConnection);
-    const pgKnex = Knex(pgConnection);
-    state.knex = mysqlKnex;
-    await buildTestSchema(mysqlKnex);
-    await buildTestSchema(pgKnex, true);
+export const buildDBSchemas = async (): Promise<Connection> => {
+    if (DB() === 'pg') {
+        state.knex = Knex(pgConnection);
+        await buildTestSchema(state.knex, true);
+        return pgConnection;
+    }
+    if (DB() === 'mysql') {
+        state.knex = Knex(mysqlConnection);
+        await buildTestSchema(state.knex, false);
+        return mysqlConnection;
+    }
+    throw new Error('No db specified');
 };

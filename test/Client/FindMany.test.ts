@@ -1,15 +1,17 @@
-import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
+import { closeConnection } from '../Setup/build-test-db';
 import gybInit, { LogLevel } from '../../src/Client';
 import gybsonRefresh, { Gybson } from '../Gen';
 import { seed, SeedIds, seedPost, seedUser } from '../Setup/seed';
 import 'jest-extended';
+import { buildDBSchemas } from '../Setup/build-test-db';
 
 describe('FindMany', () => {
     let ids: SeedIds;
     let gybson: Gybson;
+    let connection;
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
+            connection = await buildDBSchemas();
             await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
         },
     );

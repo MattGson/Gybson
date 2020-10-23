@@ -1,11 +1,12 @@
-import { buildMySQLSchema, closeConnection } from '../Setup/buildMySQL';
+import { closeConnection } from '../Setup/build-test-db';
 
 import Gybson from '../../src/Client';
+import { buildDBSchemas } from '../Setup/build-test-db';
 
 describe('Connect', () => {
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
+            await buildDBSchemas();
         },
     );
     afterAll(async () => {

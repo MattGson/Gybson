@@ -1,5 +1,5 @@
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
+import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
 import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
 import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
@@ -12,7 +12,7 @@ describe('TableTypeBuilder', () => {
     let intro: Introspection;
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
+            await buildDBSchemas();
             intro = new MySQLIntrospection(knex(), schemaName);
         },
     );

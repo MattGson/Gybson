@@ -1,21 +1,21 @@
 import { seed, SeedIds } from '../Setup/seed';
 import gybsonRefresh, { Gybson } from '../Gen';
 import {
-    buildMySQLSchema,
+    buildDBSchemas,
     closeConnection,
     closePoolConnection,
-    connection,
     getPoolConnection,
-} from '../Setup/buildMySQL';
+} from '../Setup/build-test-db';
 import gybInit, { LogLevel } from '../../src/Client';
 import 'jest-extended';
 
 describe('Upsert', () => {
     let ids: SeedIds;
     let gybson: Gybson;
+    let connection;
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
+            connection = await buildDBSchemas();
             await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
         },
     );
