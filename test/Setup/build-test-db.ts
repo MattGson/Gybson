@@ -1,5 +1,5 @@
 import Knex from 'knex';
-import { buildSchema } from './buildSchema';
+import { buildTestSchema } from './build-test-schema';
 import { Connection } from '../../src/Generator/Introspection';
 import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
 import { Connection as MySQLConn } from 'promise-mysql';
@@ -19,13 +19,13 @@ export const mysqlConnection: Connection = {
 };
 
 export const pgConnection: Connection = {
-    client: 'postgres',
+    client: 'pg',
     connection: {
         host: 'localhost',
         port: 5432,
         user: 'mattgoodson',
         password: '',
-        database: 'mattgoodson',
+        database: schemaName,
     },
 };
 
@@ -35,7 +35,8 @@ const state: any = {
 
 // helpers for testing manual connection handling
 export const getPoolConnection = async () => state.knex.client.acquireConnection();
-export const closePoolConnection = async (connection: PoolConnection) => state.knex.client.releaseConnection(connection);
+export const closePoolConnection = async (connection: PoolConnection) =>
+    state.knex.client.releaseConnection(connection);
 
 export const knex = (): Knex => state.knex;
 export const closeConnection = async () => state.knex.destroy();
@@ -44,6 +45,6 @@ export const buildDBSchemas = async () => {
     const mysqlKnex = Knex(mysqlConnection);
     const pgKnex = Knex(pgConnection);
     state.knex = mysqlKnex;
-    await buildSchema(mysqlKnex);
-    await buildSchema(pgKnex);
+    await buildTestSchema(mysqlKnex);
+    await buildTestSchema(pgKnex, true);
 };
