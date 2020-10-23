@@ -8,8 +8,8 @@ import { usage } from 'yargs';
 import path from 'path';
 import { generate } from '../index';
 
-type client = 'mysql' | 'postgres';
-const clients: ReadonlyArray<client> = ['mysql', 'postgres'];
+type client = 'mysql' | 'pg';
+const clients: ReadonlyArray<client> = ['mysql', 'pg'];
 
 const args = usage('Usage: $0 <command> [options]')
     .options({
