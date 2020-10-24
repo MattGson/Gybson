@@ -277,9 +277,9 @@ await gybson.Users.update({
 
 A soft-delete allows you to treat a row as deleted while maintaining it for record-keeping or recovery purposes.
 
-By default any tables with a column `deleted` support soft deletes. You can configure a custom name for soft-delete columns in `gybson-config.json`
+By default any tables with a column `deleted` or `deleted_at` support soft deletes.
 
-`softDelete` will set the `deleted` column to true and cause the row to be filtered from future queries.
+`softDelete` will set the `deleted` column to true or the current timestamp and cause the row to be filtered from future queries.
 
 `softDelete` supports all [where](where) filter options.
 
