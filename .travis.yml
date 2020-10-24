@@ -3,24 +3,26 @@ os: linux
 
 language: node_js
 node_js:
-  - "10"
-  - "12"
-  - "14"
+    - '10'
+    - '12'
+    - '14'
 
 env:
-  global:
-    - VAR=val
+    global:
+        - VAR=val
 
 services:
-  - postgresql
-  - mysql
+    - postgresql
+    - mysql
 
 before_install:
-  - mysql -e 'SET PASSWORD FOR "root"@"localhost" = PASSWORD("");' -uroot
-  - mysql -e "create database gybson_test"
-  - psql -c 'create database travis_ci_test;' -U postgres
+    - mysql -e 'SET PASSWORD FOR "root"@"localhost" = PASSWORD("");' -uroot
+    - mysql -e "create database gybson_test"
+    - psql -c 'create database gybson_test;' -U postgres
 
-script: npm run test
+script:
+    - npm run test-mysql
+    - npm run test-pg
 
 notifications:
-  email: false
+    email: false

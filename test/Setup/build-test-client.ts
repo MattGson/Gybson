@@ -1,12 +1,12 @@
 import { generate } from '../../src/Generator';
-import { buildMySQLSchema, closeConnection, connection } from './buildMySQL';
+import { buildDBSchemas, closeConnection } from './build-test-db';
 import path from 'path';
 
 const out = path.join(__dirname, '../Gen');
 const lib = path.join('../../src/Client');
 
 // build a db and gybson client for testing
-buildMySQLSchema()
+buildDBSchemas()
+    .then((connection) => generate(connection, out, lib))
     .then(() => closeConnection())
-    .then(() => generate(connection, out, lib))
     .catch((e) => console.log(e));

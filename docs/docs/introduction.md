@@ -29,13 +29,7 @@ Gybson is built on top of trusted open-source projects:
  - [Knex](https://github.com/knex/knex)
  - [DataLoader](https://github.com/graphql/dataloader)
  
-Gybson is designed to work with MySQL and PostgreSQL databases.
-
-:::note
-
-PostgreSQL support is currently in progress!
-
-:::
+Gybson works with MySQL and PostgreSQL databases.
 
 ## Why Gybson?
 
@@ -87,10 +81,6 @@ Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood t
 ### SQL developer friendly
 
 Gybson uses standard SQL terms where possible and offers a flexible query API including `filtering on relations`.
-
-### Native support for soft-deletes
-
-Managing soft deletes [is hard](https://medium.com/galvanize/soft-deletion-is-actually-pretty-hard-cb434e24825c) but is a vital part of many apps. Gybson has native support for soft-deletes.
 
 ## A simple example
 

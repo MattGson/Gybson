@@ -1,10 +1,10 @@
-import { ColumnDefinition, Comparable, DatabaseSchema, knex } from '../index';
+import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
 import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
-import { Transaction } from 'knex';
-import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
+import { QueryBuilder, Transaction } from 'knex';
+import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
 type Connection = PGConn | MySQLConn;
 
@@ -15,7 +15,7 @@ export abstract class SQLQueryBuilder<
     TblOrderBy extends OrderBy,
     TblPaginate extends Paginate,
     RequiredTblRow,
-    PartialTblRow = Partial<TblRow>,
+    PartialTblRow = Partial<TblRow>
 > {
     private readonly tableName: string;
     private readonly tableAlias: string;
@@ -25,6 +25,10 @@ export abstract class SQLQueryBuilder<
         this.tableName = params.tableName;
         this.schema = params.schema;
         this.tableAlias = `${this.tableName}_q_root`;
+    }
+
+    private get primaryKey(): string[] {
+        return this.schema[this.tableName].primaryKey?.columnNames || [];
     }
 
     private get aliasedTable(): string {
@@ -277,17 +281,26 @@ export abstract class SQLQueryBuilder<
         // Outputs:
         //    insert into `coords` (`x`, `y`) values (20, DEFAULT), (DEFAULT, 30), (10, 20)
         // Note that we are passing a custom connection:
-        //    This connection MUST be added last to work with the duplicateUpdateExtension
-        const query = knex()(this.tableName)
-            .insert(insertRows)
-            .onDuplicateUpdate(...columnsToUpdate);
+        //    This connection MUST be added last to work with the duplicateUpdate Extensions
+
+        let query: QueryBuilder;
+        if (engine() === 'pg') {
+            query = knex()(this.tableName)
+                .insert(insertRows)
+                .onConflictUpdate(this.primaryKey, ...columnsToUpdate);
+        } else {
+            query = knex()(this.tableName)
+                .insert(insertRows)
+                .onDuplicateUpdate(...columnsToUpdate);
+        }
 
         if (connection) query.connection(connection);
         if (transact) query.transacting(transact);
 
         logger().debug('Executing upsert: %s with values: %j', query.toSQL().sql, insertRows);
-        const result = await query;
+        const result: any = await query;
 
+        if (engine() == 'pg') return Object.values(result.rows[0])[0] as number;
         return result[0].insertId;
     }
 
@@ -314,14 +327,16 @@ export abstract class SQLQueryBuilder<
             throw new Error('Insert: No values passed.');
         }
 
-        // TODO:- add or fake returning() to support postgres style result return
         let query = knex()(this.tableName).insert(values);
+        if (engine() === 'pg') query.returning(this.primaryKey);
         if (connection) query.connection(connection);
         if (transact) query.transacting(transact);
 
         logger().debug('Executing insert: %s with values: %j', query.toSQL().sql, values);
         const result = await query;
         // seems to return 0 for non-auto-increment inserts
+
+        if (engine() === 'pg') return Object.values(result[0])[0] as number;
         return result[0];
     }
 
@@ -338,10 +353,11 @@ export abstract class SQLQueryBuilder<
         const query = knex()(this.aliasedTable);
 
         // support both soft delete types
-        const colAlias = this.aliasedSoftDeleteColumn;
+        // Note, cannot use alias on update due to PG
+        const colAlias = this.softDeleteColumn!.columnName;
         const type = this.softDeleteColumn?.tsType;
-        if (type === Comparable.Date) query.update({ [colAlias!]: new Date() });
-        if (type === Comparable.boolean) query.update({ [colAlias!]: true });
+        if (type === Comparable.Date) query.update({ [colAlias]: new Date() });
+        if (type === Comparable.boolean) query.update({ [colAlias]: true });
 
         WhereResolver.resolveWhereClause({
             queryBuilder: query,
@@ -403,9 +419,9 @@ export abstract class SQLQueryBuilder<
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
         // @ts-ignore - PartialTblRow extends object
-        const aliasedValues = _.mapKeys(values, (_val, col: string) => this.aliasedColumn(col));
+        // Note cannot use col aliases as PG does not support on update
 
-        const query = knex()(this.aliasedTable).update(aliasedValues);
+        const query = knex()(this.aliasedTable).update(values);
         WhereResolver.resolveWhereClause({
             queryBuilder: query,
             where,

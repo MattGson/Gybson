@@ -1,12 +1,16 @@
 import * as Knex from 'knex';
 
-export const buildSchema = async (knex: Knex) => {
+export const migrateDb = async (knex: Knex, pg = false) => {
     await knex.schema.dropTableIfExists('team_members_positions');
     await knex.schema.dropTableIfExists('team_members');
     await knex.schema.dropTableIfExists('teams');
     await knex.schema.dropTableIfExists('posts');
     await knex.schema.dropTableIfExists('users');
 
+    if (pg) {
+        await knex.raw(`DROP TYPE IF EXISTS permissions`);
+        await knex.raw(`DROP TYPE IF EXISTS subscription_level`);
+    }
     // table with multiple enums
     // with self-relation
     // with unique keys
@@ -19,11 +23,14 @@ export const buildSchema = async (knex: Knex) => {
         table.string('password', 200).notNullable();
         table.string('token', 200).unique();
         table
-            .enum('permissions', ['USER', 'ADMIN'])
+            .enum('permissions', ['USER', 'ADMIN'], { useNative: true, enumName: 'permissions' })
             .defaultTo('USER')
             .comment('The permissions the user has access to');
         table
-            .enum('subscription_level', ['BRONZE', 'SILVER', 'GOLD'])
+            .enum('subscription_level', ['BRONZE', 'SILVER', 'GOLD'], {
+                useNative: true,
+                enumName: 'subscription_level',
+            })
             .comment('The package subscription the user has purchased');
         table.dateTime('deleted_at');
 

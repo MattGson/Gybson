@@ -1,15 +1,15 @@
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
-import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
+import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
 import { CardinalityResolver } from '../../../src/Generator/Introspection/CardinalityResolver';
 import 'jest-extended';
+import { getIntrospection } from '../../Setup/test.env';
 
 describe('CardinalityResolver', () => {
     let intro: Introspection;
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
-            intro = new MySQLIntrospection(knex(), schemaName);
+            await buildDBSchemas();
+            intro = getIntrospection(knex(), schemaName);
         },
     );
     afterAll(async () => {
@@ -41,14 +41,14 @@ describe('CardinalityResolver', () => {
             const keys = await intro.getTableConstraints('team_members_positions');
             const unique = CardinalityResolver.uniqueConstraints(keys);
             expect(unique).toHaveLength(1);
-            expect(unique).toIncludeAllMembers([expect.objectContaining({ columnNames: ['position', 'manager'] })]);
+            expect(unique).toIncludeAllMembers([expect.objectContaining({ columnNames: ['manager', 'position'] })]);
         });
     });
     describe('getUniqueKeyCombinations', () => {
         it('Returns the UNIQUE key constraints', async () => {
             const keys = await intro.getTableConstraints('team_members_positions');
             const combos = CardinalityResolver.getUniqueKeyCombinations(keys);
-            expect(combos).toIncludeAllMembers([['position', 'manager']]);
+            expect(combos).toIncludeAllMembers([['manager', 'position']]);
         });
         it('Returns a primary key', async () => {
             const keys = await intro.getTableConstraints('users');
@@ -78,8 +78,8 @@ describe('CardinalityResolver', () => {
             const keys = await intro.getTableConstraints('team_members');
             const combos = CardinalityResolver.getNonUniqueKeyCombinations(keys);
             expect(combos).toIncludeAllMembers([
-                ['team_id', 'member_post_id'],
-                ['user_id', 'member_post_id'],
+                ['member_post_id', 'team_id'],
+                ['member_post_id', 'user_id'],
             ]);
         });
     });

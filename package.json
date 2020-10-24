@@ -1,6 +1,6 @@
 {
     "name": "gybson",
-    "version": "0.6.4",
+    "version": "0.7.0",
     "description": "Generate a type-safe database client from a SQL database",
     "keywords": [
         "postgres",
@@ -16,8 +16,8 @@
         "lint": "eslint ./src",
         "build": "tsc",
         "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
-        "test-generate": "ts-node test/Setup/build-test-client.ts --transpile-only",
-        "test": "npm run test-generate && npm run lint && jest --runInBand",
+        "test-pg": "DB=pg ts-node ./test/Setup/build-test-client.ts --transpile-only && DB=pg jest --runInBand",
+        "test-mysql": "DB=mysql ts-node ./test/Setup/build-test-client.ts --transpile-only && DB=mysql jest --runInBand",
         "prepare": "npm run build"
     },
     "bin": {
@@ -37,6 +37,7 @@
         "@types/fs-extra": "^9.0.1",
         "@types/jest": "^26.0.7",
         "@types/lodash": "^4.14.157",
+        "@types/pg": "^7.14.5",
         "@types/url-parse": "^1.4.3",
         "@types/yargs": "^15.0.5",
         "@typescript-eslint/eslint-plugin": "^1.5.0",
@@ -56,7 +57,7 @@
         "fs-extra": "^9.0.1",
         "knex": "^0.21.2",
         "lodash": "^4.17.19",
-        "pg-promise": "^6.3.6",
+        "pg": "^8.4.1",
         "prettier": "^2.0.5",
         "promise-mysql": "^4.1.3",
         "typescript": "^3.8.1",

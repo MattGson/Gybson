@@ -3,9 +3,10 @@ import { Introspection } from './IntrospectionTypes';
 import { MySQLIntrospection } from './MySQLIntrospection';
 import { TableSchemaBuilder } from './TableSchemaBuilder';
 import { DatabaseSchema } from '../../TypeTruth/TypeTruth';
+import { PostgresIntrospection } from './PostgresIntrospection';
 
 export interface Connection {
-    client: 'mysql' | 'postgres';
+    client: 'mysql' | 'pg';
     connection: {
         host: string;
         port: number;
@@ -13,6 +14,10 @@ export interface Connection {
         password: string;
         database: string;
         multipleStatements?: boolean;
+    };
+    pool?: {
+        min: number;
+        max: number;
     };
 }
 
@@ -30,7 +35,7 @@ export const introspectSchema = async (params: { conn: Connection }): Promise<Da
     if (conn.client === 'mysql') {
         DB = new MySQLIntrospection(knex, conn.connection.database);
     } else {
-        throw new Error('PostgreSQL not currently supported');
+        DB = new PostgresIntrospection(knex);
     }
 
     const schema: DatabaseSchema = {};

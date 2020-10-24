@@ -1,21 +1,17 @@
-import {seed, SeedIds} from '../Setup/seed';
-import gybsonRefresh, {Gybson} from '../Gen';
-import {
-    buildMySQLSchema,
-    closeConnection,
-    closePoolConnection,
-    connection,
-    getPoolConnection
-} from '../Setup/buildMySQL';
-import gybInit, {LogLevel} from '../../src/Client';
+import { seed, SeedIds } from '../Setup/seed';
+import gybsonRefresh, { Gybson } from '../Gen';
+import { buildDBSchemas, closeConnection, closePoolConnection, getPoolConnection } from '../Setup/build-test-db';
+import gybInit, { LogLevel } from '../../src/Client';
 import 'jest-extended';
+import { Connection } from '../../src/Generator/Introspection';
 
 describe('Insert', () => {
     let ids: SeedIds;
     let gybson: Gybson;
+    let connection: Connection;
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
+            connection = await buildDBSchemas();
             await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
         },
     );

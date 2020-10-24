@@ -1,19 +1,19 @@
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
-import { buildMySQLSchema, closeConnection, knex, schemaName } from '../../Setup/buildMySQL';
-import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
+import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
 import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
 import 'jest-extended';
 // @ts-ignore - no types for prettier
 import { format } from 'prettier';
 import { TableTypeBuilder } from '../../../src/Generator/TableClientBuilder/TableTypeBuilder';
 import { prettier } from '../../../src/Generator/config';
+import { getIntrospection } from '../../Setup/test.env';
 
 describe('TableTypeBuilder', () => {
     let intro: Introspection;
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
-            intro = new MySQLIntrospection(knex(), schemaName);
+            await buildDBSchemas();
+            intro = getIntrospection(knex(), schemaName);
         },
     );
     afterAll(async () => {
@@ -85,8 +85,8 @@ import { team_membersRelationFilter } from './TeamMembers';
             const formatted = format(result, { parser: 'typescript', ...prettier });
 
             expect(formatted).toEqual(
-                `export type users_permissions = 'USER' | 'ADMIN';
-export type users_subscription_level = 'BRONZE' | 'SILVER' | 'GOLD';
+                `export type users_permissions = 'ADMIN' | 'USER';
+export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
 `,
             );
         });

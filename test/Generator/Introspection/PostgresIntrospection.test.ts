@@ -1,17 +1,17 @@
-import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
-import { MySQLIntrospection } from '../../../src/Generator/Introspection/MySQLIntrospection';
+import { buildDBSchemas, closeConnection, knex } from '../../Setup/build-test-db';
 import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
 import 'jest-extended';
+import { PostgresIntrospection } from '../../../src/Generator/Introspection/PostgresIntrospection';
 import { describeif } from '../../Setup/helpers';
 import { DB } from '../../Setup/test.env';
 
-describeif(DB() === 'mysql')('MySQLIntrospection', () => {
+describeif(DB() === 'pg')('PostgresIntrospection', () => {
     let intro: Introspection;
 
     beforeAll(
         async (): Promise<void> => {
             await buildDBSchemas();
-            intro = new MySQLIntrospection(knex(), schemaName);
+            intro = new PostgresIntrospection(knex());
         },
     );
     afterAll(async () => {
@@ -37,12 +37,12 @@ describeif(DB() === 'mysql')('MySQLIntrospection', () => {
             const enums = await intro.getEnumTypesForTable('users');
             expect(Object.values(enums)).toIncludeAllMembers([
                 {
-                    columnName: 'permissions',
+                    columnName: '',
                     enumName: 'users_permissions',
                     values: ['ADMIN', 'USER'],
                 },
                 {
-                    columnName: 'subscription_level',
+                    columnName: '',
                     enumName: 'users_subscription_level',
                     values: ['BRONZE', 'GOLD', 'SILVER'],
                 },
@@ -60,11 +60,11 @@ describeif(DB() === 'mysql')('MySQLIntrospection', () => {
             const types = await intro.getTableTypes('users', enums);
 
             expect(types['user_id']).toEqual({
-                dbType: 'int',
+                dbType: 'int4',
                 nullable: false,
                 tsType: 'number',
                 columnName: 'user_id',
-                columnDefault: 'auto_increment',
+                columnDefault: `nextval('users_user_id_seq'::regclass)`,
             });
             expect(types['email']).toEqual({
                 dbType: 'varchar',
@@ -81,14 +81,14 @@ describeif(DB() === 'mysql')('MySQLIntrospection', () => {
                 columnDefault: null,
             });
             expect(types['permissions']).toEqual({
-                dbType: 'enum',
+                dbType: 'permissions',
                 nullable: true,
                 tsType: 'users_permissions',
                 columnName: 'permissions',
-                columnDefault: 'USER',
+                columnDefault: `'USER'::permissions`,
             });
             expect(types['deleted_at']).toEqual({
-                dbType: 'datetime',
+                dbType: 'timestamptz',
                 nullable: true,
                 tsType: 'Date',
                 columnName: 'deleted_at',
@@ -102,7 +102,7 @@ describeif(DB() === 'mysql')('MySQLIntrospection', () => {
             expect(userKeys).toIncludeAllMembers([
                 expect.objectContaining({
                     columnNames: ['user_id'],
-                    constraintName: 'PRIMARY',
+                    constraintName: 'users_pkey',
                     constraintType: 'PRIMARY KEY',
                 }),
             ]);
@@ -111,7 +111,7 @@ describeif(DB() === 'mysql')('MySQLIntrospection', () => {
             expect(teamMemberKeys).toIncludeAllMembers([
                 expect.objectContaining({
                     columnNames: ['team_id', 'user_id'],
-                    constraintName: 'PRIMARY',
+                    constraintName: 'team_members_pkey',
                     constraintType: 'PRIMARY KEY',
                 }),
             ]);

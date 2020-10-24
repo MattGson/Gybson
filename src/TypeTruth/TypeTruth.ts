@@ -12,6 +12,11 @@ export enum Comparable {
 export enum NonComparable {
     Object = 'Object',
     Array = 'Array',
+    ArrayStr = 'Array<string>',
+    ArrayBool = 'Array<boolean>',
+    ArrayNum = 'Array<number>',
+    ArrayObj = 'Array<Object>',
+    ArrayDate = 'Array<Date>',
     Buffer = 'Buffer',
     any = 'any',
 }

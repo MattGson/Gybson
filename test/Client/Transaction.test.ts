@@ -1,16 +1,18 @@
 import { seed, SeedIds } from '../Setup/seed';
 import gybsonRefresh, { Gybson } from '../Gen';
-import { buildMySQLSchema, closeConnection, connection } from '../Setup/buildMySQL';
+import { closeConnection } from '../Setup/build-test-db';
 import gybInit, { LogLevel, transaction } from '../../src/Client';
 import faker from 'faker';
 import { Transaction } from 'knex';
+import { buildDBSchemas } from '../Setup/build-test-db';
 
 describe('Transaction', () => {
     let ids: SeedIds;
     let gybson: Gybson;
+    let connection;
     beforeAll(
         async (): Promise<void> => {
-            await buildMySQLSchema();
+            connection = await buildDBSchemas();
             await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
         },
     );
