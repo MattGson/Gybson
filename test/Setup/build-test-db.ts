@@ -28,6 +28,10 @@ export const pgConnection: Connection = {
         password: '',
         database: schemaName,
     },
+    pool: {
+        min: 2,
+        max: 50,
+    },
 };
 
 const state: any = {

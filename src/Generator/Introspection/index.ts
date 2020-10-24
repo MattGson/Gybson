@@ -15,6 +15,10 @@ export interface Connection {
         database: string;
         multipleStatements?: boolean;
     };
+    pool?: {
+        min: number;
+        max: number;
+    };
 }
 
 /**
