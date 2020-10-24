@@ -1,7 +1,7 @@
 import Knex from 'knex';
 import { migrateDb } from './migrate-db';
 import { Connection } from '../../src/Generator/Introspection';
-import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
+import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
 import { DB } from './test.env';
 type PoolConnection = PGConn | MySQLConn;

@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
 import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
 import { QueryBuilder, Transaction } from 'knex';
-import { Connection as PGConn } from 'pg-promise/typescript/pg-subset';
+import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
 type Connection = PGConn | MySQLConn;
 
