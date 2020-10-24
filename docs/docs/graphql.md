@@ -7,10 +7,13 @@ sidebar_label: Using with GraphQL
 Gybson is highly suited to building GraphQL apps. It uses [DataLoader](https://github.com/graphql/dataloader) under 
 the hood to batch and cache database requests. 
 
-This allows for deep GraphQL trees to be resolved without an explosion in database requests.
-In general, gybson will execute one database request for each different resolver function that is executed.
+This allows for deep GraphQL trees to be resolved without an explosion in database request whilst still
+resolving each field independently.
 
-See the DataLoader docs for more details on query efficiency in GraphQL.
+Other solutions such as eager loading from the root of the tree work for simple apps but are massively
+limiting in complex data graphs.
+
+See the [DataLoader docs](https://github.com/graphql/dataloader)  for more details on query efficiency in GraphQL.
 
 ## Apollo example
 
@@ -45,6 +48,33 @@ Then in your resolvers:
 Query: {
     user(parent, args, context, info) {
         return context.gybson.Users.oneByUserId({ user_id: args.id });
+    },
+    posts(parent, args, context, info) {
+        return context.gybson.Posts.manyByAuthorId({ author_id: parent.author_id });
+    },
+    comments(parent, args, context, info) {
+         return context.gybson.Comments.manyByPostId({ post_id: parent.post_id });
     }
 }
+```
+
+Executing the following query results in 3 database round-trips
+regardless of how many posts or comments are loaded.
+
+```typescript
+query {
+    user(id: 1) {
+        user_id
+        name
+        posts {
+            post_id
+            message
+            comments {
+                comment_id
+                message
+            }
+        }
+    }
+}
+ 
 ```

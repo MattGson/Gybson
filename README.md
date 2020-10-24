@@ -63,10 +63,6 @@ Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood t
 
 Gybson uses standard SQL terms where possible and offers a flexible query API including `filtering on relations`.
 
-#### Native support for soft-deletes
-
-Managing soft deletes [is hard](https://medium.com/galvanize/soft-deletion-is-actually-pretty-hard-cb434e24825c) but is a vital part of many apps. Gybson has native support for soft-deletes.
-
 ### Simple example
 
 If your schema is defined as
@@ -93,7 +89,6 @@ const id = await gybson.users.insert({
 
 const user = await gybson.users.oneByUserId({ user_id: id });
 
-console.log(user);
 /* 
  {
    user_id: 1;

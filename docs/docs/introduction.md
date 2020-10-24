@@ -68,7 +68,7 @@ You can maximise developer efficiency with auto-completion in any IDE.
 
 ### Type-safe
 
-Gybson comes with automated type safety out of the box so you know exactly what data goes in and out of your database. Types are generated directly from your database schema.
+Gybson comes with automated type safety out of the box so you know exactly what data goes in and out of your database. Clean, usable types are generated directly from your database schema.
 
 ### Auto-generated
 
