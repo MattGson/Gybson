@@ -174,12 +174,13 @@ export abstract class SQLQueryBuilder<
      * @param params
      */
     public async findMany(params: {
+        connection?: Connection;
         where?: TblWhere;
         paginate?: TblPaginate;
         orderBy?: TblOrderBy;
         includeDeleted?: boolean;
     }): Promise<TblRow[]> {
-        const { orderBy, paginate, where, includeDeleted } = params;
+        const { orderBy, paginate, where, includeDeleted, connection } = params;
         let query = knex()(this.aliasedTable).select(`${this.tableAlias}.*`);
 
         if (where) {
@@ -225,6 +226,7 @@ export abstract class SQLQueryBuilder<
                     );
             }
         }
+        if (connection) query.connection(connection);
 
         logger().debug('Executing findMany: %s', query.toSQL().sql);
         return query;
