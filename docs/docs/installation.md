@@ -33,6 +33,8 @@ Change the contents of the file to connect to your database.
 The `outdir` option specifies where the Typescript files will be output.
 This should be inside of your project source so that the files are transpiled as part of your build.
 
+The `client` option specifies the sql client for the underlying Knex logic. You can choose between `mysql` and `pg`, defaults to `mysql`. **This field is compulsory if you are using PostgreSQL**.
+
 i.e.
 
 ```json
@@ -42,7 +44,8 @@ i.e.
     "user": "root",
     "password": "",
     "database": "users",
-    "outdir": "./src/generated"
+    "outdir": "./src/generated",
+    "client": "pg"
 }
 ```
 
