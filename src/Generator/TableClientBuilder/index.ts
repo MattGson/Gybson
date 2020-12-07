@@ -33,17 +33,4 @@ export const buildClient = async (params: {
     });
     await Promise.all(jobs);
     return clients;
-    // for (const [table, tableSchema] of Object.entries(schema)) {
-    //     const builder = new TableClientBuilder({
-    //         table,
-    //         schema: tableSchema,
-    //         options: { ...codeGenPreferences, gybsonLibPath },
-    //     });
-    //
-    //     clients.push({
-    //         code: await builder.build(),
-    //         name: builder.className,
-    //     });
-    // }
-    // return clients;
 };
