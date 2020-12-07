@@ -80,7 +80,7 @@ const init = (config: {
     options?: GybsonConfig;
 }) => {
     const useConfig = {
-        logLevel: config.options?.logLevel || LogLevel.info,
+        logLevel: config.options?.logLevel || LogLevel.debug,
     };
     const logger = buildLogger(useConfig);
 

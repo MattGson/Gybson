@@ -34,6 +34,8 @@ describe('Loaders', () => {
     describe('one by column load', () => {
         it('Can load one from a single unique key', async () => {
             const loadOne = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            const loadOne2 = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            console.log(loadOne2)
             expect(loadOne).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,

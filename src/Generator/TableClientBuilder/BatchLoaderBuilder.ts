@@ -42,8 +42,11 @@ export class BatchLoaderBuilder {
         );
 
         return `
-                 private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} }, ${rowTypeName} | null>(keys => {
+                 private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} }, ${rowTypeName} | null, string>(keys => {
                     return this.byCompoundColumnLoader({ keys });
+                }, 
+                {
+                    cacheKeyFn: (k) => Object.values(k).join(':')
                 });
                 
                  public async oneBy${loaderName}(params: { ${methodParamType} }) {
@@ -72,15 +75,14 @@ export class BatchLoaderBuilder {
         );
 
         return `
-                private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} orderBy?: ${orderByTypeName} }, ${rowTypeName}[]>(keys => {
+                private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} orderBy?: ${orderByTypeName} }, ${rowTypeName}[], string>(keys => {
                     const [{ orderBy }] = keys;
                     const order = { ...orderBy }; // copy to retain
                     keys.map(k => delete k.orderBy); // remove key so its not included as a load param
                     // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
                     return this.manyByCompoundColumnLoader({ keys, orderBy: order });
                 }, {
-                    // ignore order for cache equivalency - re-assess - will this compare objects properly?
-                    cacheKeyFn: (k => ({...k, orderBy: {}}))
+                    cacheKeyFn: (k) => Object.values(k).join(':')
                 });
                 
                  public async manyBy${loaderName}(params: { ${methodParamType} orderBy?: ${orderByTypeName} }) {
