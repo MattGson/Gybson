@@ -33,7 +33,7 @@ export interface JoinDefinition {
     toColumn: string;
 }
 
-export type JoinType = 'hasMany' | 'belongsTo'; // 1-n or n-1 (TODO could look for unique-keys to work out 1-1?)
+export type JoinType = 'hasMany' | 'belongsTo' | 'hasOne'; // 1-n OR n-1 OR 1-1
 
 export interface RelationDefinition {
     // name of table to join to

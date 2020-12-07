@@ -7,7 +7,7 @@ import {
 } from '../../TypeTruth/TypeTruth';
 
 export interface Introspection {
-    getTableTypes(table: string, enumTypes: EnumDefinitions): Promise<TableDefinition>;
+    getTableTypes(table: string, enumTypes: EnumDefinitions): Promise<TableColumnsDefinition>;
     getTableConstraints(table: string): Promise<ConstraintDefinition[]>;
     getForwardRelations(table: string): Promise<RelationDefinition[]>;
     getBackwardRelations(table: string): Promise<RelationDefinition[]>;
@@ -16,7 +16,7 @@ export interface Introspection {
     getTsTypeForColumn(tableName: string, columnName: string, dbType: string, customTypes: EnumDefinitions): ColumnType;
 }
 
-export interface TableDefinition {
+export interface TableColumnsDefinition {
     [columnName: string]: ColumnDefinition;
 }
 

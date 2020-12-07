@@ -1,4 +1,4 @@
-import { EnumDefinitions, Introspection, TableDefinition } from './IntrospectionTypes';
+import { EnumDefinitions, Introspection, TableColumnsDefinition } from './IntrospectionTypes';
 import {
     ColumnType,
     Comparable,
@@ -140,8 +140,8 @@ export class PostgresIntrospection implements Introspection {
      * @param tableName
      * @param enumTypes
      */
-    public async getTableTypes(tableName: string, enumTypes: EnumDefinitions): Promise<TableDefinition> {
-        let tableDefinition: TableDefinition = {};
+    public async getTableTypes(tableName: string, enumTypes: EnumDefinitions): Promise<TableColumnsDefinition> {
+        let tableDefinition: TableColumnsDefinition = {};
 
         const tableColumns = await this.knex('information_schema.columns')
             .select('column_name', 'udt_name', 'is_nullable', 'column_default')
@@ -205,7 +205,7 @@ export class PostgresIntrospection implements Introspection {
     }
 
     /**
-     * Get all relations where the given table holds the constraint (N - 1) i.e. Posts.user_id -> Users.user_id
+     * Get all relations where the given table holds the constraint (N - 1 or 1 - 1) i.e. Posts.user_id -> Users.user_id
      * @param tableName
      */
     public async getForwardRelations(tableName: string): Promise<RelationDefinition[]> {
@@ -244,7 +244,7 @@ export class PostgresIntrospection implements Introspection {
                     toTable: referenced_table_name,
                     alias: referenced_table_name,
                     joins: [],
-                    type: 'belongsTo', // forward always N - 1 (or 1 - 1)
+                    type: 'belongsTo', // default always N - 1
                 };
             relations[constraint_name].joins.push({
                 fromColumn: column_name,
@@ -255,7 +255,7 @@ export class PostgresIntrospection implements Introspection {
     }
 
     /**
-     * Get all relations where the given table does not hold the constraint (1 - N) i.e. Users.user_id <- Posts.author_id
+     * Get all relations where the given table does not hold the constraint (1 - N or 1 - 1) i.e. Users.user_id <- Posts.author_id
      * @param tableName
      */
     public async getBackwardRelations(tableName: string): Promise<RelationDefinition[]> {
@@ -294,7 +294,7 @@ export class PostgresIntrospection implements Introspection {
                     toTable: table_name,
                     alias: table_name,
                     joins: [],
-                    type: 'hasMany', // backwards always 1 - N
+                    type: 'hasMany', // default always 1 - N
                 };
             relations[constraint_name].joins.push({
                 fromColumn: referenced_column_name,
