@@ -33,6 +33,8 @@ export interface JoinDefinition {
     toColumn: string;
 }
 
+export type JoinType = 'hasMany' | 'belongsTo' | 'hasOne'; // 1-n OR n-1 OR 1-1
+
 export interface RelationDefinition {
     // name of table to join to
     toTable: string;
@@ -40,6 +42,8 @@ export interface RelationDefinition {
     alias: string;
     // columns to complete the join
     joins: JoinDefinition[];
+    // direction of key / cardinality of join
+    type: JoinType;
 }
 
 export interface ColumnDefinition {

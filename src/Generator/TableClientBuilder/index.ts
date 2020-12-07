@@ -19,7 +19,7 @@ export const buildClient = async (params: {
 
     const clients: TableClient[] = [];
 
-    for (const [table, tableSchema] of Object.entries(schema)) {
+    const jobs = Object.entries(schema).map(async ([table, tableSchema]) => {
         const builder = new TableClientBuilder({
             table,
             schema: tableSchema,
@@ -30,6 +30,7 @@ export const buildClient = async (params: {
             code: await builder.build(),
             name: builder.className,
         });
-    }
+    });
+    await Promise.all(jobs);
     return clients;
 };

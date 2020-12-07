@@ -1,4 +1,4 @@
-import { EnumDefinitions, TableDefinition } from '../Introspection/IntrospectionTypes';
+import { EnumDefinitions, TableColumnsDefinition } from '../Introspection/IntrospectionTypes';
 import { ColumnDefinition, Comparable, RelationDefinition } from '../../TypeTruth/TypeTruth';
 import _ from 'lodash';
 import { PascalCase } from '../lib';
@@ -85,7 +85,7 @@ export class TableTypeBuilder {
      * Build row type for table
      * @param params
      */
-    public static buildRowType(params: { table: TableDefinition; rowTypeName: string }) {
+    public static buildRowType(params: { table: TableColumnsDefinition; rowTypeName: string }) {
         const { table, rowTypeName } = params;
         return `
             export interface ${rowTypeName} {
@@ -104,7 +104,7 @@ export class TableTypeBuilder {
      * Build row type for table with all non-required insert values optional
      * @param params
      */
-    public static buildRequiredRowType(params: { table: TableDefinition; requiredRowTypeName: string }) {
+    public static buildRequiredRowType(params: { table: TableColumnsDefinition; requiredRowTypeName: string }) {
         const { table, requiredRowTypeName } = params;
         return `
             export interface ${requiredRowTypeName} {
@@ -126,7 +126,7 @@ export class TableTypeBuilder {
      * Build a boolean map of table columns
      * @param params
      */
-    public static buildColumnMapType(params: { columnMapTypeName: string; columns: TableDefinition }) {
+    public static buildColumnMapType(params: { columnMapTypeName: string; columns: TableColumnsDefinition }) {
         const { columnMapTypeName, columns } = params;
         return `
             export interface ${columnMapTypeName} {
@@ -207,7 +207,7 @@ export class TableTypeBuilder {
      */
     public static buildWhereType(params: {
         whereTypeName: string;
-        columns: TableDefinition;
+        columns: TableColumnsDefinition;
         relations: RelationDefinition[];
     }) {
         const { whereTypeName, columns, relations } = params;
@@ -228,7 +228,7 @@ export class TableTypeBuilder {
      * Build order by type for table
      * @param params
      */
-    public static buildOrderType(params: { orderByTypeName: string; columns: TableDefinition }) {
+    public static buildOrderType(params: { orderByTypeName: string; columns: TableColumnsDefinition }) {
         const { orderByTypeName, columns } = params;
         return `
             export type ${orderByTypeName} = {

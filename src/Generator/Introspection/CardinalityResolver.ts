@@ -24,8 +24,8 @@ export class CardinalityResolver {
      * @param constraints
      */
     public static getUniqueKeyCombinations(constraints: ConstraintDefinition[]): string[][] {
-        const unique = this.uniqueConstraints(constraints).map((con) => con.columnNames);
-        const primary = this.primaryKey(constraints)?.columnNames;
+        const unique = this.uniqueConstraints(constraints).map((con) => con.columnNames.sort());
+        const primary = this.primaryKey(constraints)?.columnNames.sort();
         if (primary) unique.push(primary);
 
         return unique;
