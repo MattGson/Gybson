@@ -71,7 +71,6 @@ export const migrateDb = async (knex: Knex, pg = false) => {
         table.foreign('team_id').references('teams.team_id');
         table.foreign('user_id').references('users.user_id');
         table.foreign('member_post_id').references('posts.post_id').onDelete('CASCADE');
-        table.unique(['member_post_id']).comment('Only one team member can have each post');
     });
 
     // table with compound foreign key

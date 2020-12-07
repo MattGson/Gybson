@@ -235,73 +235,166 @@ describe('TableSchemaBuilder', () => {
             );
         });
         describe('Relations', () => {
-            it('Forwards relations are aliased by column name with `id` stripped', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('users', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            describe('forward relations', () => {
+                it('Forwards relations on a unique key are "hasOne"', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.relations).toIncludeAllMembers([
-                    expect.objectContaining({
-                        toTable: 'users',
-                        alias: 'best_friend',
-                        joins: [
-                            {
-                                fromColumn: 'best_friend_id',
-                                toColumn: 'user_id',
-                            },
-                        ],
-                        type: 'belongsTo'
-                    }),
-                ]);
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'team_members',
+                            type: 'hasOne',
+                        }),
+                    ]);
+                });
+                it('Forwards relations on a non-unique key are "belongsTo"', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('posts', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'users',
+                            type: 'belongsTo',
+                        }),
+                    ]);
+                });
+                it('Forwards relations are aliased by column name with `id` stripped', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'users',
+                            alias: 'best_friend',
+                            joins: [
+                                {
+                                    fromColumn: 'best_friend_id',
+                                    toColumn: 'user_id',
+                                },
+                            ],
+                            type: 'belongsTo',
+                        }),
+                    ]);
+                });
+                it('Compound forwards relations are aliased with the joined table name', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'team_members',
+                            alias: 'team_member',
+                            joins: [
+                                { fromColumn: 'team_id', toColumn: 'team_id' },
+                                { fromColumn: 'user_id', toColumn: 'user_id' },
+                            ],
+                            type: 'hasOne',
+                        }),
+                    ]);
+                });
+                it('Forwards relations have trailing "s" stripped', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members_positions', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'team_members',
+                            alias: 'team_member',
+                            joins: [
+                                { fromColumn: 'team_id', toColumn: 'team_id' },
+                                { fromColumn: 'user_id', toColumn: 'user_id' },
+                            ],
+                            type: 'hasOne',
+                        }),
+                    ]);
+                });
             });
-            it('Backwards relations are aliased as the table name by default', async (): Promise<void> => {
-                const schemaBuilder = new TableSchemaBuilder('posts', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+            describe('Backwards relations', () => {
+                it('Backwards relations on a unique key are "hasOne"', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('team_members', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.relations).toIncludeAllMembers([
-                    expect.objectContaining({
-                        toTable: 'team_members',
-                        alias: 'team_members',
-                        joins: [{ fromColumn: 'post_id', toColumn: 'member_post_id' }],
-                        type: 'hasMany'
-                    }),
-                ]);
-            });
-            it('Backwards relations are aliased with columnName_tableName if there are multiple instances of the table', async (): Promise<
-                void
-            > => {
-                const schemaBuilder = new TableSchemaBuilder('users', intro);
-                const schema = await schemaBuilder.buildTableDefinition();
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'team_members_positions',
+                            type: 'hasOne',
+                        }),
+                    ]);
+                });
+                it('Backwards relations on a non-unique key are "hasMany"', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
 
-                expect(schema.relations).toIncludeAllMembers([
-                    expect.objectContaining({
-                        toTable: 'posts',
-                        alias: 'author_posts',
-                        joins: [
-                            {
-                                toColumn: 'author_id',
-                                fromColumn: 'user_id',
-                            },
-                        ],
-                        type: 'hasMany'
-                    }),
-                    expect.objectContaining({
-                        toTable: 'posts',
-                        alias: 'co_author_posts',
-                        joins: [
-                            {
-                                toColumn: 'co_author',
-                                fromColumn: 'user_id',
-                            },
-                        ],
-                        type: 'hasMany'
-                    }),
-                    expect.objectContaining({
-                        toTable: 'team_members',
-                        alias: 'team_members',
-                        joins: [{ fromColumn: 'user_id', toColumn: 'user_id' }],
-                        type: 'hasMany'
-                    }),
-                ]);
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'posts',
+                            type: 'hasMany',
+                        }),
+                    ]);
+                });
+                it('Backwards relations are aliased as the table name by default', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('posts', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'team_members',
+                            alias: 'team_members',
+                            joins: [{ fromColumn: 'post_id', toColumn: 'member_post_id' }],
+                            type: 'hasMany',
+                        }),
+                    ]);
+                });
+                it('Backwards relations of type hasMany are aliased with a trailing "s"', async (): Promise<void> => {
+                    const schemaBuilder = new TableSchemaBuilder('posts', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'team_members',
+                            alias: 'team_members',
+                            joins: [{ fromColumn: 'post_id', toColumn: 'member_post_id' }],
+                            type: 'hasMany',
+                        }),
+                    ]);
+                });
+                it('Backwards relations are aliased with columnName_tableName if there are multiple relations of the table', async (): Promise<
+                    void
+                > => {
+                    const schemaBuilder = new TableSchemaBuilder('users', intro);
+                    const schema = await schemaBuilder.buildTableDefinition();
+
+                    expect(schema.relations).toIncludeAllMembers([
+                        expect.objectContaining({
+                            toTable: 'posts',
+                            alias: 'author_posts',
+                            joins: [
+                                {
+                                    toColumn: 'author_id',
+                                    fromColumn: 'user_id',
+                                },
+                            ],
+                            type: 'hasMany',
+                        }),
+                        expect.objectContaining({
+                            toTable: 'posts',
+                            alias: 'co_author_posts',
+                            joins: [
+                                {
+                                    toColumn: 'co_author',
+                                    fromColumn: 'user_id',
+                                },
+                            ],
+                            type: 'hasMany',
+                        }),
+                        expect.objectContaining({
+                            toTable: 'team_members',
+                            alias: 'team_members',
+                            joins: [{ fromColumn: 'user_id', toColumn: 'user_id' }],
+                            type: 'hasMany',
+                        }),
+                    ]);
+                });
             });
             it('Relation alias that conflicts with column name is aliased with _', async (): Promise<void> => {
                 const schemaBuilder = new TableSchemaBuilder('posts', intro);

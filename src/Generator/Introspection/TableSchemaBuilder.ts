@@ -95,8 +95,9 @@ export class TableSchemaBuilder {
         }
 
         // add trailing s for (1 - N)
-        if (relation.type === 'hasMany' && relation.alias[relation.alias.length - 1] !== 's')
-            relation.alias = `${relation.alias}s`;
+        if (relation.type === 'hasMany' && relation.alias[relation.alias.length - 1] !== 's') {
+            relation.alias += `s`;
+        }
         // handle any column conflicts
         if (columns[relation.alias]) relation.alias += '_';
 
