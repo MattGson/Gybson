@@ -58,6 +58,9 @@ describe('SoftDelete', () => {
             });
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
+
+            const post3 = await gybson.Posts.findMany({ where: { post_id: ids.post1Id } });
+            expect(post3).toEqual([]);
         });
         it('Can soft delete using a Date column', async () => {
             const user = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
@@ -72,8 +75,12 @@ describe('SoftDelete', () => {
                     user_id: ids.user1Id,
                 },
             });
+            // test both loader and find-many
             const user2 = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
             expect(user2).toEqual(null);
+
+            const post3 = await gybson.Users.findMany({ where: { user_id: ids.user1Id } });
+            expect(post3).toEqual([]);
         });
         it('Can use an external connection', async () => {
             const connection = await getPoolConnection();
