@@ -16,31 +16,37 @@ export class TableSchemaBuilder {
     }
 
     /**
+     * Format a forward relation (N - 1)
      * Alias the name on relations to ensure unique keys even when the same table is joined multiple times
-     * Also remove plural on multi-key joins as assumed unique
-     * Also helps readability i.e. posts -> users would be 'posts.author'
+     * Also remove plural on related tables to match cardinality i.e. posts -> users would be 'post.author'
+     * Also handle any conflicts for columns:related-tables with the same name.
      * @param relation
      * @param columns
      */
-    private static aliasForwardRelationship(
-        relation: RelationDefinition,
-        columns: TableDefinition,
-    ): RelationDefinition {
-        if (relation.joins.length > 1) relation.alias = relation.toTable.replace(/s+$/, '');
-        else relation.alias = relation.joins[0].fromColumn.replace('_id', '');
+    private static formatForwardRelation(relation: RelationDefinition, columns: TableDefinition): RelationDefinition {
+        // multiple columns so use the table-name instead
+        if (relation.joins.length > 1) {
+            relation.alias = relation.toTable.replace(/s+$/, '');
+        }
+        // single column so just remove plural etc
+        else {
+            relation.alias = relation.joins[0].fromColumn.replace('_id', '');
+        }
         if (columns[relation.alias]) relation.alias += '_'; // handle any conflicts
         return relation;
     }
 
     /**
+     * Format a backwards relation (1 - N) (other table holds to key)
      * Alias the name on relations in the case that the table is joined from another table multiple times
-     * Normal case:  posts -> users would be 'users.posts'
-     * Special case:  posts.author -> users, posts.co_author -> users would be 'users.author_posts' 'users.co_author_posts'
+     * Normal case:  posts -> users would be 'user.posts'
+     * Special case:  posts.author -> users, posts.co_author -> users would be 'user.author_posts' 'user.co_author_posts'
+     * Also add plural on joins to match cardinality i.e. users => posts would be 'user.posts'
      * @param relation
      * @param columns
      * @param relations, other relations
      */
-    private static aliasBackwardRelationship(
+    private static formatBackwardRelationship(
         relation: RelationDefinition,
         columns: TableDefinition,
         relations: RelationDefinition[],
@@ -50,7 +56,11 @@ export class TableSchemaBuilder {
         for (let other_relation of relations) {
             if (other_relation.toTable === relation.toTable) relationCount += 1;
         }
-        if (relationCount > 1) relation.alias = `${relation.joins[0].toColumn.replace('_id', '')}_${relation.toTable}`;
+        if (relationCount > 1) {
+            relation.alias = `${relation.joins[0].toColumn.replace('_id', '')}_${relation.toTable}`;
+        }
+        // add trailing s
+        if (relation.alias[relation.alias.length - 1] !== 's') relation.alias = `${relation.alias}s`;
         // handle any column conflicts
         if (columns[relation.alias]) relation.alias += '_';
         return relation;
@@ -96,9 +106,9 @@ export class TableSchemaBuilder {
             uniqueKeyCombinations,
             nonUniqueKeyCombinations,
             relations: [
-                ...forwardRelations.map((r) => TableSchemaBuilder.aliasForwardRelationship(r, columns)),
+                ...forwardRelations.map((r) => TableSchemaBuilder.formatForwardRelation(r, columns)),
                 ...backwardRelations.map((r) =>
-                    TableSchemaBuilder.aliasBackwardRelationship(r, columns, backwardRelations),
+                    TableSchemaBuilder.formatBackwardRelationship(r, columns, backwardRelations),
                 ),
             ],
             columns,

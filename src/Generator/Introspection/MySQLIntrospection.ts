@@ -197,7 +197,7 @@ export class MySQLIntrospection implements Introspection {
     }
 
     /**
-     * Get all relations where the given table holds the constraint (1-N)
+     * Get all relations where the given table holds the constraint (N - 1) i.e. Posts.user_id -> Users.user_id
      * @param tableName
      */
     public async getForwardRelations(tableName: string): Promise<RelationDefinition[]> {
@@ -216,6 +216,7 @@ export class MySQLIntrospection implements Introspection {
                     toTable: referenced_table_name,
                     alias: referenced_table_name,
                     joins: [],
+                    type: 'belongsTo', // forward always N - 1 (or 1 - 1)
                 };
             relations[constraint_name].joins.push({
                 fromColumn: column_name,
@@ -226,7 +227,7 @@ export class MySQLIntrospection implements Introspection {
     }
 
     /**
-     * Get all relations where the given table does not hold the constraint (N-1)
+     * Get all relations where the given table does not hold the constraint (1 - N) i.e. Users.user_id <- Posts.author_id
      * @param tableName
      */
     public async getBackwardRelations(tableName: string): Promise<RelationDefinition[]> {
@@ -245,6 +246,7 @@ export class MySQLIntrospection implements Introspection {
                     toTable: table_name,
                     alias: table_name,
                     joins: [],
+                    type: 'hasMany', // backwards always 1 - N
                 };
             relations[constraint_name].joins.push({
                 fromColumn: referenced_column_name,

@@ -249,6 +249,7 @@ describe('TableSchemaBuilder', () => {
                                 toColumn: 'user_id',
                             },
                         ],
+                        type: 'belongsTo'
                     }),
                 ]);
             });
@@ -261,6 +262,7 @@ describe('TableSchemaBuilder', () => {
                         toTable: 'team_members',
                         alias: 'team_members',
                         joins: [{ fromColumn: 'post_id', toColumn: 'member_post_id' }],
+                        type: 'hasMany'
                     }),
                 ]);
             });
@@ -280,6 +282,7 @@ describe('TableSchemaBuilder', () => {
                                 fromColumn: 'user_id',
                             },
                         ],
+                        type: 'hasMany'
                     }),
                     expect.objectContaining({
                         toTable: 'posts',
@@ -290,11 +293,13 @@ describe('TableSchemaBuilder', () => {
                                 fromColumn: 'user_id',
                             },
                         ],
+                        type: 'hasMany'
                     }),
                     expect.objectContaining({
                         toTable: 'team_members',
                         alias: 'team_members',
                         joins: [{ fromColumn: 'user_id', toColumn: 'user_id' }],
+                        type: 'hasMany'
                     }),
                 ]);
             });
