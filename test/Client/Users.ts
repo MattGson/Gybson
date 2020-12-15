@@ -146,6 +146,8 @@ export default class Users extends SQLQueryBuilder<
         });
     }
 
+    // an object safe cache key function
+    // utilises the fact that object.values order is
     private static cacheKey(k: Partial<usersDTO>): string {
         return Object.values(k).join(':');
     }
@@ -166,23 +168,46 @@ export default class Users extends SQLQueryBuilder<
         return this.manyByCompoundColumnLoader({ keys, orderBy: order });
     }
 
-    private readonly oneLoaders: { [key: string]: DataLoader<any, usersDTO | null> } = {
-        email: new DataLoader<Partial<usersDTO>, usersDTO | null, string>(
-            (keys) => this.loadSingles(keys),
-            Users.loaderOptions(),
-        ),
-        user_id: new DataLoader<Partial<usersDTO>, usersDTO | null, string>(
-            (keys) => this.byCompoundColumnLoader({ keys }),
-            Users.loaderOptions(),
-        ),
-    };
+    // TODO:- v1 map of loaders (can easily seed and purge)
+    //  Problem: - number of entries explodes based on load angles (what if we add relation load angles?)
 
-    private readonly manyLoaders: { [key: string]: DataLoader<any, usersDTO[]> } = {
-        best_friend_id: new DataLoader<Partial<usersDTO> & { orderBy?: usersOrderBy }, usersDTO[], string>(
-            (keys) => this.loadMulti(keys),
-            Users.loaderOptions(),
-        ),
-    };
+    // private readonly oneLoaders: { [key: string]: DataLoader<any, usersDTO | null> } = {
+    //     email: new DataLoader<Partial<usersDTO>, usersDTO | null, string>(
+    //         (keys) => this.loadSingles(keys),
+    //         Users.loaderOptions(),
+    //     ),
+    //     user_id: new DataLoader<Partial<usersDTO>, usersDTO | null, string>(
+    //         (keys) => this.byCompoundColumnLoader({ keys }),
+    //         Users.loaderOptions(),
+    //     ),
+    // };
+    //
+    // private readonly manyLoaders: { [key: string]: DataLoader<any, usersDTO[]> } = {
+    //     best_friend_id: new DataLoader<Partial<usersDTO> & { orderBy?: usersOrderBy }, usersDTO[], string>(
+    //         (keys) => this.loadMulti(keys),
+    //         Users.loaderOptions(),
+    //     ),
+    // };
+
+    // public async loadOne(params: Partial<usersDTO> & { includeDeleted?: boolean }) {
+    //     const loadKey = Object.keys(params).sort().join(':');
+    //     const loader = this.oneLoaders[loadKey];
+    //     let { includeDeleted, ...rest } = params;
+    //     let row: usersDTO | null;
+    //     if (!loader) {
+    //         logger().warn(`No loader for key ${loadKey}. Will not batch`);
+    //         row = first(await this.loadSingles([params])) || null;
+    //     } else {
+    //         row = await loader.load(rest);
+    //     }
+    //     if (row?.deleted_at && !params.includeDeleted) return null;
+    //     return row;
+    // }
+    // public async loadMulti(... map() => loadOne()...) {}
+
+
+    // TODO:- option 2 - single DL that groups keys together based on load angle
+    //    Problem - how to group?
 
     private readonly combinedOneLoader = new DataLoader<
         Partial<usersDTO> & { orderBy?: usersOrderBy },
@@ -198,23 +223,13 @@ export default class Users extends SQLQueryBuilder<
         })
 
 
-        return this.loadMulti(keys)
+        // return this.loadMulti(keys)
     }, Users.loaderOptions());
+    // TODO:- slightly unrelated but:
+    //  Re: Relation loads
+    //  How will compoundColumnLoaders re-order? Will need to actually select the related column for N - 1?
+    //
 
-    public async loadOne(params: Partial<usersDTO> & { includeDeleted?: boolean }) {
-        const loadKey = Object.keys(params).sort().join(':');
-        const loader = this.oneLoaders[loadKey];
-        let { includeDeleted, ...rest } = params;
-        let row: usersDTO | null;
-        if (!loader) {
-            logger().warn(`No loader for key ${loadKey}. Will not batch`);
-            row = first(await this.loadSingles([params])) || null;
-        } else {
-            row = await loader.load(rest);
-        }
-        if (row?.deleted_at && !params.includeDeleted) return null;
-        return row;
-    }
     //
     // private readonly byEmailLoader = new DataLoader<{ email: string }, usersDTO | null, string>(
     //     (keys) => {
