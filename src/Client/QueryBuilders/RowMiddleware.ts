@@ -1,4 +1,4 @@
-import { SoftDeleteQueryFilter, SoftDeletable } from '../../TypeTruth/QueryTypes';
+import { SoftDeleteQueryFilter, SoftDeletable } from '../../TypeTruth';
 
 type RowMiddleware = <T>(rows: T[], params: SoftDeleteQueryFilter) => T[];
 

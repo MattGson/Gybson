@@ -119,7 +119,7 @@ export type DateWhere = {
     gte?: Date | string | null;
 };
 
-export type SoftDeletable = { deleted?: boolean | null; deleted_at?: Date; deletedAt?: Date };
+export type SoftDeletable = { deleted?: boolean | null; deleted_at?: Date | null; deletedAt?: Date | null };
 
 export type SoftDeleteQueryFilter = {
     includeDeleted?: boolean;

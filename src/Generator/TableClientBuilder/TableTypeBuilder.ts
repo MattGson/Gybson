@@ -53,7 +53,8 @@ export class TableTypeBuilder {
                 BooleanWhere, 
                 BooleanWhereNullable, 
                 DateWhere, 
-                DateWhereNullable 
+                DateWhereNullable,
+                Loader
             } from '${gybsonLibPath}';
             
             ${_.uniqBy(relations, (r) => r.toTable)
