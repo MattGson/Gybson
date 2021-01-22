@@ -2,7 +2,7 @@ import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex } from '../i
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
-import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
+import { OrderBy, Paginate } from '../../TypeTruth';
 import { QueryBuilder, Transaction } from 'knex';
 import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';

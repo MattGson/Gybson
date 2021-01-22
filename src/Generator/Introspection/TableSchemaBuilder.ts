@@ -1,5 +1,5 @@
 import { Introspection, TableColumnsDefinition } from './IntrospectionTypes';
-import { ColumnDefinition, Comparable, RelationDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
+import { ColumnDefinition, Comparable, RelationDefinition, TableSchemaDefinition } from '../../TypeTruth';
 import { CardinalityResolver } from './CardinalityResolver';
 import _ from 'lodash';
 

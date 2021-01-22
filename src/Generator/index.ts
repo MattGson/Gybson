@@ -10,9 +10,10 @@ import { buildClient, TableClient } from './TableClientBuilder';
  * Build an entry point file (index.ts)
  * @param builders
  * @param outdir
+ * @param gybsonLibPath- path to the gybson lib. Only configurable to improve testability
  */
-async function generateEntryPoint(builders: TableClient[], outdir: string) {
-    let index = ``;
+async function generateEntryPoint(builders: TableClient[], outdir: string, gybsonLibPath: string = 'gybson') {
+    let index = `import { runTransaction } from '${gybsonLibPath}';`;
     let clients = ``;
     for (let { name } of builders) {
         index += `import ${name} from './${name}';`;
@@ -20,7 +21,7 @@ async function generateEntryPoint(builders: TableClient[], outdir: string) {
     }
     index += `
         const Gybson = () => {
-        return {${clients}};
+        return {${clients} runTransaction };
         };
         export default Gybson;
         export type Gybson = ReturnType<typeof Gybson>;
@@ -60,7 +61,7 @@ export async function generate(conn: Connection, outdir: string, gybsonLibPath: 
             writeTypescriptFile(cl.code, outdir, `${cl.name}.ts`);
         }),
     );
-    await generateEntryPoint(clients, outdir);
+    await generateEntryPoint(clients, outdir, gybsonLibPath);
 
     console.log(`Generated for ${Object.keys(schema).length} tables in ${outdir}`);
 }

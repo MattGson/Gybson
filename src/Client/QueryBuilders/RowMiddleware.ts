@@ -1,6 +1,6 @@
-import { SharedQueryFilters, SoftDeletable } from '../../TypeTruth/QueryTypes';
+import { SoftDeleteQueryFilter, SoftDeletable } from '../../TypeTruth/QueryTypes';
 
-type RowMiddleware = <T>(rows: T[], params: SharedQueryFilters) => T[];
+type RowMiddleware = <T>(rows: T[], params: SoftDeleteQueryFilter) => T[];
 
 const SoftDeleteMiddleware: RowMiddleware = (rows, params) => {
     return rows.filter((row: SoftDeletable) => {

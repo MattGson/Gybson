@@ -1,4 +1,4 @@
-import { ColumnDefinition, TableSchemaDefinition } from '../../TypeTruth/TypeTruth';
+import { ColumnDefinition, TableSchemaDefinition } from '../../TypeTruth';
 import { TableTypeBuilder, TableTypeNames } from './TableTypeBuilder';
 import { PascalCase } from '../lib';
 import { BatchLoaderBuilder } from './BatchLoaderBuilder';
@@ -55,7 +55,6 @@ export class TableClientBuilder {
             requiredRowTypeName,
         } = this.typeNames;
         return `
-            import DataLoader = require('dataloader');
             import { schema } from './gybson.schema';
 
             ${this.types}
@@ -93,7 +92,6 @@ export class TableClientBuilder {
             this.loaders.push(
                 BatchLoaderBuilder.getOneByColumnLoader({
                     loadColumns: keyColumns,
-                    rowTypeName,
                     softDeleteColumn: this.softDeleteColumn || undefined,
                 }),
             );

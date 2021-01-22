@@ -1,4 +1,4 @@
-import { DatabaseSchema } from '../../TypeTruth/TypeTruth';
+import { DatabaseSchema } from '../../TypeTruth';
 import { TableClientBuilder } from './TableClientBuilder';
 import { codeGenPreferences } from '../config';
 

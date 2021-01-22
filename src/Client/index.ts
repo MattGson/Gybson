@@ -10,8 +10,8 @@ attachOnConflictUpdate();
 //
 // INTERNAL USE
 //
-export { SQLQueryBuilder } from './QueryBuilders/SQLQueryBuilder';
-export * from '../TypeTruth/TypeTruth';
+export * from './QueryBuilders';
+export * from '../TypeTruth';
 
 const state: { knex: Knex<any, unknown[]> | undefined; engine: 'pg' | 'mysql' } = {
     knex: undefined,
@@ -28,7 +28,7 @@ export const engine = () => state.engine;
 //
 // EXTERNAL USE
 //
-export { transaction } from './QueryBuilders/Transaction';
+export { runTransaction } from './QueryBuilders/Transaction';
 export { LogLevel } from './lib/logging';
 export interface GybsonConfig {
     logLevel?: LogLevel;

@@ -1,4 +1,4 @@
-import { ColumnDefinition } from '../../TypeTruth/TypeTruth';
+import { ColumnDefinition } from '../../TypeTruth';
 import { PascalCase } from '../lib';
 
 export class BatchLoaderBuilder {
@@ -11,17 +11,17 @@ export class BatchLoaderBuilder {
 
         const colNames = columns.map((col) => col.columnName);
 
-        const loadKeyType = `${columns.map((col) => `${col.columnName}: ${col.tsType}`)};`;
+        // const loadKeyType = `${columns.map((col) => `${col.columnName}: ${col.tsType}`)};`;
         let methodParamType = `${columns.map((col) => `${col.columnName}: ${col.tsType}`)};`;
         if (softDeleteColumn) methodParamType += 'includeDeleted?: boolean;';
 
-        let methodParamSpread = `${colNames.join(',')}`;
+        let loadFiltersSpread = `${colNames.join(',')}`;
         const loaderName = colNames.map((name) => PascalCase(name)).join('And');
 
         return {
-            loadKeyType,
+            // loadKeyType,
             methodParamType,
-            methodParamSpread,
+            loadFiltersSpread,
             loaderName,
         };
     }
@@ -33,27 +33,14 @@ export class BatchLoaderBuilder {
      */
     public static getOneByColumnLoader(params: {
         loadColumns: ColumnDefinition[];
-        rowTypeName: string;
+        // rowTypeName: string;
         softDeleteColumn?: ColumnDefinition;
     }): string {
-        const { rowTypeName, softDeleteColumn } = params;
-        const { loadKeyType, methodParamType, methodParamSpread, loaderName } = BatchLoaderBuilder.getLoadParams(
-            params,
-        );
-
+        const { methodParamType, loadFiltersSpread, loaderName } = BatchLoaderBuilder.getLoadParams(params);
         return `
-                 private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} }, ${rowTypeName} | null, string>(keys => {
-                    return this.byCompoundColumnLoader({ keys });
-                }, 
-                {
-                    cacheKeyFn: (k) => Object.values(k).join(':')
-                });
-                
                  public async oneBy${loaderName}(params: { ${methodParamType} }) {
-                    const { ${methodParamSpread} } = params;
-                    const row = await this.by${loaderName}Loader.load({ ${methodParamSpread} });
-                    ${softDeleteColumn ? `if (row?.${softDeleteColumn.columnName} && !params.includeDeleted) return null;` : ''}
-                    return row;
+                    const { ${loadFiltersSpread}, ...options } = params;
+                    return this.loader.loadOne({ ${loadFiltersSpread} }, options);
                 }
             `;
     }
@@ -69,33 +56,34 @@ export class BatchLoaderBuilder {
         softDeleteColumn?: ColumnDefinition;
         orderByTypeName: string;
     }): string {
-        const { rowTypeName, softDeleteColumn, orderByTypeName } = params;
-        const { loadKeyType, methodParamType, methodParamSpread, loaderName } = BatchLoaderBuilder.getLoadParams(
-            params,
-        );
-
-        return `
-                private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} orderBy?: ${orderByTypeName} }, ${rowTypeName}[], string>(keys => {
-                    const [{ orderBy }] = keys;
-                    const order = { ...orderBy }; // copy to retain
-                    keys.map(k => delete k.orderBy); // remove key so its not included as a load param
-                    // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
-                    return this.manyByCompoundColumnLoader({ keys, orderBy: order });
-                }, {
-                    cacheKeyFn: (k) => Object.values(k).join(':')
-                });
-                
-                 public async manyBy${loaderName}(params: { ${methodParamType} orderBy?: ${orderByTypeName} }) {
-                    const { ${methodParamSpread}, orderBy } = params;
-                    const rows = await this.by${loaderName}Loader.load({ ${methodParamSpread}, orderBy });
-                    ${
-                        softDeleteColumn
-                            ? `
-                    if (params.includeDeleted) return rows;
-                    return rows.filter(row => !row.${softDeleteColumn.columnName});`
-                            : 'return rows;'
-                    }
-                }
-            `;
+        return `const a = "${params}"`;
+        // const { rowTypeName, softDeleteColumn, orderByTypeName } = params;
+        // const { loadKeyType, methodParamType, methodParamSpread, loaderName } = BatchLoaderBuilder.getLoadParams(
+        //     params,
+        // );
+        //
+        // return `
+        //         private readonly by${loaderName}Loader = new DataLoader<{ ${loadKeyType} orderBy?: ${orderByTypeName} }, ${rowTypeName}[], string>(keys => {
+        //             const [{ orderBy }] = keys;
+        //             const order = { ...orderBy }; // copy to retain
+        //             keys.map(k => delete k.orderBy); // remove key so its not included as a load param
+        //             // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
+        //             return this.manyByCompoundColumnLoader({ keys, orderBy: order });
+        //         }, {
+        //             cacheKeyFn: (k) => Object.values(k).join(':')
+        //         });
+        //
+        //          public async manyBy${loaderName}(params: { ${methodParamType} orderBy?: ${orderByTypeName} }) {
+        //             const { ${methodParamSpread}, orderBy } = params;
+        //             const rows = await this.by${loaderName}Loader.load({ ${methodParamSpread}, orderBy });
+        //             ${
+        //                 softDeleteColumn
+        //                     ? `
+        //             if (params.includeDeleted) return rows;
+        //             return rows.filter(row => !row.${softDeleteColumn.columnName});`
+        //                     : 'return rows;'
+        //             }
+        //         }
+        //     `;
     }
 }

@@ -1,4 +1,4 @@
-import { ConstraintDefinition } from '../../TypeTruth/TypeTruth';
+import { ConstraintDefinition } from '../../TypeTruth';
 import _ from 'lodash';
 
 export class CardinalityResolver {

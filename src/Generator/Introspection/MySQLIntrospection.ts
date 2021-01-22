@@ -6,7 +6,7 @@ import {
     EnumDefinition,
     NonComparable,
     RelationDefinition,
-} from '../../TypeTruth/TypeTruth';
+} from '../../TypeTruth';
 import Knex = require('knex');
 import _ from 'lodash';
 
