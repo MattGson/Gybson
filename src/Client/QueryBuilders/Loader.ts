@@ -38,7 +38,7 @@ export class Loader<T extends object, F = Partial<T>> {
      * Generate a unique hash key for a filter combination (used for loaders)
      * @param filter
      */
-    private filterHashKey(filter: F) {
+    private filterHashKey<K extends { where: F }>(filter: K) {
         return keyify(filter).sort().join(':');
     }
 
@@ -68,7 +68,7 @@ export class Loader<T extends object, F = Partial<T>> {
         const { orderBy } = options;
 
         // different loader for each orderBy
-        const loadAngle = this.filterHashKey({ ...where, ...orderBy });
+        const loadAngle = this.filterHashKey({ where, orderBy });
         let loader = this.loaders.manyLoaders[loadAngle];
 
         if (!loader) {
@@ -92,7 +92,7 @@ export class Loader<T extends object, F = Partial<T>> {
      * @param options
      */
     public async loadOne(where: F, options: SoftDeleteQueryFilter) {
-        const loadAngle = this.filterHashKey(where);
+        const loadAngle = this.filterHashKey({ where });
         let loader = this.loaders.oneLoaders[loadAngle];
 
         if (!loader) {
