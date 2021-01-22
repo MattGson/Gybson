@@ -66,11 +66,11 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Load multiple rows for each input compound key
+     * Load multiple rows for each input compound key (stable ordering)
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    protected async manyByCompoundColumnLoader(params: {
+    protected async stableGetMany(params: {
         keys: readonly PartialTblRow[];
         orderBy?: TblOrderBy;
     }): Promise<TblRow[][]> {
@@ -120,11 +120,11 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Load a single row for each input compound key
+     * Load a single row for each input compound key (stable ordering)
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    protected async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
+    protected async stableGetSingles(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
         const { keys } = params;
 
         // get the key columns to load on

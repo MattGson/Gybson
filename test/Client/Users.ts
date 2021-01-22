@@ -157,7 +157,7 @@ export default class Users extends SQLQueryBuilder<
     }
 
     private loadSingles(keys: readonly any[]) {
-        return this.byCompoundColumnLoader({ keys });
+        return this.stableGetSingles({ keys });
     }
 
     private loadMulti(keys: readonly any[]) {
@@ -165,11 +165,12 @@ export default class Users extends SQLQueryBuilder<
         const order = { ...orderBy }; // copy to retain
         keys.map((k) => delete k.orderBy); // remove key so its not included as a load param
         // apply the first ordering to all - may need to change data loader to execute multiple times for each ordering specified
-        return this.manyByCompoundColumnLoader({ keys, orderBy: order });
+        return this.stableGetMany({ keys, orderBy: order });
     }
 
     // TODO:- v1 map of loaders (can easily seed and purge)
     //  Problem: - number of entries explodes based on load angles (what if we add relation load angles?)
+    //  Solution:- generate dynamically rather than static
 
     // private readonly oneLoaders: { [key: string]: DataLoader<any, usersDTO | null> } = {
     //     email: new DataLoader<Partial<usersDTO>, usersDTO | null, string>(
@@ -205,9 +206,9 @@ export default class Users extends SQLQueryBuilder<
     // }
     // public async loadMulti(... map() => loadOne()...) {}
 
-
     // TODO:- option 2 - single DL that groups keys together based on load angle
     //    Problem - how to group?
+    //    This feels potentially too problematic
 
     private readonly combinedOneLoader = new DataLoader<
         Partial<usersDTO> & { orderBy?: usersOrderBy },
@@ -215,19 +216,18 @@ export default class Users extends SQLQueryBuilder<
         string
     >((keys) => {
         // group loads by key tuples
-        const loadAngles = groupBy(keys, k => Object.keys(k).sort().join(':'));
+        const loadAngles = groupBy(keys, (k) => Object.keys(k).sort().join(':'));
         // TODO:
         //  - Build a map from keys -> results in order
         const loads = Object.entries(loadAngles).map(([k, v]) => {
             return this.loadSingles(v);
-        })
-
+        });
 
         // return this.loadMulti(keys)
     }, Users.loaderOptions());
     // TODO:- slightly unrelated but:
-    //  Re: Relation loads
-    //  How will compoundColumnLoaders re-order? Will need to actually select the related column for N - 1?
+    //  Re: Relation filtered loads
+    //  How will compoundColumnLoaders re-order for stable ordering? Will need to actually select the related column for N - 1?
     //
 
     //
