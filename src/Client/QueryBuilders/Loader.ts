@@ -52,8 +52,11 @@ export class Loader<T extends object, F = Partial<T>> {
      * Clear the load cache
      */
     public async purge() {
-        Object.values(this.loaders.manyLoaders).forEach((l) => l.clearAll());
-        Object.values(this.loaders.oneLoaders).forEach((l) => l.clearAll());
+        return new Promise((res) => {
+            Object.values(this.loaders.manyLoaders).forEach((l) => l.clearAll());
+            Object.values(this.loaders.oneLoaders).forEach((l) => l.clearAll());
+            res();
+        });
     }
 
     /**

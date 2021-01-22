@@ -59,7 +59,7 @@ describe('TableTypeBuilder', () => {
 
             expect(formatted).toEqual(
                 `import {
-    SQLQueryBuilder,
+    QueryClient,
     Order,
     Enumerable,
     NumberWhere,
@@ -70,6 +70,7 @@ describe('TableTypeBuilder', () => {
     BooleanWhereNullable,
     DateWhere,
     DateWhereNullable,
+    Loader,
 } from 'gybson';
 
 import { postsRelationFilter } from './Posts';

@@ -114,6 +114,7 @@ describe('Upsert', () => {
                 },
                 reinstateSoftDeletedRows: true,
             });
+            await gybson.Posts.purge();
             const post2 = await gybson.Posts.oneByPostId({ post_id: postId });
             expect(post2).toEqual(
                 expect.objectContaining({

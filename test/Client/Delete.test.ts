@@ -40,6 +40,7 @@ describe('Delete', () => {
                     },
                 },
             });
+            await gybson.Posts.purge();
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
         });
@@ -60,6 +61,7 @@ describe('Delete', () => {
                     },
                 },
             });
+            await gybson.Posts.purge();
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
             await closePoolConnection(connection);
