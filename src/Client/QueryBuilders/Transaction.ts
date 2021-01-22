@@ -19,12 +19,12 @@ export const runTransaction = async <T>(fn: (conn: Connection) => T): Promise<T>
         await knex().raw('START TRANSACTION').connection(conn);
         const result = await fn(conn);
         await knex().raw('COMMIT').connection(conn);
-        // conn.release();
+        conn.end();
         return result;
     } catch (err) {
         logger().debug('Transaction failed. Rolling back...');
         await knex().raw('ROLLBACK').connection(conn);
-        // conn.release();
+        conn.end();
         throw err;
     }
 };
