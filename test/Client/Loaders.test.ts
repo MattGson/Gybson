@@ -77,6 +77,37 @@ describe('Loaders', () => {
                 }),
             );
         });
+        it('Caches the result of load', async () => {
+            await gybson.Users.oneByUserId({ user_id: ids.user1Id }); // run twice to debug load cache
+
+            await gybson.Users.update({
+                values: {
+                    first_name: 'Changed',
+                },
+                where: {
+                    user_id: ids.user1Id,
+                },
+            });
+
+            // check name has not changed
+            const loadOne = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            expect(loadOne).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    first_name: 'John',
+                }),
+            );
+            // clear cache
+            await gybson.Users.purge();
+            // should be up to date
+            const loadOne2 = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            expect(loadOne2).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    first_name: 'Changed',
+                }),
+            );
+        });
     });
     describe('many by column load', () => {
         it('Can load many from a single non-unique key', async () => {
@@ -143,6 +174,25 @@ describe('Loaders', () => {
             });
             const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id, includeDeleted: true });
             expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
+        });
+        it('Caches the result of load', async () => {
+            await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+
+            await gybson.Posts.softDelete({
+                where: {
+                    post_id: ids.post1Id,
+                },
+            });
+
+            // check result has not changed
+            const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
+
+            // clear cache
+            await gybson.Posts.purge();
+            // should be up to date
+            const loadMany2 = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            expect(loadMany2).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
     });
     describe('MySQL only', () => {

@@ -43,7 +43,7 @@ export class TableTypeBuilder {
         const { relations, tableName, gybsonLibPath } = params;
         return `
              import { 
-                SQLQueryBuilder,
+                QueryClient,
                 Order, 
                 Enumerable, 
                 NumberWhere, 

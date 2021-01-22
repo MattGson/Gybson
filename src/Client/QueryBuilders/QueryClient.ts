@@ -1,4 +1,4 @@
-import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex } from '../index';
+import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex, Loader } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
@@ -6,10 +6,11 @@ import { OrderBy, Paginate } from '../../TypeTruth';
 import { QueryBuilder, Transaction } from 'knex';
 import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
+
 type Connection = PGConn | MySQLConn;
 
-export abstract class SQLQueryBuilder<
-    TblRow,
+export abstract class QueryClient<
+    TblRow extends object,
     TblColumnMap,
     TblWhere,
     TblOrderBy extends OrderBy,
@@ -20,6 +21,11 @@ export abstract class SQLQueryBuilder<
     private readonly tableName: string;
     private readonly tableAlias: string;
     private readonly schema: DatabaseSchema;
+
+    protected loader = new Loader<TblRow>({
+        getMultis: (args) => this.stableGetMany(args),
+        getOnes: (args) => this.stableGetSingles(args),
+    });
 
     protected constructor(params: { tableName: string; schema: DatabaseSchema }) {
         this.tableName = params.tableName;
@@ -63,6 +69,13 @@ export abstract class SQLQueryBuilder<
         if (type === Comparable.Date) return { [colName]: null };
         if (type === Comparable.boolean) return { [colName]: false };
         return {};
+    }
+
+    /**
+     * Clear cache
+     */
+    public async purge() {
+        await this.loader.purge();
     }
 
     /**
@@ -138,7 +151,7 @@ export abstract class SQLQueryBuilder<
 
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
 
-        logger().debug('Executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        logger().debug('Executing single load: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 

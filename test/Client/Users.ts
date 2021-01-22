@@ -6,7 +6,7 @@ import DataLoader = require('dataloader');
 import { schema } from '../Gen/gybson.schema';
 
 import {
-    SQLQueryBuilder,
+    QueryClient,
     Order,
     Enumerable,
     NumberWhere,
@@ -131,7 +131,7 @@ export interface Loader {
     keyFunc: (user: usersDTO) => string;
 }
 
-export default class Users extends SQLQueryBuilder<
+export default class Users extends QueryClient<
     usersDTO,
     usersColumnMap,
     usersWhere,

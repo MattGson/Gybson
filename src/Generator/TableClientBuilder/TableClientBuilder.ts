@@ -61,11 +61,7 @@ export class TableClientBuilder {
 
              export default class ${
                  this.className
-             } extends SQLQueryBuilder<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}, ${requiredRowTypeName}> {
-                    private loader: Loader<${rowTypeName}> = new Loader({
-                        getMultis: this.stableGetMany,
-                        getOnes: this.stableGetSingles,
-                    });
+             } extends QueryClient<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}, ${requiredRowTypeName}> {
                     
                     constructor() {
                         super({ 
