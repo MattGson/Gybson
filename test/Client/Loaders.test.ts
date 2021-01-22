@@ -33,7 +33,11 @@ describe('Loaders', () => {
 
     describe('one by column load', () => {
         it('Can load one from a single unique key', async () => {
-            const loadOne = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            // multi-load to debug batching
+            const [loadOne] = await Promise.all([
+                gybson.Users.oneByUserId({ user_id: ids.user1Id }),
+                gybson.Users.oneByUserId({ user_id: 12 }),
+            ]);
             expect(loadOne).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
