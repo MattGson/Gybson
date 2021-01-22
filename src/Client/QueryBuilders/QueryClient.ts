@@ -1,15 +1,16 @@
-import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex } from '../index';
+import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex, Loader } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
-import { OrderBy, Paginate } from '../../TypeTruth/TypeTruth';
+import { OrderBy, Paginate } from '../../TypeTruth';
 import { QueryBuilder, Transaction } from 'knex';
 import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
+
 type Connection = PGConn | MySQLConn;
 
-export abstract class SQLQueryBuilder<
-    TblRow,
+export abstract class QueryClient<
+    TblRow extends object,
     TblColumnMap,
     TblWhere,
     TblOrderBy extends OrderBy,
@@ -20,6 +21,11 @@ export abstract class SQLQueryBuilder<
     private readonly tableName: string;
     private readonly tableAlias: string;
     private readonly schema: DatabaseSchema;
+
+    protected loader = new Loader<TblRow>({
+        getMultis: (args) => this.stableGetMany(args),
+        getOnes: (args) => this.stableGetSingles(args),
+    });
 
     protected constructor(params: { tableName: string; schema: DatabaseSchema }) {
         this.tableName = params.tableName;
@@ -66,11 +72,18 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Load multiple rows for each input compound key
+     * Clear cache
+     */
+    public async purge() {
+        await this.loader.purge();
+    }
+
+    /**
+     * Load multiple rows for each input compound key (stable ordering)
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    protected async manyByCompoundColumnLoader(params: {
+    protected async stableGetMany(params: {
         keys: readonly PartialTblRow[];
         orderBy?: TblOrderBy;
     }): Promise<TblRow[][]> {
@@ -120,11 +133,11 @@ export abstract class SQLQueryBuilder<
     }
 
     /**
-     * Load a single row for each input compound key
+     * Load a single row for each input compound key (stable ordering)
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    protected async byCompoundColumnLoader(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
+    protected async stableGetSingles(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
         const { keys } = params;
 
         // get the key columns to load on
@@ -138,7 +151,7 @@ export abstract class SQLQueryBuilder<
 
         let query = knex()(this.tableName).select().whereIn(columns, loadValues);
 
-        logger().debug('Executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        logger().debug('Executing single load: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 

@@ -40,6 +40,7 @@ describe('SoftDelete', () => {
                     },
                 },
             });
+            await gybson.Posts.purge();
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
         });
@@ -56,6 +57,7 @@ describe('SoftDelete', () => {
                     post_id: ids.post1Id,
                 },
             });
+            await gybson.Posts.purge();
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
 
@@ -76,6 +78,7 @@ describe('SoftDelete', () => {
                 },
             });
             // test both loader and find-many
+            await gybson.Users.purge();
             const user2 = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
             expect(user2).toEqual(null);
 
@@ -99,6 +102,7 @@ describe('SoftDelete', () => {
                     },
                 },
             });
+            await gybson.Posts.purge();
             const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
             expect(post2).toEqual(null);
             await closePoolConnection(connection);

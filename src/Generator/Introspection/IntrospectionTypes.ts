@@ -4,7 +4,7 @@ import {
     ConstraintDefinition,
     EnumDefinition,
     RelationDefinition,
-} from '../../TypeTruth/TypeTruth';
+} from '../../TypeTruth';
 
 export interface Introspection {
     getTableTypes(table: string, enumTypes: EnumDefinitions): Promise<TableColumnsDefinition>;

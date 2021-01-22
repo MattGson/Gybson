@@ -36,9 +36,8 @@ describe('BatchLoaderBuilder', () => {
 
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns, softDeleteColumn: softDelete });
             expect(params).toEqual({
-                loadKeyType: 'user_id: number;',
                 methodParamType: 'user_id: number;includeDeleted?: boolean;',
-                methodParamSpread: 'user_id',
+                loadFiltersSpread: 'user_id',
                 loaderName: 'UserId',
             });
         });
@@ -54,9 +53,8 @@ describe('BatchLoaderBuilder', () => {
             ];
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns });
             expect(params).toEqual({
-                loadKeyType: 'user_id: number;',
                 methodParamType: 'user_id: number;',
-                methodParamSpread: 'user_id',
+                loadFiltersSpread: 'user_id',
                 loaderName: 'UserId',
             });
         });
@@ -79,9 +77,8 @@ describe('BatchLoaderBuilder', () => {
             ];
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns });
             expect(params).toEqual({
-                loadKeyType: 'user_id: number,first_name: string;',
                 methodParamType: 'user_id: number,first_name: string;',
-                methodParamSpread: 'user_id,first_name',
+                loadFiltersSpread: 'user_id,first_name',
                 loaderName: 'UserIdAndFirstName',
             });
         });

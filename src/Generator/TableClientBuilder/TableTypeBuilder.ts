@@ -1,5 +1,5 @@
 import { EnumDefinitions, TableColumnsDefinition } from '../Introspection/IntrospectionTypes';
-import { ColumnDefinition, Comparable, RelationDefinition } from '../../TypeTruth/TypeTruth';
+import { ColumnDefinition, Comparable, RelationDefinition } from '../../TypeTruth';
 import _ from 'lodash';
 import { PascalCase } from '../lib';
 
@@ -43,7 +43,7 @@ export class TableTypeBuilder {
         const { relations, tableName, gybsonLibPath } = params;
         return `
              import { 
-                SQLQueryBuilder,
+                QueryClient,
                 Order, 
                 Enumerable, 
                 NumberWhere, 
@@ -53,7 +53,8 @@ export class TableTypeBuilder {
                 BooleanWhere, 
                 BooleanWhereNullable, 
                 DateWhere, 
-                DateWhereNullable 
+                DateWhereNullable,
+                Loader
             } from '${gybsonLibPath}';
             
             ${_.uniqBy(relations, (r) => r.toTable)
@@ -74,7 +75,7 @@ export class TableTypeBuilder {
         return `
             ${Object.entries(enums)
                 .map(([name, def]) => {
-                    return `export type ${name} = ${def.values.map((v) => `'${v}'`).join(' | ')}`;
+                    return `export type ${name} = ${def.values.map((v: string) => `'${v}'`).join(' | ')}`;
                 })
                 .sort()
                 .join(';')}

@@ -6,7 +6,7 @@ import {
     Comparable,
     RelationDefinition,
     DatabaseSchema,
-} from '../../TypeTruth/TypeTruth';
+} from '../../TypeTruth';
 import { knex } from '../index';
 
 export class WhereResolver {

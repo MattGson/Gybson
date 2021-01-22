@@ -2,7 +2,7 @@ import Knex from 'knex';
 import { Introspection } from './IntrospectionTypes';
 import { MySQLIntrospection } from './MySQLIntrospection';
 import { TableSchemaBuilder } from './TableSchemaBuilder';
-import { DatabaseSchema } from '../../TypeTruth/TypeTruth';
+import { DatabaseSchema } from '../../TypeTruth';
 import { PostgresIntrospection } from './PostgresIntrospection';
 
 export interface Connection {

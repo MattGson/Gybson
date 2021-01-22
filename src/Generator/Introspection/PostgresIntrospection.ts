@@ -5,7 +5,7 @@ import {
     ConstraintDefinition,
     NonComparable,
     RelationDefinition,
-} from '../../TypeTruth/TypeTruth';
+} from '../../TypeTruth';
 import _ from 'lodash';
 import Knex = require('knex');
 
