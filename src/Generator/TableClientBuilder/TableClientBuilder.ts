@@ -84,7 +84,7 @@ export class TableClientBuilder {
     }
 
     private async buildLoadersForTable() {
-        const { rowTypeName, orderByTypeName } = this.typeNames;
+        const { orderByTypeName } = this.typeNames;
 
         const unique = this.schema.uniqueKeyCombinations;
         const nonUnique = this.schema.nonUniqueKeyCombinations;
@@ -136,14 +136,15 @@ export class TableClientBuilder {
             requiredRowTypeName,
         } = this.typeNames;
 
-        const { columns, relations, enums, uniqueKeyCombinations, nonUniqueKeyCombinations } = this.schema;
+        const { columns, relations, enums, uniqueKeyCombinations } = this.schema;
 
         const uniqueColumns = uniqueKeyCombinations.map((key) => {
             return key.map((k) => this.schema.columns[k]);
         });
 
-        const nonUniqueColumns = nonUniqueKeyCombinations.map((key) => {
-            return key.map((k) => this.schema.columns[k]);
+        // get columns that are not unique constraints
+        const nonUniqueColumns = Object.values(columns).filter((col) => {
+            return !uniqueKeyCombinations.find((k) => k.length === 1 && k[0] === col.columnName);
         });
 
         this.types = `

@@ -16,7 +16,6 @@ export type TableTypeNames = {
 };
 
 export class TableTypeBuilder {
-
     /**
      * Get the type names for a table
      * @param params
@@ -259,24 +258,21 @@ export class TableTypeBuilder {
      * Build the where clause type for non-unique load angles
      * @param params
      */
-    public static buildLoadManyWhereType(params: { loadManyWhereTypeName: string; nonUniqueColumns: ColumnDefinition[][] }) {
-        const { loadManyWhereTypeName, nonUniqueColumns } = params;
-        const columnEntry = (col: ColumnDefinition) => `${col.columnName}: ${col.tsType}`;
-        const optionalColumnEntry = (col: ColumnDefinition) => `${col.columnName}?: ${col.tsType}`;
+    public static buildLoadManyWhereType(params: {
+        nonUniqueColumns: ColumnDefinition[];
+        loadManyWhereTypeName: string;
+    }) {
+        const { nonUniqueColumns, loadManyWhereTypeName } = params;
         return `
             export interface ${loadManyWhereTypeName} {
                 ${nonUniqueColumns
-            .map((cols) => {
-                if (cols.length == 1) return optionalColumnEntry(cols[0]);
-                const name = cols.map((c) => c.columnName).join('__');
-                return `
-                        ${name}?: {
-                            ${cols.map(columnEntry).join(';')}
-                        }
-                    `;
-            })
-            .join('; ')}
-            };
+                    .map((columnDefinition) => {
+                        let type = columnDefinition.tsType;
+                        let nullable = columnDefinition.nullable ? '| null' : '';
+                        return `${columnDefinition.columnName}?: ${type}${nullable};`;
+                    })
+                    .join(' ')}
+            }
         `;
     }
 

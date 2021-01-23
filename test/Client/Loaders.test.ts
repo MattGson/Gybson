@@ -210,10 +210,8 @@ describe('Loaders', () => {
         it('Can load many from a compound non-unique key from the common interface', async () => {
             const member = await gybson.TeamMembers.loadMany({
                 where: {
-                    member_post_id__team_id: {
-                        member_post_id: ids.post2Id,
-                        team_id: ids.team1Id,
-                    },
+                    member_post_id: ids.post2Id,
+                    team_id: ids.team1Id,
                 },
             });
             expect(member).toContainEqual(
@@ -262,7 +260,7 @@ describe('Loaders', () => {
                     orderBy: {
                         post_id: 'asc',
                     },
-                })
+                }),
             ]);
             expect(member).toEqual([
                 expect.objectContaining({
