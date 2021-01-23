@@ -17,9 +17,20 @@ export class BatchLoaderBuilder {
         let loadFiltersSpread = `${colNames.join(',')}`;
         const loaderName = colNames.map((name) => PascalCase(name)).join('And');
 
+        const loadFilter = ((cols: ColumnDefinition[]) => {
+                if (cols.length == 1) return cols[0].columnName;
+                const name = cols.map((c) => c.columnName).join('__');
+                return `
+                        ${name}?: {
+                            ${loadFiltersSpread}
+                        }
+                    `;
+            })(columns);
+
         return {
             methodParamType,
             loadFiltersSpread,
+            loadFilter,
             loaderName,
         };
     }
@@ -34,11 +45,11 @@ export class BatchLoaderBuilder {
         // rowTypeName: string;
         softDeleteColumn?: ColumnDefinition;
     }): string {
-        const { methodParamType, loadFiltersSpread, loaderName } = BatchLoaderBuilder.getLoadParams(params);
+        const { methodParamType, loadFiltersSpread, loadFilter, loaderName } = BatchLoaderBuilder.getLoadParams(params);
         return `
-                 public async oneBy${loaderName}(params: { ${methodParamType} }) {
+                public async oneBy${loaderName}(params: { ${methodParamType} }) {
                     const { ${loadFiltersSpread}, ...options } = params;
-                    return this.loader.loadOne({ ${loadFiltersSpread} }, options);
+                    return this.loadOne({ where: { ${loadFilter} }, ...options });
                 }
             `;
     }

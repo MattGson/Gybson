@@ -1,4 +1,4 @@
-import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex, Loader } from '../index';
+import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex, Loader, SoftDeleteQueryFilter } from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
@@ -13,6 +13,7 @@ export abstract class QueryClient<
     TblRow extends object,
     TblColumnMap,
     TblWhere,
+    TblUniqueWhere,
     TblOrderBy extends OrderBy,
     TblPaginate extends Paginate,
     RequiredTblRow,
@@ -76,6 +77,14 @@ export abstract class QueryClient<
      */
     public async purge() {
         await this.loader.purge();
+    }
+
+    /**
+     * Batch load a single-row
+     * @param params
+     */
+    public async loadOne(params: { where: TblUniqueWhere } & SoftDeleteQueryFilter) {
+        return this.loader.loadOne(params);
     }
 
     /**

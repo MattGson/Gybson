@@ -88,12 +88,19 @@ export class Loader<T extends object, F = Partial<T>> {
 
     /**
      * Loads a single row for the input filter.
-     * @param where
-     * @param options
+     * @param params
      */
-    public async loadOne(where: F, options: SoftDeleteQueryFilter) {
+    public async loadOne(params: { where: F }) {
+        const { where, ...options } = params;
         const loadAngle = this.filterHashKey({ where });
         let loader = this.loaders.oneLoaders[loadAngle];
+
+        // un-nest filters
+        const filter: any = {};
+        Object.entries(where).map(([k, v]) => {
+            if (v instanceof Object) Object.assign(filter, v);
+            else filter[k] = v;
+        });
 
         if (!loader) {
             // create new loader
@@ -103,8 +110,9 @@ export class Loader<T extends object, F = Partial<T>> {
                 this.getDataLoaderOptions(),
             );
         }
-        const row = await loader.load(where);
+        const row = await loader.load(filter);
 
+        // TODO:- move this to QQ?
         const [result] = runMiddleWares([row], options);
         return result || null;
     }

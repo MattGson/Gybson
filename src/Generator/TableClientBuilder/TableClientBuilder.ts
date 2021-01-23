@@ -50,6 +50,7 @@ export class TableClientBuilder {
             rowTypeName,
             columnMapTypeName,
             whereTypeName,
+            loadOneWhereTypeName,
             orderByTypeName,
             paginationTypeName,
             requiredRowTypeName,
@@ -61,7 +62,7 @@ export class TableClientBuilder {
 
              export default class ${
                  this.className
-             } extends QueryClient<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}, ${requiredRowTypeName}> {
+             } extends QueryClient<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${loadOneWhereTypeName}, ${orderByTypeName}, ${paginationTypeName}, ${requiredRowTypeName}> {
                     
                     constructor() {
                         super({ 
@@ -122,13 +123,18 @@ export class TableClientBuilder {
             rowTypeName,
             columnMapTypeName,
             whereTypeName,
+            loadOneWhereTypeName,
             orderByTypeName,
             paginationTypeName,
             relationFilterTypeName,
             requiredRowTypeName,
         } = this.typeNames;
 
-        const { columns, relations, enums } = this.schema;
+        const { columns, relations, enums, uniqueKeyCombinations } = this.schema;
+
+        const uniqueColumns = uniqueKeyCombinations.map((key) => {
+            return key.map((k) => this.schema.columns[k]);
+        });
 
         this.types = `
                 ${TableTypeBuilder.buildTypeImports({
@@ -148,6 +154,8 @@ export class TableClientBuilder {
                 ${TableTypeBuilder.buildRelationFilterType({ relationFilterTypeName, whereTypeName })}
                 
                 ${TableTypeBuilder.buildWhereType({ columns, whereTypeName, relations })}
+                
+                ${TableTypeBuilder.buildLoadOneWhereType({ uniqueColumns, loadOneWhereTypeName })}
                 
                 ${TableTypeBuilder.buildOrderType({ orderByTypeName, columns })}
                 
