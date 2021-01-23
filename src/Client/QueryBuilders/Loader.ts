@@ -38,7 +38,7 @@ export class Loader<T extends object, F = Partial<T>> {
      * Generate a unique hash key for a filter combination (used for loaders)
      * @param filter
      */
-    private filterHashKey<K extends { where: F }>(filter: K) {
+    private filterHashKey<K extends { filter: F }>(filter: K) {
         return keyify(filter).sort().join(':');
     }
 
@@ -60,30 +60,15 @@ export class Loader<T extends object, F = Partial<T>> {
     }
 
     /**
-     * // TODO:- move this to QC ? Loader should just run batch-dedup mechanism?
-     * un-nest filters i.e. team_id__user_id: { ... } -> team_id: ..., user_id: ...,
-     * @param where
-     */
-    private unNestFilters(where: F) {
-        const filter: any = {};
-        Object.entries(where).map(([k, v]) => {
-            if (v instanceof Object) Object.assign(filter, v);
-            else filter[k] = v;
-        });
-        return filter;
-    }
-
-    /**
-     * Loads multiple rows for the input filter.
+     * Batch Loads multiple rows for the input filter.
      * @param params
      */
-    public async loadMany(params: { where: F } & OrderQueryFilter) {
-        const { where, orderBy, ...options } = params;
+    public async loadMany(params: { filter: F } & OrderQueryFilter) {
+        const { filter, orderBy } = params;
 
         // different loader for each orderBy
-        const loadAngle = this.filterHashKey({ where, orderBy });
+        const loadAngle = this.filterHashKey({ filter, orderBy });
         let loader = this.loaders.manyLoaders[loadAngle];
-        const filter = this.unNestFilters(where);
 
         if (!loader) {
             // create new loader
@@ -93,21 +78,17 @@ export class Loader<T extends object, F = Partial<T>> {
                 this.getDataLoaderOptions(),
             );
         }
-        const rows = await loader.load(filter);
-
-        const result = runMiddleWares(rows, options);
-        return result || null;
+        return loader.load(filter);
     }
 
     /**
-     * Loads a single row for the input filter.
+     * Batch Loads a single row for the input filter.
      * @param params
      */
-    public async loadOne(params: { where: F }) {
-        const { where, ...options } = params;
-        const loadAngle = this.filterHashKey({ where });
+    public async loadOne(params: { filter: F }) {
+        const { filter } = params;
+        const loadAngle = this.filterHashKey({ filter });
         let loader = this.loaders.oneLoaders[loadAngle];
-        const filter = this.unNestFilters(where);
 
         if (!loader) {
             // create new loader
@@ -117,10 +98,6 @@ export class Loader<T extends object, F = Partial<T>> {
                 this.getDataLoaderOptions(),
             );
         }
-        const row = await loader.load(filter);
-
-        // TODO:- move this to QueryClient? Also, why can't soft delete filter run at DB layer? Can just add `includeDeleted` to filterHash like orderBy ?
-        const [result] = runMiddleWares([row], options);
-        return result || null;
+        return loader.load(filter);
     }
 }
