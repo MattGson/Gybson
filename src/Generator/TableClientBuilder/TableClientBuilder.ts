@@ -51,6 +51,7 @@ export class TableClientBuilder {
             columnMapTypeName,
             whereTypeName,
             loadOneWhereTypeName,
+            loadManyWhereTypeName,
             orderByTypeName,
             paginationTypeName,
             requiredRowTypeName,
@@ -60,9 +61,14 @@ export class TableClientBuilder {
 
             ${this.types}
 
-             export default class ${
-                 this.className
-             } extends QueryClient<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${loadOneWhereTypeName}, ${orderByTypeName}, ${paginationTypeName}, ${requiredRowTypeName}> {
+             export default class ${this.className} extends QueryClient<${rowTypeName}, 
+                    ${columnMapTypeName}, 
+                    ${whereTypeName}, 
+                    ${loadOneWhereTypeName}, 
+                    ${loadManyWhereTypeName}, 
+                    ${orderByTypeName}, 
+                    ${paginationTypeName}, 
+                    ${requiredRowTypeName}> {
                     
                     constructor() {
                         super({ 
@@ -110,7 +116,6 @@ export class TableClientBuilder {
             this.loaders.push(
                 BatchLoaderBuilder.getManyByColumnLoader({
                     loadColumns: keyColumns,
-                    rowTypeName,
                     orderByTypeName,
                     softDeleteColumn: this.softDeleteColumn || undefined,
                 }),
@@ -124,15 +129,20 @@ export class TableClientBuilder {
             columnMapTypeName,
             whereTypeName,
             loadOneWhereTypeName,
+            loadManyWhereTypeName,
             orderByTypeName,
             paginationTypeName,
             relationFilterTypeName,
             requiredRowTypeName,
         } = this.typeNames;
 
-        const { columns, relations, enums, uniqueKeyCombinations } = this.schema;
+        const { columns, relations, enums, uniqueKeyCombinations, nonUniqueKeyCombinations } = this.schema;
 
         const uniqueColumns = uniqueKeyCombinations.map((key) => {
+            return key.map((k) => this.schema.columns[k]);
+        });
+
+        const nonUniqueColumns = nonUniqueKeyCombinations.map((key) => {
             return key.map((k) => this.schema.columns[k]);
         });
 
@@ -156,6 +166,8 @@ export class TableClientBuilder {
                 ${TableTypeBuilder.buildWhereType({ columns, whereTypeName, relations })}
                 
                 ${TableTypeBuilder.buildLoadOneWhereType({ uniqueColumns, loadOneWhereTypeName })}
+                
+                ${TableTypeBuilder.buildLoadManyWhereType({ nonUniqueColumns, loadManyWhereTypeName })}
                 
                 ${TableTypeBuilder.buildOrderType({ orderByTypeName, columns })}
                 

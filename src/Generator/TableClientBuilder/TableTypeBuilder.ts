@@ -9,6 +9,7 @@ export type TableTypeNames = {
     columnMapTypeName: string;
     whereTypeName: string;
     loadOneWhereTypeName: string;
+    loadManyWhereTypeName: string;
     orderByTypeName: string;
     paginationTypeName: string;
     relationFilterTypeName: string;
@@ -28,6 +29,7 @@ export class TableTypeBuilder {
             columnMapTypeName: `${tableName}ColumnMap`,
             whereTypeName: `${tableName}Where`,
             loadOneWhereTypeName: `${tableName}LoadOneWhere`,
+            loadManyWhereTypeName: `${tableName}LoadManyWhere`,
             orderByTypeName: `${tableName}OrderBy`,
             paginationTypeName: `${tableName}Paginate`,
             relationFilterTypeName: `${tableName}RelationFilter`,
@@ -249,6 +251,31 @@ export class TableTypeBuilder {
                     `;
                     })
                     .join('; ')}
+            };
+        `;
+    }
+
+    /**
+     * Build the where clause type for non-unique load angles
+     * @param params
+     */
+    public static buildLoadManyWhereType(params: { loadManyWhereTypeName: string; nonUniqueColumns: ColumnDefinition[][] }) {
+        const { loadManyWhereTypeName, nonUniqueColumns } = params;
+        const columnEntry = (col: ColumnDefinition) => `${col.columnName}: ${col.tsType}`;
+        const optionalColumnEntry = (col: ColumnDefinition) => `${col.columnName}?: ${col.tsType}`;
+        return `
+            export interface ${loadManyWhereTypeName} {
+                ${nonUniqueColumns
+            .map((cols) => {
+                if (cols.length == 1) return optionalColumnEntry(cols[0]);
+                const name = cols.map((c) => c.columnName).join('__');
+                return `
+                        ${name}?: {
+                            ${cols.map(columnEntry).join(';')}
+                        }
+                    `;
+            })
+            .join('; ')}
             };
         `;
     }

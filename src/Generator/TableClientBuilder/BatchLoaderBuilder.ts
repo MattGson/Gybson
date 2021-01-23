@@ -42,7 +42,6 @@ export class BatchLoaderBuilder {
      */
     public static getOneByColumnLoader(params: {
         loadColumns: ColumnDefinition[];
-        // rowTypeName: string;
         softDeleteColumn?: ColumnDefinition;
     }): string {
         const { methodParamType, loadFiltersSpread, loadFilter, loaderName } = BatchLoaderBuilder.getLoadParams(params);
@@ -61,17 +60,16 @@ export class BatchLoaderBuilder {
      */
     public static getManyByColumnLoader(params: {
         loadColumns: ColumnDefinition[];
-        rowTypeName: string;
         softDeleteColumn?: ColumnDefinition;
         orderByTypeName: string;
     }): string {
         const { orderByTypeName } = params;
-        const { methodParamType, loadFiltersSpread, loaderName } = BatchLoaderBuilder.getLoadParams(params);
+        const { methodParamType, loadFiltersSpread, loadFilter, loaderName } = BatchLoaderBuilder.getLoadParams(params);
 
         return `
                  public async manyBy${loaderName}(params: { ${methodParamType} orderBy?: ${orderByTypeName} }) {
                     const { ${loadFiltersSpread}, ...options } = params;
-                    return this.loader.loadMany({ ${loadFiltersSpread} }, options);
+                    return this.loadMany({ where: { ${loadFilter} }, ...options });
                 }
             `;
     }

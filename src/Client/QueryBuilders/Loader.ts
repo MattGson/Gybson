@@ -60,6 +60,7 @@ export class Loader<T extends object, F = Partial<T>> {
     }
 
     /**
+     * // TODO:- move this to QC ? Loader should just run batch-dedup mechanism?
      * un-nest filters i.e. team_id__user_id: { ... } -> team_id: ..., user_id: ...,
      * @param where
      */
@@ -74,25 +75,25 @@ export class Loader<T extends object, F = Partial<T>> {
 
     /**
      * Loads multiple rows for the input filter.
-     * @param where
-     * @param options
+     * @param params
      */
-    public async loadMany(where: F, options: SoftDeleteQueryFilter & OrderQueryFilter) {
-        const { orderBy } = options;
+    public async loadMany(params: { where: F } & OrderQueryFilter) {
+        const { where, orderBy, ...options } = params;
 
         // different loader for each orderBy
         const loadAngle = this.filterHashKey({ where, orderBy });
         let loader = this.loaders.manyLoaders[loadAngle];
+        const filter = this.unNestFilters(where);
 
         if (!loader) {
             // create new loader
-            logger().debug(`No many loader for key ${loadAngle}. Creating loader.`);
+            logger().debug(`No many-loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.manyLoaders[loadAngle] = new DataLoader<F, T[], string>(
                 (keys) => this.dataSource.getMultis({ keys, orderBy }),
                 this.getDataLoaderOptions(),
             );
         }
-        const rows = await loader.load(where);
+        const rows = await loader.load(filter);
 
         const result = runMiddleWares(rows, options);
         return result || null;
@@ -110,7 +111,7 @@ export class Loader<T extends object, F = Partial<T>> {
 
         if (!loader) {
             // create new loader
-            logger().debug(`No single loader for key ${loadAngle}. Creating loader.`);
+            logger().debug(`No single-loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.oneLoaders[loadAngle] = new DataLoader<F, T | null, string>(
                 (keys) => this.dataSource.getOnes({ keys }),
                 this.getDataLoaderOptions(),
