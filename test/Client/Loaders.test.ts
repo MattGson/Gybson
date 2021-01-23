@@ -47,11 +47,53 @@ describe('Loaders', () => {
                 }),
             );
         });
+        it('Can load one from a single unique key using common interface', async () => {
+            // multi-load to debug batching - should batch across both methods
+            const [loadOne] = await Promise.all([
+                gybson.Users.loadOne({
+                    where: {
+                        user_id: ids.user1Id,
+                    },
+                }),
+                gybson.Users.oneByUserId({ user_id: 12 }),
+            ]);
+            expect(loadOne).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    first_name: 'John',
+                    last_name: 'Doe',
+                    permissions: 'USER',
+                }),
+            );
+        });
         it('Can load one from a compound unique key', async () => {
             const member = await gybson.TeamMembers.oneByTeamIdAndUserId({
                 user_id: ids.user1Id,
                 team_id: ids.team1Id,
             });
+            expect(member).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    team_id: ids.team1Id,
+                }),
+            );
+        });
+        it('Can load one from a compound unique key using common interface', async () => {
+            // run both to debug batching
+            const [member] = await Promise.all([
+                gybson.TeamMembers.loadOne({
+                    where: {
+                        team_id__user_id: {
+                            team_id: ids.team1Id,
+                            user_id: ids.user1Id,
+                        },
+                    },
+                }),
+                gybson.TeamMembers.oneByTeamIdAndUserId({
+                    user_id: 5,
+                    team_id: 3,
+                }),
+            ]);
             expect(member).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,

@@ -60,6 +60,19 @@ export class Loader<T extends object, F = Partial<T>> {
     }
 
     /**
+     * un-nest filters i.e. team_id__user_id: { ... } -> team_id: ..., user_id: ...,
+     * @param where
+     */
+    private unNestFilters(where: F) {
+        const filter: any = {};
+        Object.entries(where).map(([k, v]) => {
+            if (v instanceof Object) Object.assign(filter, v);
+            else filter[k] = v;
+        });
+        return filter;
+    }
+
+    /**
      * Loads multiple rows for the input filter.
      * @param where
      * @param options
@@ -73,9 +86,8 @@ export class Loader<T extends object, F = Partial<T>> {
 
         if (!loader) {
             // create new loader
-            logger().debug(`No loader for key ${loadAngle}. Creating loader.`);
+            logger().debug(`No many loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.manyLoaders[loadAngle] = new DataLoader<F, T[], string>(
-                // TODO - this will use the same order for all? Even in the future - should work right?
                 (keys) => this.dataSource.getMultis({ keys, orderBy }),
                 this.getDataLoaderOptions(),
             );
@@ -94,17 +106,11 @@ export class Loader<T extends object, F = Partial<T>> {
         const { where, ...options } = params;
         const loadAngle = this.filterHashKey({ where });
         let loader = this.loaders.oneLoaders[loadAngle];
-
-        // un-nest filters
-        const filter: any = {};
-        Object.entries(where).map(([k, v]) => {
-            if (v instanceof Object) Object.assign(filter, v);
-            else filter[k] = v;
-        });
+        const filter = this.unNestFilters(where);
 
         if (!loader) {
             // create new loader
-            logger().debug(`No loader for key ${loadAngle}. Creating loader.`);
+            logger().debug(`No single loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.oneLoaders[loadAngle] = new DataLoader<F, T | null, string>(
                 (keys) => this.dataSource.getOnes({ keys }),
                 this.getDataLoaderOptions(),
@@ -112,7 +118,7 @@ export class Loader<T extends object, F = Partial<T>> {
         }
         const row = await loader.load(filter);
 
-        // TODO:- move this to QQ?
+        // TODO:- move this to QueryClient? Also, why can't soft delete filter run at DB layer? Can just add `includeDeleted` to filterHash like orderBy ?
         const [result] = runMiddleWares([row], options);
         return result || null;
     }
