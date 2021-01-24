@@ -23,7 +23,7 @@ sidebar_label: Introduction
 
 Gybson is a type-safe, auto-generated Node.js query client (light-weight ORM) for working with SQL databases in Typescript.
 
-Optimized for super fast lazy loading, using batching and caching, which makes it perfect for GraphQL apps.
+Optimized for super fast lazy loading, using batching and caching, it's perfect for GraphQL apps.
 
 Gybson is built on top of trusted open-source projects:
  - [Knex](https://github.com/knex/knex)
@@ -35,26 +35,7 @@ Gybson works with MySQL and PostgreSQL databases.
 
 Gybson was created to make working with relational databases in Typescript as productive as possible.
 
-The core principle of Gybson is **Make the easiest thing to do, the right thing to do**. 
-
 Just run `gybson generate` and you have a fully type-safe database client created for your exact schema. 
-
-**Ex.** "I want to get a user with the email abc@testemail.com"
-
-In gybson:
-
-```typescript
-const user: users = await gybson.Users.oneByEmail({ email: 'abc@testemail.com' });
-```
-This method:
- - Is the first option in `IDE auto-completion` when typing "gybson.Users.emai..."
- - Makes sure the `email` argument passed is a `string` type.
- - Performs the query on an `indexed column` to maximise speed.
- - `Batches` the query with other queries to reduce round trips to the database.
- - `Caches` the result so it does not need to be refetched elsewhere in a request.
- - Returns a `typed` result with an auto-gen type `users` that can be used elsewhere in the app.
-
-All of this is taken care of so you can focus your effort on your app, not your database.
 
 ---
 
@@ -72,7 +53,7 @@ Gybson comes with automated type safety out of the box so you know exactly what 
 
 ### Auto-generated
 
-Unlike most ORMs you don't have to define complex types and relations in code. You can get started using Gybson in 5 minutes and work purely with plain JavaScript objects.
+Unlike most ORMs you don't have to define complex types and relations in code. You can get started using Gybson in 5 minutes and work with plain JavaScript objects.
 
 ### GraphQL optimized
 
@@ -80,7 +61,7 @@ Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood t
 
 ### SQL developer friendly
 
-Gybson uses standard SQL terms where possible and offers a flexible query API including `filtering on relations`.
+Gybson uses SQL terms where possible and offers a flexible query API including `filtering on relations`.
 
 ## A simple example
 
@@ -106,7 +87,11 @@ const id = await gybson.users.insert({
     },
 });
 
-const user = await gybson.users.oneByUserId({ user_id: id });
+const user = await gybson.users.loadOne({
+    where: {
+        user_id: id
+    }
+});
 
 console.log(user);
 /* 

@@ -17,9 +17,16 @@ export class BatchLoaderBuilder {
         let loadFiltersSpread = `${colNames.join(',')}`;
         const loaderName = colNames.map((name) => PascalCase(name)).join('And');
 
+        const uniqueLoadFilter = ((cols: ColumnDefinition[]) => {
+            if (cols.length == 1) return cols[0].columnName;
+            const name = cols.map((c) => c.columnName).join('__');
+            return `${name}?: { ${loadFiltersSpread} }`;
+        })(columns);
+
         return {
             methodParamType,
             loadFiltersSpread,
+            uniqueLoadFilter,
             loaderName,
         };
     }
@@ -31,14 +38,15 @@ export class BatchLoaderBuilder {
      */
     public static getOneByColumnLoader(params: {
         loadColumns: ColumnDefinition[];
-        // rowTypeName: string;
         softDeleteColumn?: ColumnDefinition;
     }): string {
-        const { methodParamType, loadFiltersSpread, loaderName } = BatchLoaderBuilder.getLoadParams(params);
+        const { methodParamType, loadFiltersSpread, uniqueLoadFilter, loaderName } = BatchLoaderBuilder.getLoadParams(
+            params,
+        );
         return `
-                 public async oneBy${loaderName}(params: { ${methodParamType} }) {
+                public async oneBy${loaderName}(params: { ${methodParamType} }) {
                     const { ${loadFiltersSpread}, ...options } = params;
-                    return this.loader.loadOne({ ${loadFiltersSpread} }, options);
+                    return this.loadOne({ where: { ${uniqueLoadFilter} }, ...options });
                 }
             `;
     }
@@ -50,7 +58,6 @@ export class BatchLoaderBuilder {
      */
     public static getManyByColumnLoader(params: {
         loadColumns: ColumnDefinition[];
-        rowTypeName: string;
         softDeleteColumn?: ColumnDefinition;
         orderByTypeName: string;
     }): string {
@@ -60,7 +67,7 @@ export class BatchLoaderBuilder {
         return `
                  public async manyBy${loaderName}(params: { ${methodParamType} orderBy?: ${orderByTypeName} }) {
                     const { ${loadFiltersSpread}, ...options } = params;
-                    return this.loader.loadMany({ ${loadFiltersSpread} }, options);
+                    return this.loadMany({ where: { ${loadFiltersSpread} }, ...options });
                 }
             `;
     }

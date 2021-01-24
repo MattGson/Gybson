@@ -50,6 +50,8 @@ export class TableClientBuilder {
             rowTypeName,
             columnMapTypeName,
             whereTypeName,
+            loadOneWhereTypeName,
+            loadManyWhereTypeName,
             orderByTypeName,
             paginationTypeName,
             requiredRowTypeName,
@@ -59,9 +61,14 @@ export class TableClientBuilder {
 
             ${this.types}
 
-             export default class ${
-                 this.className
-             } extends QueryClient<${rowTypeName}, ${columnMapTypeName}, ${whereTypeName}, ${orderByTypeName}, ${paginationTypeName}, ${requiredRowTypeName}> {
+             export default class ${this.className} extends QueryClient<${rowTypeName}, 
+                    ${columnMapTypeName}, 
+                    ${whereTypeName}, 
+                    ${loadOneWhereTypeName}, 
+                    ${loadManyWhereTypeName}, 
+                    ${orderByTypeName}, 
+                    ${paginationTypeName}, 
+                    ${requiredRowTypeName}> {
                     
                     constructor() {
                         super({ 
@@ -77,7 +84,7 @@ export class TableClientBuilder {
     }
 
     private async buildLoadersForTable() {
-        const { rowTypeName, orderByTypeName } = this.typeNames;
+        const { orderByTypeName } = this.typeNames;
 
         const unique = this.schema.uniqueKeyCombinations;
         const nonUnique = this.schema.nonUniqueKeyCombinations;
@@ -109,7 +116,6 @@ export class TableClientBuilder {
             this.loaders.push(
                 BatchLoaderBuilder.getManyByColumnLoader({
                     loadColumns: keyColumns,
-                    rowTypeName,
                     orderByTypeName,
                     softDeleteColumn: this.softDeleteColumn || undefined,
                 }),
@@ -122,13 +128,15 @@ export class TableClientBuilder {
             rowTypeName,
             columnMapTypeName,
             whereTypeName,
+            loadOneWhereTypeName,
+            loadManyWhereTypeName,
             orderByTypeName,
             paginationTypeName,
             relationFilterTypeName,
             requiredRowTypeName,
         } = this.typeNames;
 
-        const { columns, relations, enums } = this.schema;
+        const { columns, relations, enums, uniqueKeyCombinations } = this.schema;
 
         this.types = `
                 ${TableTypeBuilder.buildTypeImports({
@@ -148,6 +156,18 @@ export class TableClientBuilder {
                 ${TableTypeBuilder.buildRelationFilterType({ relationFilterTypeName, whereTypeName })}
                 
                 ${TableTypeBuilder.buildWhereType({ columns, whereTypeName, relations })}
+                
+                ${TableTypeBuilder.buildLoadOneWhereType({
+                    columns,
+                    uniqueKeys: uniqueKeyCombinations,
+                    loadOneWhereTypeName,
+                })}
+                
+                ${TableTypeBuilder.buildLoadManyWhereType({
+                    columns,
+                    uniqueKeys: uniqueKeyCombinations,
+                    loadManyWhereTypeName,
+                })}
                 
                 ${TableTypeBuilder.buildOrderType({ orderByTypeName, columns })}
                 

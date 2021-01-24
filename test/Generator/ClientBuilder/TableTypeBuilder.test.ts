@@ -28,6 +28,8 @@ describe('TableTypeBuilder', () => {
                 requiredRowTypeName: `usersRequiredRow`,
                 columnMapTypeName: `usersColumnMap`,
                 whereTypeName: `usersWhere`,
+                loadOneWhereTypeName: `usersLoadOneWhere`,
+                loadManyWhereTypeName: `usersLoadManyWhere`,
                 orderByTypeName: `usersOrderBy`,
                 paginationTypeName: `usersPaginate`,
                 relationFilterTypeName: `usersRelationFilter`,
@@ -41,6 +43,8 @@ describe('TableTypeBuilder', () => {
                 requiredRowTypeName: `usersRequiredRow`,
                 columnMapTypeName: `usersColumnMap`,
                 whereTypeName: `usersWhere`,
+                loadOneWhereTypeName: `usersLoadOneWhere`,
+                loadManyWhereTypeName: `usersLoadManyWhere`,
                 orderByTypeName: `usersOrderBy`,
                 paginationTypeName: `usersPaginate`,
                 relationFilterTypeName: `usersRelationFilter`,
@@ -184,6 +188,55 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     author_?: usersRelationFilter | null;
     co_author_?: usersRelationFilter | null;
     team_members?: team_membersRelationFilter | null;
+}
+`,
+            );
+        });
+    });
+    describe('buildLoadOneWhereType', () => {
+        it('Generates filters for unique keys', async (): Promise<void> => {
+            const { uniqueKeyCombinations } = await new TableSchemaBuilder('team_members', intro).buildTableDefinition();
+            const enums = await intro.getEnumTypesForTable('team_members');
+            const columns = await intro.getTableTypes('team_members', enums);
+            const result = TableTypeBuilder.buildLoadOneWhereType({
+                uniqueKeys: uniqueKeyCombinations,
+                columns,
+                loadOneWhereTypeName: 'team_membersLoadOneWhere',
+            });
+            const formatted = format(result, { parser: 'typescript', ...prettier });
+
+            expect(formatted).toEqual(
+                `export interface team_membersLoadOneWhere {
+    team_id__user_id?: {
+        team_id: number;
+        user_id: number;
+    };
+}
+`,
+            );
+        });
+    });
+    describe('buildLoadManyWhereType', () => {
+        it('Generates filters for non-unique keys', async (): Promise<void> => {
+            const { uniqueKeyCombinations } = await new TableSchemaBuilder('posts', intro).buildTableDefinition();
+            const enums = await intro.getEnumTypesForTable('posts');
+            const columns = await intro.getTableTypes('posts', enums);
+            const result = TableTypeBuilder.buildLoadManyWhereType({
+                columns,
+                uniqueKeys: uniqueKeyCombinations,
+                loadManyWhereTypeName: 'postsLoadManyWhere',
+            });
+            const formatted = format(result, { parser: 'typescript', ...prettier });
+
+            expect(formatted).toEqual(
+                `export interface postsLoadManyWhere {
+    author?: string;
+    author_id?: number;
+    co_author?: number | null;
+    message?: string;
+    rating_average?: number | null;
+    created?: Date | null;
+    deleted?: boolean | null;
 }
 `,
             );

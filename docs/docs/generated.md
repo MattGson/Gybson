@@ -15,13 +15,9 @@ query functionality such as relationship filtering.
 ### Client
 
 Gybson generates TypeScript code that you can import and use in your project.
-There is a client class generated for each table in the database. 
-The Gybson() entry point simply wraps an instance of each class.
+There is a client class and types generated for each table in the database. 
 
 ### Data loaders
 
 Gybson leverages data loaders for batching and de-duplication of requests.
-Each loader method in a gybson client class is backed by a dataloader instance. This allows 
-for batching on compound keys as well as multi-row loads rather than just
-on basic primary keys. Instantiating a new client instance creates new dataloader 
-instances with a fresh in memory cache.
+Each Gybson client instance creates new dataloader instances with a fresh in memory cache.

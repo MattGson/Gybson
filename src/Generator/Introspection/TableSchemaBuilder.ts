@@ -16,20 +16,6 @@ export class TableSchemaBuilder {
     }
 
     /**
-     * Check if a given relation is one-to-one (has a unique constraint)
-     * @param joinColumns, columns in the join
-     * @param uniqueKeys
-     */
-    private static isOneToOneRelation(joinColumns: string[], uniqueKeys: string[][]): boolean {
-        // check if there is a unique constraint on the join. If so, it is 1 - 1;
-        // TODO:- what if unique constraint is only on part of the join (would relation be over constrained?)
-        for (let key of uniqueKeys) {
-            if (_.isEqual(joinColumns, key)) return true;
-        }
-        return false;
-    }
-
-    /**
      * Format a forward relation (N - 1)
      * Alias the name on relations to ensure unique keys even when the same table is joined multiple times
      * Also remove plural on related tables to match cardinality i.e. posts -> users would be 'post.author'
@@ -55,7 +41,7 @@ export class TableSchemaBuilder {
 
         // check if there is a unique constraint on the join. If so, it is 1 - 1;
         const joins = relation.joins.map((j) => j.fromColumn).sort();
-        if (TableSchemaBuilder.isOneToOneRelation(joins, uniqueKeys)) relation.type = 'hasOne';
+        if (CardinalityResolver.isOneToOneRelation(joins, uniqueKeys)) relation.type = 'hasOne';
 
         return relation;
     }
@@ -89,7 +75,7 @@ export class TableSchemaBuilder {
         const uniqueKeys = CardinalityResolver.getUniqueKeyCombinations(relatedTableConstraints);
 
         const joins = relation.joins.map((j) => j.toColumn).sort();
-        if (TableSchemaBuilder.isOneToOneRelation(joins, uniqueKeys)) {
+        if (CardinalityResolver.isOneToOneRelation(joins, uniqueKeys)) {
             relation.type = 'hasOne';
             relation.alias = relation.alias.replace(/s+$/, ''); // remove trailing s
         }

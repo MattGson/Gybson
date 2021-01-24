@@ -9,32 +9,58 @@ sidebar_label: Query API
 Loaders are methods for each table that perform super fast [batched](https://github.com/graphql/dataloader#batching) and [cached](https://github.com/graphql/dataloader#batching) loads on key columns.
 This is designed to minimise performance issues from the [n+1 problem](https://stackoverflow.com/questions/97197/what-is-the-n1-selects-problem-in-orm-object-relational-mapping).
 
-Loader methods are generated for each unique and non-unique key combination.
-Loaders are the primary way of loading data from your database using gybson.
+Loaders are the primary way of getting data from your database.
 
-### Unique keys
+### loadOne
 
-Unique key loaders filter by a unique column (usually the primary key).
-These loader methods return a single record or null
+`loadOne(...)` returns a single record or null.
 
-> **Unique loaders use the prefix _"one"_**
+`loadOne` filters by a unique column or combination (often primary key).
 
 ```typescript
-const user = await gybson.Users.oneByUserId({ user_id: 1 });
+const user = await gybson.Users.loadOne({
+    where: {
+        user_id: 1,
+    },
+});
+// Return type: User | null
+```
+A compound unique key example:
 
-// Return type: users | null
+```typescript
+const posts = await gybson.Posts.loadOne({
+    where: {
+        tag_id__topic_id: {
+            tag_id: 1,
+            topic_id: 4
+        }
+    },
+});
+
+// Return type: post | null
 ```
 
-### Non-Unique keys
+### loadMany
 
-Non-unique loaders filter on a non-unique key column (usually a foreign key).
-These methods return an array of records. These loaders allow an order to be specified.
-
-> **Non-unique loaders use the prefix _"many"_**
+`loadMany(...)` returns an array of records.
+`loadMany` filters on non-unique key columns (often foreign keys).
 
 ```typescript
-const posts = await gybson.Posts.manyByUserId({
-    user_id: 1,
+const posts = await gybson.Posts.loadMany({
+    where: {
+        author_id: 1,
+    },
+});
+
+// Return type: posts[]
+```
+An order can be specified:
+
+```typescript
+const posts = await gybson.Posts.loadMany({
+    where: {
+        author_id: 1,
+    },
     orderBy: {
         first_name: 'asc',
     },
@@ -43,21 +69,10 @@ const posts = await gybson.Posts.manyByUserId({
 // Return type: posts[]
 ```
 
-### Key combinations
-
-Loaders are also generated for unique and non-unique key combinations.
-
-**i.e.**
-
-```typescript
-const posts = await gybson.Posts.manyByTagIdAndTopicId({ tag_id: 1, topic_id: 4 });
-
-// Return type: posts[]
-```
 
 ## findMany
 
-`findMany` loads many rows from a table. It provides a very flexible query API whilst maintaining full type safety.
+Similar to `loadMany`, `findMany` loads many rows from a table. The difference is that `findMany` provides a very flexible query API including relation filtering.
 Due to this flexibility, `findMany` **does not** perform batching or caching.
 
 :::tip
@@ -137,7 +152,6 @@ const users = await gybson.Users.findMany({
 });
 ```
 
-
 #### Cursor pagination
 
 Returns rows before or after a specific row. You can use any column (or combination) as your cursor.
@@ -165,8 +179,6 @@ const users = await gybson.Users.findMany({
 });
 ```
 
-
-
 ## insert
 
 Inserts one or more rows into the database. This will automatically apply _DEFAULT_ values for any
@@ -182,12 +194,11 @@ const user_id = await gybson.Users.insert({
         first_name: 'John',
         age: 25,
         last_name: 'Doe',
-     },
+    },
 });
 ```
 
 ### insert multiple rows
-
 
 ```typescript
 const user_id = await gybson.Users.insert({
@@ -309,25 +320,24 @@ await gybson.Users.delete({
 });
 ```
 
-## transaction
+## runTransaction
 
-Use `transaction` to run a set of queries as a single atomic query. This means if any
-of the queries fail then none of the changes will be committed. 
+Use `runTransaction` to run a set of queries as a single atomic query. This means if any
+of the queries fail then none of the changes will be committed.
 
-You can include a query in the transaction by passing in the `transact` argument.
+You can include a query in the transaction by passing in the `connection` argument.
 
 ```typescript
-import { transaction } from 'gybson';
 
-const newUser = await transaction(async (trx) => {
+const newUser = await gybson.runTransaction(async (connection) => {
     const users = await gybson.Users.softDelete({
-        transact: trx,
+        connection,
         where: {
             user_id: 1,
         },
     });
     return await gybson.Users.insert({
-        transact: trx,
+        connection,
         values: { first_name: 'Steve' },
     });
 });
@@ -341,8 +351,8 @@ and the query will use it instead of the internal connection.
 This can be useful for apps with existing connection handling or more complex transaction handling requirements.
 
 Example with `insert` and MySQL:
+
 ```typescript
-import { insert } from 'gybson';
 import mysql from 'promise-mysql';
 
 const poolConn = mysql.getPoolConnection();
@@ -353,5 +363,4 @@ return await gybson.Users.insert({
 });
 
 poolConn.close();
-
 ```

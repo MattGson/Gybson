@@ -1,4 +1,14 @@
-import { ColumnDefinition, Comparable, DatabaseSchema, engine, knex, Loader } from '../index';
+import {
+    ColumnDefinition,
+    Comparable,
+    DatabaseSchema,
+    engine,
+    knex,
+    Loader,
+    OrderQueryFilter,
+    runMiddleWares,
+    SoftDeleteQueryFilter,
+} from '../index';
 import { logger } from '../lib/logging';
 import _ from 'lodash';
 import { WhereResolver } from './WhereResolver';
@@ -13,6 +23,8 @@ export abstract class QueryClient<
     TblRow extends object,
     TblColumnMap,
     TblWhere,
+    TblUniqueWhere,
+    TblNonUniqueWhere,
     TblOrderBy extends OrderBy,
     TblPaginate extends Paginate,
     RequiredTblRow,
@@ -72,10 +84,54 @@ export abstract class QueryClient<
     }
 
     /**
+     * un-nest filters i.e. team_id__user_id: { ... } -> team_id: ..., user_id: ...,
+     * @param where
+     */
+    private unNestFilters(where: TblUniqueWhere | TblNonUniqueWhere) {
+        const filter: any = {};
+        Object.entries(where).map(([k, v]) => {
+            if (v instanceof Object) Object.assign(filter, v);
+            else filter[k] = v;
+        });
+        return filter;
+    }
+
+    /**
      * Clear cache
      */
-    public async purge() {
+    public async purge(): Promise<void> {
         await this.loader.purge();
+    }
+
+    /**
+     * Batch load a single-row
+     * @param params
+     */
+    public async loadOne(params: { where: TblUniqueWhere } & SoftDeleteQueryFilter): Promise<TblRow | null> {
+        const { where, ...options } = params;
+
+        const filter = this.unNestFilters(where);
+        const row = await this.loader.loadOne({ filter });
+
+        // TODO:- why can't soft delete filter run at DB layer? Can just add `includeDeleted` to filterHash like orderBy ?
+        const [result] = runMiddleWares([row], options);
+        return result || null;
+    }
+
+    /**
+     * Batch load many-rows
+     * @param params
+     */
+    public async loadMany(
+        params: { where: TblNonUniqueWhere } & SoftDeleteQueryFilter & OrderQueryFilter,
+    ): Promise<TblRow[]> {
+        const { where, orderBy, ...options } = params;
+
+        const filter = this.unNestFilters(where);
+        const rows = await this.loader.loadMany({ filter, orderBy });
+
+        const result = runMiddleWares(rows, options);
+        return result || null;
     }
 
     /**

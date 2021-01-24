@@ -47,11 +47,53 @@ describe('Loaders', () => {
                 }),
             );
         });
+        it('Can load one from a single unique key using common interface', async () => {
+            // multi-load to debug batching - should batch across both methods
+            const [loadOne] = await Promise.all([
+                gybson.Users.loadOne({
+                    where: {
+                        user_id: ids.user1Id,
+                    },
+                }),
+                gybson.Users.oneByUserId({ user_id: 12 }),
+            ]);
+            expect(loadOne).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    first_name: 'John',
+                    last_name: 'Doe',
+                    permissions: 'USER',
+                }),
+            );
+        });
         it('Can load one from a compound unique key', async () => {
             const member = await gybson.TeamMembers.oneByTeamIdAndUserId({
                 user_id: ids.user1Id,
                 team_id: ids.team1Id,
             });
+            expect(member).toEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    team_id: ids.team1Id,
+                }),
+            );
+        });
+        it('Can load one from a compound unique key using common interface', async () => {
+            // run both to debug batching
+            const [member] = await Promise.all([
+                gybson.TeamMembers.loadOne({
+                    where: {
+                        team_id__user_id: {
+                            team_id: ids.team1Id,
+                            user_id: ids.user1Id,
+                        },
+                    },
+                }),
+                gybson.TeamMembers.oneByTeamIdAndUserId({
+                    user_id: 5,
+                    team_id: 3,
+                }),
+            ]);
             expect(member).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -129,10 +171,48 @@ describe('Loaders', () => {
                 }),
             );
         });
+        it('Can load many from a single non-unique key from the common interface', async () => {
+            // run both to debug batch
+            const [loadMany] = await Promise.all([
+                gybson.Posts.loadMany({
+                    where: {
+                        author_id: ids.user1Id,
+                    },
+                }),
+                gybson.Posts.manyByAuthorId({ author_id: 8 }),
+            ]);
+            expect(loadMany).toContainEqual(
+                expect.objectContaining({
+                    author_id: ids.user1Id,
+                    message: 'test 2',
+                }),
+            );
+            expect(loadMany).toContainEqual(
+                expect.objectContaining({
+                    author_id: ids.user1Id,
+                    message: 'first',
+                }),
+            );
+        });
         it('Can load many from a compound non-unique key', async () => {
             const member = await gybson.TeamMembers.manyByMemberPostIdAndTeamId({
                 team_id: ids.team1Id,
                 member_post_id: ids.post2Id,
+            });
+            expect(member).toContainEqual(
+                expect.objectContaining({
+                    user_id: ids.user1Id,
+                    team_id: ids.team1Id,
+                    member_post_id: ids.post2Id,
+                }),
+            );
+        });
+        it('Can load many from a compound non-unique key from the common interface', async () => {
+            const member = await gybson.TeamMembers.loadMany({
+                where: {
+                    member_post_id: ids.post2Id,
+                    team_id: ids.team1Id,
+                },
             });
             expect(member).toContainEqual(
                 expect.objectContaining({
@@ -152,6 +232,36 @@ describe('Loaders', () => {
                     message: 'asc',
                 },
             });
+            expect(member).toEqual([
+                expect.objectContaining({
+                    post_id: p2,
+                }),
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+            ]);
+        });
+        it('Can order loaded rows using the common interface', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
+            // run both to debug batch - should Not be batched as orderBy is different.
+            const [member] = await Promise.all([
+                gybson.Posts.loadMany({
+                    where: {
+                        author_id: u,
+                    },
+                    orderBy: {
+                        message: 'asc',
+                    },
+                }),
+                gybson.Posts.manyByAuthorId({
+                    author_id: 2,
+                    orderBy: {
+                        post_id: 'asc',
+                    },
+                }),
+            ]);
             expect(member).toEqual([
                 expect.objectContaining({
                     post_id: p2,

@@ -38,7 +38,7 @@ export class Loader<T extends object, F = Partial<T>> {
      * Generate a unique hash key for a filter combination (used for loaders)
      * @param filter
      */
-    private filterHashKey<K extends { where: F }>(filter: K) {
+    private filterHashKey<K extends { filter: F }>(filter: K) {
         return keyify(filter).sort().join(':');
     }
 
@@ -60,52 +60,44 @@ export class Loader<T extends object, F = Partial<T>> {
     }
 
     /**
-     * Loads multiple rows for the input filter.
-     * @param where
-     * @param options
+     * Batch Loads multiple rows for the input filter.
+     * @param params
      */
-    public async loadMany(where: F, options: SoftDeleteQueryFilter & OrderQueryFilter) {
-        const { orderBy } = options;
+    public async loadMany(params: { filter: F } & OrderQueryFilter) {
+        const { filter, orderBy } = params;
 
         // different loader for each orderBy
-        const loadAngle = this.filterHashKey({ where, orderBy });
+        const loadAngle = this.filterHashKey({ filter, orderBy });
         let loader = this.loaders.manyLoaders[loadAngle];
 
         if (!loader) {
             // create new loader
-            logger().debug(`No loader for key ${loadAngle}. Creating loader.`);
+            logger().debug(`No many-loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.manyLoaders[loadAngle] = new DataLoader<F, T[], string>(
-                // TODO - this will use the same order for all? Even in the future - should work right?
                 (keys) => this.dataSource.getMultis({ keys, orderBy }),
                 this.getDataLoaderOptions(),
             );
         }
-        const rows = await loader.load(where);
-
-        const result = runMiddleWares(rows, options);
-        return result || null;
+        return loader.load(filter);
     }
 
     /**
-     * Loads a single row for the input filter.
-     * @param where
-     * @param options
+     * Batch Loads a single row for the input filter.
+     * @param params
      */
-    public async loadOne(where: F, options: SoftDeleteQueryFilter) {
-        const loadAngle = this.filterHashKey({ where });
+    public async loadOne(params: { filter: F }) {
+        const { filter } = params;
+        const loadAngle = this.filterHashKey({ filter });
         let loader = this.loaders.oneLoaders[loadAngle];
 
         if (!loader) {
             // create new loader
-            logger().debug(`No loader for key ${loadAngle}. Creating loader.`);
+            logger().debug(`No single-loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.oneLoaders[loadAngle] = new DataLoader<F, T | null, string>(
                 (keys) => this.dataSource.getOnes({ keys }),
                 this.getDataLoaderOptions(),
             );
         }
-        const row = await loader.load(where);
-
-        const [result] = runMiddleWares([row], options);
-        return result || null;
+        return loader.load(filter);
     }
 }
