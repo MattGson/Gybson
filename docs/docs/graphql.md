@@ -47,18 +47,18 @@ Then in your resolvers:
 
 Query: {
     user(parent, args, context, info) {
-        return context.gybson.Users.oneByUserId({ user_id: args.id });
+        return context.gybson.Users.loadOne({ where: { user_id: args.id } });
     },
     posts(parent, args, context, info) {
-        return context.gybson.Posts.manyByAuthorId({ author_id: parent.author_id });
+        return context.gybson.Posts.loadMany({ where: { author_id: parent.author_id } });
     },
     comments(parent, args, context, info) {
-         return context.gybson.Comments.manyByPostId({ post_id: parent.post_id });
+         return context.gybson.Comments.loadMany({ where: { post_id: parent.post_id } });
     }
 }
 ```
 
-Executing the following query results in 3 database round-trips
+Executing the following query results in just 3 database round-trips
 regardless of how many posts or comments are loaded.
 
 ```typescript

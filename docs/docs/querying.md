@@ -13,7 +13,7 @@ Loaders are the primary way of getting data from your database.
 
 ### loadOne
 
-`loadOne(...)` return a single record or null.
+`loadOne(...)` returns a single record or null.
 
 `loadOne` filters by a unique column or combination (often primary key).
 
@@ -25,30 +25,7 @@ const user = await gybson.Users.loadOne({
 });
 // Return type: User | null
 ```
-
-### loadMany
-
-`loadMany(...)` returns an array of records. Order can be specified.
-`loadMany` filters on non-unique key columns (often foreign keys).
-
-```typescript
-const posts = await gybson.Posts.loadMany({
-    where: {
-        author_id: 1,
-    },
-    orderBy: {
-        first_name: 'asc',
-    },
-});
-
-// Return type: posts[]
-```
-
-### Key combinations
-
-Loaders can filter on unique and non-unique key combinations.
-
-**i.e.**
+A compound unique key example:
 
 ```typescript
 const posts = await gybson.Posts.loadOne({
@@ -63,9 +40,39 @@ const posts = await gybson.Posts.loadOne({
 // Return type: post | null
 ```
 
+### loadMany
+
+`loadMany(...)` returns an array of records.
+`loadMany` filters on non-unique key columns (often foreign keys).
+
+```typescript
+const posts = await gybson.Posts.loadMany({
+    where: {
+        author_id: 1,
+    },
+});
+
+// Return type: posts[]
+```
+An order can be specified:
+
+```typescript
+const posts = await gybson.Posts.loadMany({
+    where: {
+        author_id: 1,
+    },
+    orderBy: {
+        first_name: 'asc',
+    },
+});
+
+// Return type: posts[]
+```
+
+
 ## findMany
 
-`findMany` loads many rows from a table. It provides a very flexible query API whilst maintaining full type safety.
+Similar to `loadMany`, `findMany` loads many rows from a table. The difference is that `findMany` provides a very flexible query API including relation filtering.
 Due to this flexibility, `findMany` **does not** perform batching or caching.
 
 :::tip

@@ -37,16 +37,6 @@ Gybson was created to make working with relational databases in Typescript as pr
 
 Just run `gybson generate` and you have a fully type-safe database client created for your exact schema. 
 
-**Ex.** "Get a user with the email abc@testemail.com"
-
-
-```typescript
-const user = await gybson.Users.loadOne({ 
-    where: {
-        email: 'abc@testemail.com'
-    } 
-});
-```
 ---
 
 ## Key features
