@@ -2,7 +2,7 @@ import { Introspection } from '../../../src/Generator/Introspection/Introspectio
 import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
 import 'jest-extended';
 import { BatchLoaderBuilder } from '../../../src/Generator/TableClientBuilder/BatchLoaderBuilder';
-import {getIntrospection} from "../../Setup/test.env";
+import { getIntrospection } from '../../Setup/test.env';
 
 describe('BatchLoaderBuilder', () => {
     let intro: Introspection;
@@ -38,6 +38,7 @@ describe('BatchLoaderBuilder', () => {
             expect(params).toEqual({
                 methodParamType: 'user_id: number;includeDeleted?: boolean;',
                 loadFiltersSpread: 'user_id',
+                uniqueLoadFilter: 'user_id',
                 loaderName: 'UserId',
             });
         });
@@ -48,13 +49,14 @@ describe('BatchLoaderBuilder', () => {
                     nullable: false,
                     tsType: 'number',
                     columnName: 'user_id',
-                    columnDefault: null
+                    columnDefault: null,
                 },
             ];
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns });
             expect(params).toEqual({
                 methodParamType: 'user_id: number;',
                 loadFiltersSpread: 'user_id',
+                uniqueLoadFilter: 'user_id',
                 loaderName: 'UserId',
             });
         });
@@ -65,14 +67,14 @@ describe('BatchLoaderBuilder', () => {
                     nullable: false,
                     tsType: 'number',
                     columnName: 'user_id',
-                    columnDefault: null
+                    columnDefault: null,
                 },
                 {
                     dbType: 'varchar',
                     nullable: true,
                     tsType: 'string',
                     columnName: 'first_name',
-                    columnDefault: null
+                    columnDefault: null,
                 },
             ];
             const params = BatchLoaderBuilder.getLoadParams({ loadColumns: columns });
@@ -80,6 +82,7 @@ describe('BatchLoaderBuilder', () => {
                 methodParamType: 'user_id: number,first_name: string;',
                 loadFiltersSpread: 'user_id,first_name',
                 loaderName: 'UserIdAndFirstName',
+                uniqueLoadFilter: 'user_id__first_name?: { user_id,first_name }',
             });
         });
     });

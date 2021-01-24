@@ -138,15 +138,6 @@ export class TableClientBuilder {
 
         const { columns, relations, enums, uniqueKeyCombinations } = this.schema;
 
-        const uniqueColumns = uniqueKeyCombinations.map((key) => {
-            return key.map((k) => this.schema.columns[k]);
-        });
-
-        // get columns that are not unique constraints
-        const nonUniqueColumns = Object.values(columns).filter((col) => {
-            return !uniqueKeyCombinations.find((k) => k.length === 1 && k[0] === col.columnName);
-        });
-
         this.types = `
                 ${TableTypeBuilder.buildTypeImports({
                     tableName: this.tableName,
@@ -166,9 +157,17 @@ export class TableClientBuilder {
                 
                 ${TableTypeBuilder.buildWhereType({ columns, whereTypeName, relations })}
                 
-                ${TableTypeBuilder.buildLoadOneWhereType({ uniqueColumns, loadOneWhereTypeName })}
+                ${TableTypeBuilder.buildLoadOneWhereType({
+                    columns,
+                    uniqueKeys: uniqueKeyCombinations,
+                    loadOneWhereTypeName,
+                })}
                 
-                ${TableTypeBuilder.buildLoadManyWhereType({ nonUniqueColumns, loadManyWhereTypeName })}
+                ${TableTypeBuilder.buildLoadManyWhereType({
+                    columns,
+                    uniqueKeys: uniqueKeyCombinations,
+                    loadManyWhereTypeName,
+                })}
                 
                 ${TableTypeBuilder.buildOrderType({ orderByTypeName, columns })}
                 

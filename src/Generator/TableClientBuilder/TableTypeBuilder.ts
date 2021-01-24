@@ -233,8 +233,17 @@ export class TableTypeBuilder {
      * Build the where clause type for unique load angles
      * @param params
      */
-    public static buildLoadOneWhereType(params: { loadOneWhereTypeName: string; uniqueColumns: ColumnDefinition[][] }) {
-        const { loadOneWhereTypeName, uniqueColumns } = params;
+    public static buildLoadOneWhereType(params: {
+        loadOneWhereTypeName: string;
+        columns: TableColumnsDefinition;
+        uniqueKeys: string[][];
+    }) {
+        const { loadOneWhereTypeName, columns, uniqueKeys } = params;
+
+        const uniqueColumns = uniqueKeys.map((key) => {
+            return key.map((k) => columns[k]);
+        });
+
         const columnEntry = (col: ColumnDefinition) => `${col.columnName}: ${col.tsType}`;
         const optionalColumnEntry = (col: ColumnDefinition) => `${col.columnName}?: ${col.tsType}`;
         return `
@@ -259,10 +268,17 @@ export class TableTypeBuilder {
      * @param params
      */
     public static buildLoadManyWhereType(params: {
-        nonUniqueColumns: ColumnDefinition[];
+        columns: TableColumnsDefinition;
+        uniqueKeys: string[][];
         loadManyWhereTypeName: string;
     }) {
-        const { nonUniqueColumns, loadManyWhereTypeName } = params;
+        const { columns, uniqueKeys, loadManyWhereTypeName } = params;
+
+        // get columns that are not unique constraints
+        const nonUniqueColumns = Object.values(columns).filter((col) => {
+            return !uniqueKeys.find((k) => k.length === 1 && k[0] === col.columnName);
+        });
+
         return `
             export interface ${loadManyWhereTypeName} {
                 ${nonUniqueColumns
