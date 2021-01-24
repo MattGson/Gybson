@@ -87,7 +87,7 @@ const id = await gybson.users.insert({
     },
 });
 
-const user = await gybson.users.oneByUserId({ user_id: id });
+const user = await gybson.users.loadOne({ where: { user_id: id } });
 
 /* 
  {
@@ -125,7 +125,7 @@ Then in your resolvers:
 
 Query: {
     user(parent, args, context, info) {
-        return context.gybson.Users.oneByUserId({ user_id: args.id });
+        return context.gybson.Users.loadOne({ where: { user_id: args.id } });
     }
 }
 ```
