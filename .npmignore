@@ -10,7 +10,12 @@ test/
 .idea
 jest.config.js
 gybson-config.json
+relational-schema-config.json
 *.md
 .travis.yml
 .prettierrc.js
 .eslintrc.js
+.releaserc.json
+docker-compose.*
+relation-config.json
+node_modules

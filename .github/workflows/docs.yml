@@ -1,0 +1,30 @@
+name: docs-actions
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  # Only run when docs are changed
+  push:
+    paths:
+      - 'docs/**'
+    branches:
+      - main
+      - master
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+      - name: Install
+        run: npm ci
+        working-directory: ./docs
+      - name: Deploy
+        run: |
+          git config --global user.email "mattgson@github.com"
+          git config --global user.name "mattgson"
+          npm run deploy
+        working-directory: ./docs
+        env:
+          GIT_USER: mattgson
+          GIT_PASS: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,28 @@
+version: '3.7'
+services:
+    postgres:
+        image: postgres:13-alpine
+        # platform: amd64
+        environment:
+            TZ: 'UTC'
+            PGTZ: 'UTC'
+            POSTGRES_USER: 'postgres' # default user
+            POSTGRES_DB: 'tests'
+            POSTGRES_PASSWORD: 'password'
+            POSTGRES_HOST_AUTH_METHOD: 'trust' # allow all connections without password
+
+        ports:
+            - 5432:5432
+
+    mysql:
+        image: mysql:5.7
+        platform: amd64
+
+        environment:
+            TZ: 'UTC'
+            MYSQL_ROOT_PASSWORD: ''
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+            MYSQL_DATABASE: 'tests'
+
+        ports:
+            - 3306:3306

@@ -1,5 +1,8 @@
 module.exports = {
     preset: 'ts-jest',
+    globals: {
+        'ts-jest': { tsConfigFile: 'test/tsconfig.json' },
+    },
     testEnvironment: 'node',
     // Automatically clear mock calls and instances between every test
     clearMocks: true,
