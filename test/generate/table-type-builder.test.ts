@@ -5,6 +5,7 @@ import { format } from 'prettier';
 import { TableTypeBuilder } from 'src/generate/client-builder/table-type-builder';
 import { prettierDefault } from 'src/generate/config';
 import schema from 'test/tmp/relational-schema';
+import { DB, itif } from 'test/helpers';
 
 describe('TableTypeBuilder', () => {
     beforeAll(async (): Promise<void> => {
@@ -18,30 +19,15 @@ describe('TableTypeBuilder', () => {
             const typeNames = TableTypeBuilder.typeNamesForTable({ tableName: 'users' });
 
             expect(typeNames).toEqual({
-                rowTypeName: `usersRow`,
-                requiredRowTypeName: `usersRequiredRow`,
-                columnMapTypeName: `usersColumnMap`,
-                whereTypeName: `usersWhere`,
-                loadOneWhereTypeName: `usersLoadOneWhere`,
-                loadManyWhereTypeName: `usersLoadManyWhere`,
-                orderByTypeName: `usersOrderBy`,
-                paginationTypeName: `usersPaginate`,
-                relationFilterTypeName: `usersRelationFilter`,
-            });
-        });
-        it('Applies a given suffix to row type', async (): Promise<void> => {
-            const typeNames = TableTypeBuilder.typeNamesForTable({ tableName: 'users', rowTypeSuffix: 'DTO' });
-
-            expect(typeNames).toEqual({
-                rowTypeName: `usersDTO`,
-                requiredRowTypeName: `usersRequiredRow`,
-                columnMapTypeName: `usersColumnMap`,
-                whereTypeName: `usersWhere`,
-                loadOneWhereTypeName: `usersLoadOneWhere`,
-                loadManyWhereTypeName: `usersLoadManyWhere`,
-                orderByTypeName: `usersOrderBy`,
-                paginationTypeName: `usersPaginate`,
-                relationFilterTypeName: `usersRelationFilter`,
+                rowTypeName: `User`,
+                requiredRowTypeName: `UserRequiredRow`,
+                columnMapTypeName: `UserColumnMap`,
+                whereTypeName: `UserWhere`,
+                loadOneWhereTypeName: `UserLoadOneWhere`,
+                loadManyWhereTypeName: `UserLoadManyWhere`,
+                orderByTypeName: `UserOrderBy`,
+                paginationTypeName: `UserPaginate`,
+                relationFilterTypeName: `UserRelationFilter`,
             });
         });
     });
@@ -72,14 +58,15 @@ describe('TableTypeBuilder', () => {
     Loader,
 } from 'gybson';
 
-import { postsRelationFilter } from './Posts';
-import { team_membersRelationFilter } from './TeamMembers';
+import { PostRelationFilter } from './Post';
+import { TeamMemberRelationFilter } from './TeamMember';
+import { TeamRelationFilter } from './Team';
 `,
             );
         });
     });
     describe('buildEnumTypes', () => {
-        it('Generates the enum types for the table', async (): Promise<void> => {
+        itif(DB() === 'mysql')('Generates the enum types for the table', async (): Promise<void> => {
             const enums = schema.tables.users.enums;
             const result = TableTypeBuilder.buildEnumTypes({ enums });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
@@ -90,16 +77,27 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
 `,
             );
         });
-    });
-    describe('buildRowType', () => {
-        it('Generates the row type for the table', async (): Promise<void> => {
+        itif(DB() === 'pg')('Generates the enum types for the table', async (): Promise<void> => {
             const enums = schema.tables.users.enums;
-            const columns = schema.tables.users.columns;
-            const result = TableTypeBuilder.buildRowType({ table: columns, rowTypeName: 'usersRow' });
+            const result = TableTypeBuilder.buildEnumTypes({ enums });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export interface usersRow {
+                `export type permissions = 'ADMIN' | 'USER';
+export type subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
+`,
+            );
+        });
+    });
+    describe('buildRowType', () => {
+        itif(DB() === 'mysql')('Generates the row type for the table', async (): Promise<void> => {
+            const enums = schema.tables.users.enums;
+            const columns = schema.tables.users.columns;
+            const result = TableTypeBuilder.buildRowType({ table: columns, rowTypeName: 'User' });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
+
+            expect(formatted).toEqual(
+                `export interface User {
     user_id: number;
     best_friend_id: number | null;
     email: string;
@@ -114,16 +112,38 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
 `,
             );
         });
+        itif(DB() === 'pg')('Generates the row type for the table', async (): Promise<void> => {
+            const enums = schema.tables.users.enums;
+            const columns = schema.tables.users.columns;
+            const result = TableTypeBuilder.buildRowType({ table: columns, rowTypeName: 'User' });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
+
+            expect(formatted).toEqual(
+                `export interface User {
+    user_id: number;
+    best_friend_id: number | null;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    password: string;
+    token: string | null;
+    permissions: permissions | null;
+    subscription_level: subscription_level | null;
+    deleted_at: Date | null;
+}
+`,
+            );
+        });
     });
     describe('buildColumnMapType', () => {
         it('Generates a boolean map of the columns', async (): Promise<void> => {
             const enums = schema.tables.users.enums;
             const columns = schema.tables.users.columns;
-            const result = TableTypeBuilder.buildColumnMapType({ columns, columnMapTypeName: 'usersColumnMap' });
+            const result = TableTypeBuilder.buildColumnMapType({ columns, columnMapTypeName: 'UserColumnMap' });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export interface usersColumnMap {
+                `export interface UserColumnMap {
     user_id: boolean;
     best_friend_id: boolean;
     email: boolean;
@@ -142,16 +162,16 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     describe('buildRelationFilterType', () => {
         it('Generates a filter for relation queries for the table', async (): Promise<void> => {
             const result = TableTypeBuilder.buildRelationFilterType({
-                whereTypeName: 'usersWhere',
-                relationFilterTypeName: 'usersRelationFilter',
+                whereTypeName: 'UserWhere',
+                relationFilterTypeName: 'UserRelationFilter',
             });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export interface usersRelationFilter {
-    existsWhere?: usersWhere;
-    notExistsWhere?: usersWhere;
-    whereEvery?: usersWhere;
+                `export interface UserRelationFilter {
+    existsWhere?: UserWhere;
+    notExistsWhere?: UserWhere;
+    whereEvery?: UserWhere;
 }
 `,
             );
@@ -162,11 +182,11 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
             const columns = schema.tables.posts.columns;
             const relations = schema.tables.posts.relations;
             // @ts-ignore
-            const result = TableTypeBuilder.buildWhereType({ columns, relations, whereTypeName: 'postsWhere' });
+            const result = TableTypeBuilder.buildWhereType({ columns, relations, whereTypeName: 'PostWhere' });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export interface postsWhere {
+                `export interface PostWhere {
     post_id?: number | NumberWhere;
     author?: string | StringWhere;
     author_id?: number | NumberWhere;
@@ -176,13 +196,15 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     created?: Date | DateWhereNullable | null;
     deleted?: boolean | BooleanWhereNullable | null;
 
-    AND?: Enumerable<postsWhere>;
-    OR?: Enumerable<postsWhere>;
-    NOT?: Enumerable<postsWhere>;
+    AND?: Enumerable<PostWhere>;
+    OR?: Enumerable<PostWhere>;
+    NOT?: Enumerable<PostWhere>;
 
-    author_?: usersRelationFilter | null;
-    co_author_?: usersRelationFilter | null;
-    team_members?: team_membersRelationFilter | null;
+    author_relation?: UserRelationFilter | null;
+    co_author_relation?: UserRelationFilter | null;
+    team_members?: TeamMemberRelationFilter | null;
+    teams?: TeamRelationFilter | null;
+    users?: UserRelationFilter | null;
 }
 `,
             );
@@ -195,12 +217,12 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
             const result = TableTypeBuilder.buildLoadOneWhereType({
                 uniqueKeys: uniqueKeyCombinations,
                 columns,
-                loadOneWhereTypeName: 'team_membersLoadOneWhere',
+                loadOneWhereTypeName: 'TeamMemberLoadOneWhere',
             });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export interface team_membersLoadOneWhere {
+                `export interface TeamMemberLoadOneWhere {
     team_id__user_id?: {
         team_id: number;
         user_id: number;
@@ -238,11 +260,11 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     describe('buildOrderType', () => {
         it('Generates an Order clause for every column', async (): Promise<void> => {
             const columns = schema.tables.posts.columns;
-            const result = TableTypeBuilder.buildOrderType({ orderByTypeName: 'postsOrderBy', columns });
+            const result = TableTypeBuilder.buildOrderType({ orderByTypeName: 'PostOrderBy', columns });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export type postsOrderBy = {
+                `export type PostOrderBy = {
     post_id?: Order;
     author?: Order;
     author_id?: Order;
@@ -259,16 +281,16 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     describe('buildPaginateType', () => {
         it('Generates a filter for relation queries for the table', async (): Promise<void> => {
             const result = TableTypeBuilder.buildPaginateType({
-                paginationTypeName: 'postsPaginate',
-                rowTypeName: 'postsDTO',
+                paginationTypeName: 'PostPaginate',
+                rowTypeName: 'Post',
             });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export interface postsPaginate {
+                `export interface PostPaginate {
     limit?: number;
-    afterCursor?: Partial<postsDTO>;
-    beforeCursor?: Partial<postsDTO>;
+    afterCursor?: Partial<Post>;
+    beforeCursor?: Partial<Post>;
     offset?: number;
 }
 `,

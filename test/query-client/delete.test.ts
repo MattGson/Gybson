@@ -4,7 +4,7 @@ import {
     closeConnection,
     closePoolConnection,
     getPoolConnection,
-    knex,
+    getKnex,
     seed,
     SeedIds,
 } from 'test/helpers';
@@ -16,48 +16,46 @@ describe('Delete', () => {
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = new GybsonClient(knex());
+        gybson = new GybsonClient(getKnex());
 
         // Seeds
         ids = await seed(gybson);
     });
     describe('usage', () => {
         it('Can delete using where filters', async () => {
-            const post = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
+            const post = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: ids.post1Id,
                 }),
             );
 
-            await gybson.Posts.delete({
+            await gybson.post.delete({
                 where: {
                     rating_average: {
                         gt: 4,
                     },
                 },
             });
-            await gybson.Posts.purge();
-            const post2 = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
+            await gybson.post.purge();
+            const post2 = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
             expect(post2).toEqual(null);
         });
         it('Can use an external connection', async () => {
             const connection = await getPoolConnection();
-            const post = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
+            const post = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: ids.post1Id,
                 }),
             );
 
-            await gybson.Posts.delete({
+            await gybson.post.delete({
                 connection,
                 where: {
                     rating_average: {
@@ -65,8 +63,8 @@ describe('Delete', () => {
                     },
                 },
             });
-            await gybson.Posts.purge();
-            const post2 = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
+            await gybson.post.purge();
+            const post2 = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
             expect(post2).toEqual(null);
             await closePoolConnection(connection);
         });

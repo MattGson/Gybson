@@ -9,6 +9,7 @@ const gybsonLibPath = path.join('../../src/query-client');
 const schemaFile = 'test/tmp/relational-schema.ts';
 
 // build a db and gybson client for testing
+// Note:- if you import this file you may get test issues as it executes immediately
 buildDBSchemas()
     .then(() => generate({ outdir, gybsonLibPath, schemaFile }))
     .then(() => closeConnection())

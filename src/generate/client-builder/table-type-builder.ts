@@ -8,6 +8,7 @@ import {
 } from 'relational-schema';
 import * as pluralize from 'pluralize';
 import { PascalCase } from '../printer';
+import { camelCase } from 'lodash';
 
 export type TableTypeNames = {
     rowTypeName: string;
@@ -27,21 +28,21 @@ export class TableTypeBuilder {
      * @param tableName
      * @returns
      */
-    private static tableNameAlias(tableName: string) {
-        return pluralize.singular(tableName);
+    public static tableNameAlias(tableName: string) {
+        return PascalCase(pluralize.singular(tableName));
     }
 
     /**
      * Get the type names for a table
      * @param params
      */
-    public static typeNamesForTable(params: { tableName: string; rowTypeSuffix?: string }): TableTypeNames {
-        let { tableName, rowTypeSuffix } = params;
+    public static typeNamesForTable(params: { tableName: string }): TableTypeNames {
+        let { tableName } = params;
 
         tableName = this.tableNameAlias(tableName);
 
         return {
-            rowTypeName: `${tableName}${rowTypeSuffix || 'Row'}`,
+            rowTypeName: `${tableName}`,
             requiredRowTypeName: `${tableName}RequiredRow`,
             columnMapTypeName: `${tableName}ColumnMap`,
             whereTypeName: `${tableName}Where`,
@@ -86,7 +87,7 @@ export class TableTypeBuilder {
 
                     const names = this.typeNamesForTable({ tableName: tbl.toTable });
 
-                    return `import { ${names.relationFilterTypeName} } from "./${PascalCase(tbl.toTable)}"`;
+                    return `import { ${names.relationFilterTypeName} } from "./${names.rowTypeName}"`;
                 })
                 .join(';')}
         `;

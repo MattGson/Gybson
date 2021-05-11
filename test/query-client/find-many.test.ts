@@ -1,15 +1,5 @@
+import { buildDBSchemas, closeConnection, getKnex, seed, SeedIds, seedPost, seedUser } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
-import {
-    buildDBSchemas,
-    closeConnection,
-    closePoolConnection,
-    getPoolConnection,
-    knex,
-    seed,
-    SeedIds,
-    seedPost,
-    seedUser,
-} from 'test/helpers';
 
 describe('FindMany', () => {
     let ids: SeedIds;
@@ -17,45 +7,43 @@ describe('FindMany', () => {
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = new GybsonClient(knex());
+        gybson = new GybsonClient(getKnex());
 
         // Seeds
         ids = await seed(gybson);
     });
     describe('usage', () => {
         it('loads many rows', async () => {
-            const posts = await gybson.Posts.findMany({});
-            expect(posts.length).toBeGreaterThan(1);
+            const post = await gybson.post.findMany({});
+            expect(post.length).toBeGreaterThan(1);
         });
         it('does not load deleted rows by default', async () => {
-            await gybson.Posts.softDelete({
+            await gybson.post.softDelete({
                 where: {
                     post_id: ids.post1Id,
                 },
             });
-            const posts = await gybson.Posts.findMany({});
-            expect(posts).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
+            const post = await gybson.post.findMany({});
+            expect(post).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
         it('does not load date deleted rows by default', async () => {
-            await gybson.Users.softDelete({
+            await gybson.user.softDelete({
                 where: {
                     user_id: ids.user1Id,
                 },
             });
-            const users = await gybson.Users.findMany({});
+            const users = await gybson.user.findMany({});
             expect(users).not.toContainEqual(expect.objectContaining({ user_id: ids.user1Id }));
         });
     });
     describe('filtering', () => {
         it('Can filter by where clause', async () => {
-            await gybson.Users.findMany({
+            await gybson.user.findMany({
                 where: {
                     permissions: 'USER',
                     first_name: {
@@ -77,8 +65,8 @@ describe('FindMany', () => {
             const u2 = await seedUser(gybson);
             await seedPost(gybson, { author_id: u2, message: 'filter-me' });
             await seedPost(gybson, { author_id: u2, message: 'nope' });
-            // both posts meet the condition
-            const users = await gybson.Users.findMany({
+            // both post meet the condition
+            const users = await gybson.user.findMany({
                 where: {
                     author_posts: {
                         whereEvery: {
@@ -95,7 +83,7 @@ describe('FindMany', () => {
                 }),
             );
             // tighten the condition so only one post meets it
-            const users2 = await gybson.Users.findMany({
+            const users2 = await gybson.user.findMany({
                 where: {
                     author_posts: {
                         whereEvery: {
@@ -118,7 +106,7 @@ describe('FindMany', () => {
             const u = await seedUser(gybson);
             const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
-            const member = await gybson.Posts.findMany({
+            const member = await gybson.post.findMany({
                 where: {
                     author_id: u,
                 },
@@ -139,7 +127,7 @@ describe('FindMany', () => {
             const u = await seedUser(gybson);
             const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
-            const member = await gybson.Posts.findMany({
+            const member = await gybson.post.findMany({
                 where: {
                     author_id: u,
                 },
@@ -160,7 +148,7 @@ describe('FindMany', () => {
             const u = await seedUser(gybson);
             const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'a', author: 'b' });
-            const member = await gybson.Posts.findMany({
+            const member = await gybson.post.findMany({
                 where: {
                     author_id: u,
                 },
@@ -185,7 +173,7 @@ describe('FindMany', () => {
             const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
             const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
-            const posts = await gybson.Posts.findMany({
+            const post = await gybson.post.findMany({
                 where: {
                     author_id: u,
                 },
@@ -197,8 +185,8 @@ describe('FindMany', () => {
                     limit: 1,
                 },
             });
-            expect(posts).toHaveLength(1);
-            expect(posts).toEqual([
+            expect(post).toHaveLength(1);
+            expect(post).toEqual([
                 expect.objectContaining({
                     post_id: p2,
                 }),
@@ -209,7 +197,7 @@ describe('FindMany', () => {
             const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
             const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
-            const posts = await gybson.Posts.findMany({
+            const post = await gybson.post.findMany({
                 where: {
                     author_id: u,
                 },
@@ -223,8 +211,8 @@ describe('FindMany', () => {
                     limit: 2,
                 },
             });
-            expect(posts).toHaveLength(2);
-            expect(posts).toEqual([
+            expect(post).toHaveLength(2);
+            expect(post).toEqual([
                 expect.objectContaining({
                     post_id: p2,
                 }),
@@ -238,7 +226,7 @@ describe('FindMany', () => {
             const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'c' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
             const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
-            const posts = await gybson.Posts.findMany({
+            const post = await gybson.post.findMany({
                 where: {
                     author_id: u,
                 },
@@ -252,8 +240,8 @@ describe('FindMany', () => {
                     limit: 3,
                 },
             });
-            expect(posts).toHaveLength(2);
-            expect(posts).toEqual([
+            expect(post).toHaveLength(2);
+            expect(post).toEqual([
                 expect.objectContaining({
                     post_id: p1,
                 }),
@@ -267,7 +255,7 @@ describe('FindMany', () => {
             const p1 = await seedPost(gybson, { author_id: u, message: 'a', author: 'a' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'b', author: 'b' });
             const p3 = await seedPost(gybson, { author_id: u, message: 'c', author: 'b' });
-            const posts = await gybson.Posts.findMany({
+            const post = await gybson.post.findMany({
                 where: {
                     author_id: u,
                 },
@@ -282,8 +270,8 @@ describe('FindMany', () => {
                     limit: 3,
                 },
             });
-            expect(posts).toHaveLength(1);
-            expect(posts).toEqual([
+            expect(post).toHaveLength(1);
+            expect(post).toEqual([
                 expect.objectContaining({
                     post_id: p1,
                 }),

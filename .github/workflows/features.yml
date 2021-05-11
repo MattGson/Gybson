@@ -1,75 +1,77 @@
 name: feature-actions
 on:
-  # Trigger the workflow on push or pull request,
-  # but only for the main branch
-  # Ignore when only docs are changed
+    # Trigger the workflow on push or pull request,
+    # but only for the main branch
+    # Ignore when only docs are changed
 
-  push:
-    paths:
-      - 'src/**'
-      - 'test/**'
-    branches:
-      - main
-      - master
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'test/**'
-    branches:
-      - main
-      - master
+    push:
+        paths:
+            - 'src/**'
+            - 'test/**'
+        branches:
+            - main
+            - master
+    pull_request:
+        paths:
+            - 'src/**'
+            - 'test/**'
+        branches:
+            - main
+            - master
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-      - run: npm ci
-      - run: npm run lint
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-node@v1
+            - run: npm ci
+            - run: npm run lint
 
-  test-mysql:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [ 10, 12, 14 ]
-    services:
-      mysql:
-        image: mysql:5.7
-        ports:
-          - 3306:3306
-        env:
-          TZ: 'UTC'
-          MYSQL_ROOT_PASSWORD: ''
-          MYSQL_ALLOW_EMPTY_PASSWORD: 1
-          MYSQL_DATABASE: 'tests'
+    test-mysql:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node: [12, 14]
+        services:
+            mysql:
+                image: mysql:5.7
+                ports:
+                    - 3306:3306
+                env:
+                    TZ: 'UTC'
+                    MYSQL_ROOT_PASSWORD: ''
+                    MYSQL_ALLOW_EMPTY_PASSWORD: 1
+                    MYSQL_DATABASE: 'tests'
 
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-      - run: npm ci
-      - run: npm run test:mysql
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-node@v1
+            - run: npm ci
+            - run: npm run introspect:mysql
+            - run: npm run test:mysql
 
-  test-postgres:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [ 10, 12, 14 ]
-    services:
-      postgres:
-        image: postgres:13-alpine
-        ports:
-          - 5432:5432
-        env:
-          TZ: 'UTC'
-          PGTZ: 'UTC'
-          POSTGRES_USER: 'postgres' # default user
-          POSTGRES_DB: 'tests'
-          POSTGRES_PASSWORD: 'password'
-          POSTGRES_HOST_AUTH_METHOD: 'trust' # allow all connections without password
+    test-postgres:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node: [12, 14]
+        services:
+            postgres:
+                image: postgres:13-alpine
+                ports:
+                    - 5432:5432
+                env:
+                    TZ: 'UTC'
+                    PGTZ: 'UTC'
+                    POSTGRES_USER: 'postgres' # default user
+                    POSTGRES_DB: 'tests'
+                    POSTGRES_PASSWORD: 'password'
+                    POSTGRES_HOST_AUTH_METHOD: 'trust' # allow all connections without password
 
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-      - run: npm ci
-      - run: npm run test:pg
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-node@v1
+            - run: npm ci
+            - run: npm run introspect:pg
+            - run: npm run test:pg

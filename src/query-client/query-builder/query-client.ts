@@ -1,4 +1,4 @@
-import Knex, { Transaction } from 'knex';
+import { Knex } from 'knex';
 import _ from 'lodash';
 import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
@@ -11,7 +11,7 @@ import { WhereResolver } from './where-resolver';
 type Connection = PGConn | MySQLConn;
 
 export abstract class QueryClient<
-    TblRow extends object,
+    TblRow extends Record<string, any>,
     TblColumnMap,
     TblWhere,
     TblUniqueWhere,
@@ -167,7 +167,7 @@ export abstract class QueryClient<
             }
         }
 
-        this.logger.debug('Executing loading: %s with keys %j', query.toSQL().sql, loadValues);
+        this.logger.debug('Executing many load: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 
@@ -310,18 +310,17 @@ export abstract class QueryClient<
      *     * Pass a constant column (usually primary key) to ignore duplicates without updating any rows.
      * Can automatically remove soft deletes if desired instead of specifying the column and values manually.
      *     * This should be set to false if the table does not support soft deletes
-     * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
+     * Will replace undefined values with DEFAULT which will use a default column value if available.
      * Will take the superset of all columns in the insert values
      * @param params
      */
     public async upsert(params: {
-        transact?: Transaction;
         connection?: Connection;
         values: RequiredTblRow | RequiredTblRow[];
         reinstateSoftDeletedRows?: boolean;
         updateColumns: Partial<TblColumnMap>;
     }): Promise<number> {
-        const { values, transact, connection, reinstateSoftDeletedRows, updateColumns } = params;
+        const { values, connection, reinstateSoftDeletedRows, updateColumns } = params;
 
         const columnsToUpdate: string[] = [];
         for (let [column, update] of Object.entries(updateColumns)) {
@@ -351,25 +350,21 @@ export abstract class QueryClient<
             });
         }
 
-        // Knex Normalizes empty (undefined) keys to DEFAULT on multi-row insert:
-        // knex('coords').insert([{x: 20}, {y: 30},  {x: 10, y: 20}])
-        // Outputs:
-        //    insert into `coords` (`x`, `y`) values (20, DEFAULT), (DEFAULT, 30), (10, 20)
-        // Note that we are passing a custom connection:
-        //    This connection MUST be added last to work with the duplicateUpdate Extensions
-
         // TODO:- onConflict only works on the primary key of the table (MySQL behvaiour, PG limitation)
 
         const query = this.knex(this.tableName).insert(insertRows).onConflict(this.primaryKey).merge(columnsToUpdate);
 
+        if (this.engine === 'pg') query.returning(this.primaryKey);
+
         if (connection) query.connection(connection);
-        if (transact) query.transacting(transact);
 
         this.logger.debug('Executing upsert: %s with values: %j', query.toSQL().sql, insertRows);
         const result: any = await query;
 
-        if (this.engine == 'pg') return Object.values(result.rows[0])[0] as number;
-        return result[0].insertId;
+        // wrong behaviour for compound keys
+        if (this.engine == 'pg') return result[0][this.primaryKey[0]];
+        // MySQL seems to return 0 for non-auto-increment inserts (or compound inserts)
+        return result[0];
     }
 
     /**
@@ -381,12 +376,11 @@ export abstract class QueryClient<
      * @param params
      */
     public async insert(params: {
-        transact?: Transaction;
         connection?: Connection;
         values: RequiredTblRow | RequiredTblRow[];
         ignoreDuplicates?: boolean;
     }): Promise<number> {
-        const { values, transact, connection, ignoreDuplicates } = params;
+        const { values, connection, ignoreDuplicates } = params;
 
         let insertRows: RequiredTblRow[];
         if (Array.isArray(values)) insertRows = values;
@@ -401,13 +395,13 @@ export abstract class QueryClient<
 
         if (this.engine === 'pg') query.returning(this.primaryKey);
         if (connection) query.connection(connection);
-        if (transact) query.transacting(transact);
 
         this.logger.debug('Executing insert: %s with values: %j', query.toSQL().sql, values);
-        const result = await query;
-        // seems to return 0 for non-auto-increment inserts
+        const result: any = await query;
 
-        if (this.engine === 'pg') return Object.values(result[0])[0] as number;
+        // wrong behaviour for compound keys
+        if (this.engine == 'pg') return result[0][this.primaryKey[0]];
+        // MySQL seems to return 0 for non-auto-increment inserts (or compound inserts)
         return result[0];
     }
 
@@ -416,8 +410,8 @@ export abstract class QueryClient<
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      * @param params
      */
-    public async softDelete(params: { transact?: Transaction; connection?: Connection; where: TblWhere }) {
-        const { where, transact, connection } = params;
+    public async softDelete(params: { connection?: Connection; where: TblWhere }) {
+        const { where, connection } = params;
         if (!this.hasSoftDelete) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
 
@@ -438,7 +432,6 @@ export abstract class QueryClient<
             tableAlias: this.tableAlias,
         });
 
-        if (transact) query.transacting(transact);
         if (connection) query.connection(connection);
 
         this.logger.debug('Executing soft delete: %s', query.toSQL().sql);
@@ -451,8 +444,8 @@ export abstract class QueryClient<
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      * @param params
      */
-    public async delete(params: { transact?: Transaction; connection?: Connection; where: TblWhere }) {
-        const { where, transact, connection } = params;
+    public async delete(params: { connection?: Connection; where: TblWhere }) {
+        const { where, connection } = params;
         if (this.hasSoftDelete)
             this.logger.warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
@@ -468,7 +461,6 @@ export abstract class QueryClient<
             tableAlias: this.tableName,
         });
         if (connection) query.connection(connection);
-        if (transact) query.transacting(transact);
 
         this.logger.debug('Executing delete: %s', query.toSQL().sql);
 
@@ -479,13 +471,8 @@ export abstract class QueryClient<
      * Update
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      */
-    public async update(params: {
-        transact?: Transaction;
-        connection?: Connection;
-        values: PartialTblRow;
-        where: TblWhere;
-    }) {
-        const { values, transact, connection, where } = params;
+    public async update(params: { connection?: Connection; values: PartialTblRow; where: TblWhere }) {
+        const { values, connection, where } = params;
         if (Object.keys(values).length < 1) throw new Error('Must update least one column');
         if (Object.keys(where).length < 1) this.logger.warn('Running update without a where clause');
 
@@ -503,7 +490,6 @@ export abstract class QueryClient<
             });
         }
         if (connection) query.connection(connection);
-        if (transact) query.transacting(transact);
 
         this.logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
 

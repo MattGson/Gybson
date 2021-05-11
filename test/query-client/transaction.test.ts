@@ -1,16 +1,6 @@
-import { GybsonClient } from 'test/tmp';
-import {
-    buildDBSchemas,
-    closeConnection,
-    closePoolConnection,
-    getPoolConnection,
-    knex,
-    seed,
-    SeedIds,
-    seedPost,
-    seedUser,
-} from 'test/helpers';
 import faker from 'faker';
+import { buildDBSchemas, closeConnection, getKnex, seed, SeedIds } from 'test/helpers';
+import { GybsonClient } from 'test/tmp';
 
 describe('Transaction', () => {
     let ids: SeedIds;
@@ -18,14 +8,12 @@ describe('Transaction', () => {
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = new GybsonClient(knex());
+        gybson = new GybsonClient(getKnex());
 
         // Seeds
         ids = await seed(gybson);
@@ -33,7 +21,7 @@ describe('Transaction', () => {
     describe('Insert multiple rows', () => {
         it('Can insert multiple rows as a transaction', async () => {
             const result = await gybson._transaction(async (connection) => {
-                const userId = await gybson.Users.insert({
+                const userId = await gybson.user.insert({
                     connection,
                     values: {
                         first_name: 'John',
@@ -43,7 +31,7 @@ describe('Transaction', () => {
                         password: 'my password',
                     },
                 });
-                const tm = await gybson.TeamMembers.insert({
+                const tm = await gybson.teamMember.insert({
                     connection,
                     values: {
                         user_id: userId,
@@ -52,7 +40,7 @@ describe('Transaction', () => {
                 });
                 return userId;
             });
-            const user = await gybson.Users.loadOne({ where: { user_id: result } });
+            const user = await gybson.user.loadOne({ where: { user_id: result } });
             expect(user).toEqual(
                 expect.objectContaining({
                     user_id: result,
@@ -64,11 +52,11 @@ describe('Transaction', () => {
         });
         describe('Rollback on failure', () => {
             it('Does not make any changes if an statement fails', async () => {
-                const users = await gybson.Users.findMany({});
-                const numUsers = users.length;
+                const users = await gybson.user.findMany({});
+                const numuser = users.length;
                 await expect(
                     gybson._transaction(async (trx) => {
-                        const userId = await gybson.Users.insert({
+                        const userId = await gybson.user.insert({
                             connection: trx,
                             values: {
                                 first_name: 'John',
@@ -79,7 +67,7 @@ describe('Transaction', () => {
                             },
                         });
                         // non existing team_id will fail
-                        const tm = await gybson.TeamMembers.insert({
+                        const tm = await gybson.teamMember.insert({
                             connection: trx,
                             values: {
                                 user_id: userId,
@@ -90,14 +78,14 @@ describe('Transaction', () => {
                     }),
                 ).rejects.toThrow(Error);
                 // no new user added
-                const users2 = await gybson.Users.findMany({});
-                expect(users2).toHaveLength(numUsers);
+                const users2 = await gybson.user.findMany({});
+                expect(users2).toHaveLength(numuser);
             });
         });
         describe('Query support', () => {
             it('Can transact insert, upsert, soft-delete, update', async () => {
                 await gybson._transaction(async (trx) => {
-                    await gybson.Users.insert({
+                    await gybson.user.insert({
                         connection: trx,
                         values: {
                             first_name: 'John',
@@ -107,7 +95,7 @@ describe('Transaction', () => {
                             password: 'my password',
                         },
                     });
-                    await gybson.Users.upsert({
+                    await gybson.user.upsert({
                         connection: trx,
                         values: {
                             first_name: 'John',
@@ -118,13 +106,13 @@ describe('Transaction', () => {
                         },
                         updateColumns: { first_name: true },
                     });
-                    await gybson.Users.softDelete({
+                    await gybson.user.softDelete({
                         connection: trx,
                         where: {
                             first_name: 'steve',
                         },
                     });
-                    await gybson.Users.update({
+                    await gybson.user.update({
                         connection: trx,
                         values: {
                             email: faker.internet.email(),

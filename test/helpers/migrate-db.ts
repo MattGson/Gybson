@@ -1,4 +1,4 @@
-import * as Knex from 'knex';
+import { Knex } from 'knex';
 
 export const migrateDb = async (knex: Knex, pg = false) => {
     await knex.schema.dropTableIfExists('team_members_positions');

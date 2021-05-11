@@ -25,7 +25,7 @@ const keyify = (obj: any, prefix = ''): string[] =>
  * Dynamically builds a map of data-loaders for a given table
  * Could later be generalised to automatically split loads by load angle
  */
-export class Loader<T extends object, F = Partial<T>> {
+export class Loader<T extends Record<string, unknown>, F = Partial<T>> {
     private loaders: {
         oneLoaders: Record<string, DataLoader<any, T | null>>;
         manyLoaders: Record<string, DataLoader<any, T[]>>;

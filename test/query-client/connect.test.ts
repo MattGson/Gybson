@@ -1,9 +1,9 @@
-import Knex from 'knex';
+import { knex } from 'knex';
 import { GybsonClient } from 'test/tmp';
 
 describe('Connect', () => {
     it('Can initialise a connection to MySQL', async () => {
-        const knex = Knex({
+        const knexClient = knex({
             client: 'mysql',
             connection: {
                 host: 'localhost',
@@ -14,11 +14,11 @@ describe('Connect', () => {
             },
         });
 
-        const gybson = new GybsonClient(knex);
-        await gybson.close();
+        const gybson = new GybsonClient(knexClient);
+        await gybson._close();
     });
     it('Can initialise a connection to Postgres', async () => {
-        const knex = Knex({
+        const knexClient = knex({
             client: 'pg',
             connection: {
                 host: 'localhost',
@@ -29,7 +29,7 @@ describe('Connect', () => {
             },
         });
 
-        const gybson = new GybsonClient(knex);
-        await gybson.close();
+        const gybson = new GybsonClient(knexClient);
+        await gybson._close();
     });
 });

@@ -1,47 +1,9 @@
-import { writeFormattedFile } from './printer';
-import { buildClient, TableClient } from './client-builder';
 import { join } from 'path';
-
-// **************************
-// generate client libs
-// **************************
+import { buildClient, buildTableClients } from './client-builder';
+import { writeFormattedFile } from './printer';
 
 /**
- * Build an entry point file (index.ts)
- * @param builders
- * @param outdir
- * @param gybsonLibPath- path to the gybson lib. Only configurable to improve testability
- */
-async function generateEntryPoint(builders: TableClient[], outdir: string, gybsonLibPath: string = 'gybson') {
-    let index = `import { GybsonBase } from '${gybsonLibPath}';`;
-    let clients = ``;
-    for (let { name } of builders) {
-        index += `import ${name} from './${name}';`;
-        clients += `public readonly ${name} = new ${name}(this.clientConfig);`;
-    }
-    for (let { name } of builders) {
-        index += `export * from './${name}';`;
-    }
-    index += `
-
-        export class GybsonClient extends GybsonBase {
-            ${clients}
-        }
-    `;
-
-    await writeFormattedFile({
-        content: index,
-        directory: outdir,
-        filename: 'index',
-    });
-}
-
-// ****************************
-// Entry point
-// ****************************
-
-/**
- *
+ * Generate the client
  * @param conn
  * @param outdir - write files to this dir
  * @param gybsonLibPath - path to the gybson lib. Only configurable to improve testability
@@ -62,18 +24,26 @@ export async function generate(args: { outdir: string; schemaFile: string; gybso
 
     console.log('Generating client in ', outdir);
 
-    // const schema = await introspectSchema({ conn });
-    const clients = await buildClient({ schema, gybsonLibPath: gybsonLibPath ?? 'gybson' });
+    const tableClients = await buildTableClients({ schema, gybsonLibPath: gybsonLibPath ?? 'gybson' });
+    const client = await buildClient({ tableClients, gybsonLibPath: gybsonLibPath ?? 'gybson' });
+
     await Promise.all(
-        clients.map((cl) => {
+        tableClients.map((cl) => {
             writeFormattedFile({
                 content: cl.code,
                 directory: outdir,
-                filename: cl.name,
+                filename: cl.entityName,
             });
         }),
     );
-    await generateEntryPoint(clients, outdir, gybsonLibPath);
+
+    await writeFormattedFile({
+        content: client.code,
+        directory: outdir,
+        filename: 'index',
+    });
+
+    // await generateEntryPoint(clients, outdir, gybsonLibPath);
 
     console.log(`Generated for ${Object.keys(schema.tables).length} tables`);
 }

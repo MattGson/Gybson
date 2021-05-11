@@ -1,7 +1,7 @@
 import { GybsonClient } from '../tmp';
 import faker from 'faker';
-import { userDTO } from '../tmp/Users';
-import { postDTO } from '../tmp/Posts';
+import { User } from '../tmp/User';
+import { Post } from '../tmp/Post';
 
 export type SeedIds = {
     user1Id: number;
@@ -10,8 +10,8 @@ export type SeedIds = {
     post2Id: number;
 };
 
-export const seedPost = async (gybson: GybsonClient, values?: Partial<postDTO>): Promise<number> => {
-    const postId = await gybson.Posts.insert({
+export const seedPost = async (gybson: GybsonClient, values?: Partial<Post>): Promise<number> => {
+    const postId = await gybson.post.insert({
         values: {
             message: 'test 2',
             author_id: faker.random.number(),
@@ -24,8 +24,8 @@ export const seedPost = async (gybson: GybsonClient, values?: Partial<postDTO>):
     return postId;
 };
 
-export const seedUser = async (gybson: GybsonClient, values?: Partial<userDTO>): Promise<number> => {
-    const user1Id = await gybson.Users.insert({
+export const seedUser = async (gybson: GybsonClient, values?: Partial<User>): Promise<number> => {
+    const user1Id = await gybson.user.insert({
         values: {
             first_name: 'John',
             last_name: 'Doe',
@@ -40,7 +40,7 @@ export const seedUser = async (gybson: GybsonClient, values?: Partial<userDTO>):
 
 export const seed = async (gybson: GybsonClient) => {
     const user1Id = await seedUser(gybson);
-    const team1Id = await gybson.Teams.insert({
+    const team1Id = await gybson.team.insert({
         values: {
             name: 'team',
         },
@@ -59,7 +59,7 @@ export const seed = async (gybson: GybsonClient) => {
         author: 'name',
         created: new Date(2003, 20, 4),
     });
-    await gybson.TeamMembers.insert({
+    await gybson.teamMember.insert({
         values: {
             user_id: user1Id,
             team_id: team1Id,

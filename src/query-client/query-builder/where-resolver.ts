@@ -1,4 +1,4 @@
-import { QueryBuilder } from 'knex';
+import { Knex } from 'knex';
 import { RelationFilters, Combiners, Operators } from '../../types';
 import { Comparable, RelationDefinition, DatabaseSchema, TransitiveRelationDefinition } from 'relational-schema';
 
@@ -17,7 +17,7 @@ export class WhereResolver {
      * @param builder
      * @param tableAlias
      */
-    private static resolveWhereLeaf(column: string, value: any, builder: QueryBuilder, tableAlias: string) {
+    private static resolveWhereLeaf(column: string, value: any, builder: Knex.QueryBuilder, tableAlias: string) {
         const valueType: string = typeof value;
         const columnAlias = `${tableAlias}.${column}`;
         // @ts-ignore - can't index enum
@@ -101,12 +101,12 @@ export class WhereResolver {
      * @param params
      */
     public static resolveWhereClause<TblWhere>(params: {
-        queryBuilder: QueryBuilder;
+        queryBuilder: Knex.QueryBuilder;
         where: TblWhere;
         schema: DatabaseSchema;
         tableName: string;
         tableAlias: string;
-    }): QueryBuilder {
+    }): Knex.QueryBuilder {
         const { queryBuilder, where, schema, tableName, tableAlias } = params;
 
         // Resolve each sub-clause recursively
@@ -114,7 +114,7 @@ export class WhereResolver {
         // Depth is used to create unique table alias'
         const resolveWhere = (params: {
             subQuery: any;
-            builder: QueryBuilder;
+            builder: Knex.QueryBuilder;
             depth: number;
             table: string;
             tableAlias: string;

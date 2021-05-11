@@ -1,15 +1,5 @@
+import { buildDBSchemas, closeConnection, getKnex, seed, SeedIds, seedPost, seedUser } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
-import {
-    buildDBSchemas,
-    closeConnection,
-    closePoolConnection,
-    getPoolConnection,
-    knex,
-    seed,
-    SeedIds,
-    seedPost,
-    seedUser,
-} from 'test/helpers';
 
 describe('WhereFilters', () => {
     let ids: SeedIds;
@@ -17,14 +7,12 @@ describe('WhereFilters', () => {
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = new GybsonClient(knex());
+        gybson = new GybsonClient(getKnex());
 
         // Seeds
         ids = await seed(gybson);
@@ -32,7 +20,7 @@ describe('WhereFilters', () => {
     describe('where', () => {
         describe('Column filters', () => {
             it('Can filter by column equals', async () => {
-                const find = await gybson.Users.findMany({
+                const find = await gybson.user.findMany({
                     where: {
                         user_id: ids.user1Id,
                     },
@@ -45,7 +33,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by column equals (other syntax)', async () => {
-                const find = await gybson.Users.findMany({
+                const find = await gybson.user.findMany({
                     where: {
                         user_id: {
                             equals: ids.user1Id,
@@ -60,7 +48,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by column not equals', async () => {
-                const find = await gybson.Users.findMany({
+                const find = await gybson.user.findMany({
                     where: {
                         user_id: {
                             not: ids.user1Id,
@@ -75,7 +63,7 @@ describe('WhereFilters', () => {
             });
             it('Can filter by column in', async () => {
                 const user2Id = await seedUser(gybson);
-                const find = await gybson.Users.findMany({
+                const find = await gybson.user.findMany({
                     where: {
                         user_id: {
                             in: [ids.user1Id, user2Id],
@@ -94,7 +82,7 @@ describe('WhereFilters', () => {
             });
             it('Can filter by column not in', async () => {
                 const user2Id = await seedUser(gybson);
-                const find = await gybson.Users.findMany({
+                const find = await gybson.user.findMany({
                     where: {
                         user_id: {
                             notIn: [ids.user1Id, user2Id],
@@ -111,7 +99,7 @@ describe('WhereFilters', () => {
                 ]);
             });
             it('Can filter by greater than', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         rating_average: {
                             gt: 4.5,
@@ -130,7 +118,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by greater than or equal', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         rating_average: {
                             gte: 6,
@@ -149,7 +137,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by less than', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         rating_average: {
                             lt: 4.5,
@@ -159,7 +147,7 @@ describe('WhereFilters', () => {
                 expect(find).toHaveLength(0);
             });
             it('Can filter by less than or equal', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         rating_average: {
                             lte: 4.5,
@@ -178,7 +166,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by string contains', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         message: {
                             contains: 'est',
@@ -197,7 +185,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by string starts with', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         message: {
                             startsWith: 'fi',
@@ -216,7 +204,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by string ends with', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         message: {
                             endsWith: '2',
@@ -237,7 +225,7 @@ describe('WhereFilters', () => {
         });
         describe('Column types filters', () => {
             it('Can filter strings', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         message: {
                             equals: 'test 2',
@@ -258,7 +246,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter numbers', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         rating_average: {
                             equals: 4,
@@ -272,7 +260,7 @@ describe('WhereFilters', () => {
             });
             it('Can filter dates', async () => {
                 const p3 = await seedPost(gybson, { author_id: ids.user1Id, created: new Date(2009, 4) });
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         created: {
                             lt: new Date(),
@@ -292,7 +280,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter booleans', async () => {
-                await gybson.TeamMembersPositions.insert({
+                await gybson.teamMembersPosition.insert({
                     values: {
                         team_id: ids.team1Id,
                         user_id: ids.user1Id,
@@ -301,7 +289,7 @@ describe('WhereFilters', () => {
                         manager: 'a manager',
                     },
                 });
-                const find = await gybson.TeamMembersPositions.findMany({
+                const find = await gybson.teamMembersPosition.findMany({
                     where: {
                         verified: true,
                     },
@@ -316,7 +304,7 @@ describe('WhereFilters', () => {
         });
         describe('Multiple column filters', () => {
             it('Can filter by multiple columns', async () => {
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         author: {
                             equals: 'name',
@@ -336,7 +324,7 @@ describe('WhereFilters', () => {
                 );
             });
             it('Can filter by multiple columns', async () => {
-                await gybson.Users.findMany({
+                await gybson.user.findMany({
                     where: {
                         permissions: 'USER',
                         first_name: {
@@ -360,7 +348,7 @@ describe('WhereFilters', () => {
                 await seedPost(gybson, { author_id: u2, message: 'filter-me' });
                 await seedPost(gybson, { author_id: u2, message: 'nope' });
                 // both posts meet the condition
-                const users = await gybson.Users.findMany({
+                const users = await gybson.user.findMany({
                     where: {
                         author_posts: {
                             whereEvery: {
@@ -377,7 +365,7 @@ describe('WhereFilters', () => {
                     }),
                 );
                 // tighten the condition so only one post meets it
-                const users2 = await gybson.Users.findMany({
+                const users2 = await gybson.user.findMany({
                     where: {
                         author_posts: {
                             whereEvery: {
@@ -398,7 +386,7 @@ describe('WhereFilters', () => {
                 const u2 = await seedUser(gybson);
                 await seedPost(gybson, { author_id: u2, message: 'filter-me' });
                 await seedPost(gybson, { author_id: u2, message: 'not' });
-                const users = await gybson.Users.findMany({
+                const users = await gybson.user.findMany({
                     where: {
                         author_posts: {
                             existsWhere: {
@@ -424,7 +412,7 @@ describe('WhereFilters', () => {
                 const u2 = await seedUser(gybson);
                 await seedPost(gybson, { author_id: u2, message: 'filter-me' });
                 await seedPost(gybson, { author_id: u2, message: 'not' });
-                const users = await gybson.Users.findMany({
+                const users = await gybson.user.findMany({
                     where: {
                         author_posts: {
                             notExistsWhere: {
@@ -451,7 +439,7 @@ describe('WhereFilters', () => {
             it('Can combine clauses with AND', async () => {
                 const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
                 const p2 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 3 });
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         AND: [
                             {
@@ -481,7 +469,7 @@ describe('WhereFilters', () => {
             it('Can combine clauses with OR', async () => {
                 const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
                 const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         OR: [
                             {
@@ -511,7 +499,7 @@ describe('WhereFilters', () => {
             it('Can combine clauses with NOT', async () => {
                 const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
                 const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         NOT: [
                             {
@@ -541,7 +529,7 @@ describe('WhereFilters', () => {
             it('Can combine more than 2 clauses', async () => {
                 const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
                 const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         AND: [
                             {
@@ -576,7 +564,7 @@ describe('WhereFilters', () => {
             it('Can nest combiners', async () => {
                 const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
                 const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
-                const find = await gybson.Posts.findMany({
+                const find = await gybson.post.findMany({
                     where: {
                         OR: [
                             {
@@ -617,7 +605,7 @@ describe('WhereFilters', () => {
             const p1 = await seedPost(gybson, { message: 'happy', author_id: ids.user1Id, rating_average: 8 });
             const p2 = await seedPost(gybson, { message: 'hip', author_id: ids.user1Id, rating_average: 3 });
             const p3 = await seedPost(gybson, { message: 'hipper', author_id: ids.user1Id, rating_average: 5 });
-            const find = await gybson.Posts.findMany({
+            const find = await gybson.post.findMany({
                 where: {
                     OR: [
                         {

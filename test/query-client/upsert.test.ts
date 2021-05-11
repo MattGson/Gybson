@@ -1,16 +1,14 @@
-import { GybsonClient } from 'test/tmp';
+import 'jest-extended';
 import {
     buildDBSchemas,
     closeConnection,
-    closePoolConnection,
     getPoolConnection,
-    knex,
+    getKnex,
     seed,
     SeedIds,
-    seedPost,
-    seedUser,
+    closePoolConnection,
 } from 'test/helpers';
-import 'jest-extended';
+import { GybsonClient } from 'test/tmp';
 
 describe('Upsert', () => {
     let ids: SeedIds;
@@ -18,21 +16,19 @@ describe('Upsert', () => {
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = new GybsonClient(knex());
+        gybson = new GybsonClient(getKnex());
 
         // Seeds
         ids = await seed(gybson);
     });
     describe('inserting rows with conflicts', () => {
         it('Updates only the specified fields on conflicting rows', async () => {
-            const postId = await gybson.Posts.upsert({
+            const postId = await gybson.post.upsert({
                 values: {
                     post_id: ids.post1Id,
                     message: 'new message',
@@ -45,7 +41,9 @@ describe('Upsert', () => {
                     author: true,
                 },
             });
-            const post = await gybson.Posts.loadOne({ where: { post_id: postId } });
+
+            if (!postId) throw new Error('Post id not found');
+            const post = await gybson.post.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: ids.post1Id,
@@ -56,9 +54,9 @@ describe('Upsert', () => {
                 }),
             );
         });
-        it('Updates specified fields on a subset of rows that conflict', async () => {
+        it('Updates specified fields on a subset of multi-rows that conflict', async () => {
             // first post has conflict second doesn't
-            const postId = await gybson.Posts.upsert({
+            const postId = await gybson.post.upsert({
                 values: [
                     {
                         post_id: ids.post1Id,
@@ -78,7 +76,7 @@ describe('Upsert', () => {
                     message: true,
                 },
             });
-            const posts = await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
+            const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
             expect(posts).toIncludeAllMembers([
                 expect.objectContaining({
                     post_id: ids.post1Id,
@@ -94,15 +92,15 @@ describe('Upsert', () => {
             ]);
         });
         it('Can reinstate soft-deleted rows', async () => {
-            await gybson.Posts.softDelete({
+            await gybson.post.softDelete({
                 where: {
                     post_id: ids.post1Id,
                 },
             });
-            const post = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
+            const post = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
             expect(post).toEqual(null);
 
-            const postId = await gybson.Posts.upsert({
+            const postId = await gybson.post.upsert({
                 values: {
                     post_id: ids.post1Id,
                     message: 'new message',
@@ -115,8 +113,8 @@ describe('Upsert', () => {
                 },
                 reinstateSoftDeletedRows: true,
             });
-            await gybson.Posts.purge();
-            const post2 = await gybson.Posts.loadOne({ where: { post_id: postId } });
+            await gybson.post.purge();
+            const post2 = await gybson.post.loadOne({ where: { post_id: postId } });
             expect(post2).toEqual(
                 expect.objectContaining({
                     post_id: ids.post1Id,
@@ -124,7 +122,7 @@ describe('Upsert', () => {
             );
         });
         it('Returns the id of the first upserted row', async () => {
-            const postId = await gybson.Posts.upsert({
+            const postId = await gybson.post.upsert({
                 values: {
                     message: 'test 2',
                     author_id: ids.user1Id,
@@ -137,17 +135,35 @@ describe('Upsert', () => {
                 },
             });
             expect(postId).toBeDefined();
-            const post = await gybson.Posts.loadOne({ where: { post_id: postId } });
+            const post = await gybson.post.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: postId,
                 }),
             );
         });
+        it('Returns compund id of the first upserted row', async () => {
+            const result = await gybson.teamMember.upsert({
+                values: {
+                    team_id: ids.team1Id,
+                    user_id: ids.user1Id,
+                },
+                updateColumns: {
+                    team_id: true,
+                },
+            });
+            expect(result).toBeDefined();
+            // const post = await gybson.post.loadOne({ where: { post_id: postId } });
+            // expect(post).toEqual(
+            //     expect.objectContaining({
+            //         post_id: postId,
+            //     }),
+            // );
+        });
     });
     describe('inserting rows without conflicts', () => {
         it('Can insert a single row', async () => {
-            const postId = await gybson.Posts.upsert({
+            const postId = await gybson.post.upsert({
                 values: {
                     message: 'test 2',
                     author_id: ids.user1Id,
@@ -158,7 +174,7 @@ describe('Upsert', () => {
                     message: true,
                 },
             });
-            const post = await gybson.Posts.loadOne({ where: { post_id: postId } });
+            const post = await gybson.post.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: postId,
@@ -169,7 +185,7 @@ describe('Upsert', () => {
             );
         });
         it('Can insert multiple rows', async () => {
-            const postId = await gybson.Posts.upsert({
+            const postId = await gybson.post.upsert({
                 values: [
                     {
                         message: 'test 2',
@@ -188,7 +204,7 @@ describe('Upsert', () => {
                     message: true,
                 },
             });
-            const posts = await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
+            const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
             expect(posts).toIncludeAllMembers([
                 expect.objectContaining({
                     post_id: postId,
@@ -204,7 +220,7 @@ describe('Upsert', () => {
             ]);
         });
         it('Returns the id of the first inserted row', async () => {
-            const postId = await gybson.Posts.upsert({
+            const postId = await gybson.post.upsert({
                 values: {
                     message: 'test 2',
                     author_id: ids.user1Id,
@@ -217,7 +233,7 @@ describe('Upsert', () => {
                 },
             });
             expect(postId).toBeDefined();
-            const post = await gybson.Posts.loadOne({ where: { post_id: postId } });
+            const post = await gybson.post.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: postId,
@@ -227,7 +243,7 @@ describe('Upsert', () => {
         it('Throws error if the upsert fails', async () => {
             // author_id is non existing
             await expect(
-                gybson.Posts.upsert({
+                gybson.post.upsert({
                     values: {
                         post_id: ids.post1Id,
                         message: 'test 2',
@@ -245,7 +261,7 @@ describe('Upsert', () => {
     });
     it('Can use an external connection', async () => {
         const connection = await getPoolConnection();
-        const postId = await gybson.Posts.upsert({
+        const postId = await gybson.post.upsert({
             connection,
             values: {
                 message: 'test 2',

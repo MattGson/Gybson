@@ -1,9 +1,7 @@
 import { TableSchemaDefinition } from 'relational-schema';
-import { PascalCase } from '../printer';
 import { TableTypeBuilder, TableTypeNames } from './table-type-builder';
 
 interface BuilderOptions {
-    rowTypeSuffix: string;
     gybsonLibPath: string;
 }
 
@@ -26,20 +24,15 @@ export class TableClientBuilder {
      */
     public constructor(params: { table: string; schema: TableSchemaDefinition; options: BuilderOptions }) {
         const { table, options, schema } = params;
-        this.entityName = PascalCase(table);
+        this.entityName = TableTypeBuilder.tableNameAlias(table);
         this.schema = schema;
         this.tableName = table;
-        this.className = `${this.entityName}`;
+        this.className = `${this.entityName}Client`;
         this.options = options;
-        this.typeNames = TableTypeBuilder.typeNamesForTable({ tableName: table, rowTypeSuffix: options.rowTypeSuffix });
+        this.typeNames = TableTypeBuilder.typeNamesForTable({ tableName: table });
     }
 
-    // private get softDeleteColumn() {
-    //     return this.schema.softDelete;
-    // }
-
     public async build(): Promise<string> {
-        // await this.buildLoadersForTable();
         await this.buildTableTypes();
         return this.buildTemplate();
     }
@@ -58,12 +51,12 @@ export class TableClientBuilder {
         return `
             import { ClientEngine } from '${this.options.gybsonLibPath}';            
             import schema from './relational-schema';
-            import Knex from 'knex';
+            import { Knex } from 'knex';
             import winston from 'winston';
 
             ${this.types}
 
-             export default class ${this.className} extends QueryClient<${rowTypeName}, 
+             export class ${this.className} extends QueryClient<${rowTypeName}, 
                     ${columnMapTypeName}, 
                     ${whereTypeName}, 
                     ${loadOneWhereTypeName}, 
@@ -92,46 +85,6 @@ export class TableClientBuilder {
             }
             `;
     }
-
-    // private async buildLoadersForTable() {
-    //     const { orderByTypeName } = this.typeNames;
-
-    //     const unique = this.schema.uniqueKeyCombinations;
-    //     const nonUnique = this.schema.nonUniqueKeyCombinations;
-
-    //     // build single row loaders
-    //     unique.forEach((key) => {
-    //         const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k]);
-    //         for (let col of keyColumns) {
-    //             // for now only accept loaders on string and number column types
-    //             if (col.tsType !== 'string' && col.tsType !== 'number') return;
-    //         }
-
-    //         this.loaders.push(
-    //             BatchLoaderBuilder.getOneByColumnLoader({
-    //                 loadColumns: keyColumns,
-    //                 softDeleteColumn: this.softDeleteColumn || undefined,
-    //             }),
-    //         );
-    //     });
-
-    //     // build multi-row loaders
-    //     nonUnique.forEach((key) => {
-    //         const keyColumns: ColumnDefinition[] = key.map((k) => this.schema.columns[k]);
-    //         for (let col of keyColumns) {
-    //             // for now only accept loaders on string and number column types
-    //             if (col.tsType !== 'string' && col.tsType !== 'number') return;
-    //         }
-
-    //         this.loaders.push(
-    //             BatchLoaderBuilder.getManyByColumnLoader({
-    //                 loadColumns: keyColumns,
-    //                 orderByTypeName,
-    //                 softDeleteColumn: this.softDeleteColumn || undefined,
-    //             }),
-    //         );
-    //     });
-    // }
 
     private buildTableTypes() {
         const {

@@ -1,4 +1,4 @@
-import Knex from 'knex';
+import { knex, Knex } from 'knex';
 import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
 import { migrateDb } from './migrate-db';
@@ -42,17 +42,17 @@ const state: any = {
 export const closePoolConnection = async (connection: PoolConnection): Promise<void> =>
     state.knex.client.releaseConnection(connection);
 
-export const knex = (): Knex => state.knex;
+export const getKnex = (): Knex => state.knex;
 export const closeConnection = async (): Promise<void> => state.knex.destroy();
-export const getPoolConnection = async () => state.knex.client.getConnection();
+export const getPoolConnection = async () => state.knex.client.acquireConnection();
 
 export const openConnection = async (): Promise<Knex<any, unknown>> => {
     if (DB() === 'pg') {
-        state.knex = Knex(pgConnection);
+        state.knex = knex(pgConnection);
         return state.knex;
     }
     if (DB() === 'mysql') {
-        state.knex = Knex(mysqlConnection);
+        state.knex = knex(mysqlConnection);
         return state.knex;
     }
     throw new Error('No db specified while opening connection');

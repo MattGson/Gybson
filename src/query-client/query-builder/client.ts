@@ -1,14 +1,14 @@
-import Knex from 'knex';
+import { Knex } from 'knex';
 import { ClientEngine, LogLevel } from 'src/types';
 import winston from 'winston';
 import { Connection, GybsonConfig } from '..';
 import { buildLogger, logger } from '../lib/logging';
 
 export class GybsonBase {
-    protected logger: winston.Logger;
-    protected engine: ClientEngine;
+    protected readonly logger: winston.Logger;
+    protected readonly engine: ClientEngine;
 
-    constructor(protected knex: Knex<any, unknown>, protected config?: GybsonConfig) {
+    constructor(protected readonly knex: Knex<any, unknown>, protected readonly config?: GybsonConfig) {
         this.logger = buildLogger({ logLevel: config?.logLevel ?? LogLevel.debug });
         this.engine = knex.client.config.client;
         if (this.engine !== 'pg' && this.engine !== 'mysql') {
@@ -20,7 +20,7 @@ export class GybsonBase {
         this.logger.info('Initialising Gybson...');
     }
 
-    public async close() {
+    public async _close() {
         await this.knex.destroy();
         this.logger.info('Gybson connection closed');
     }
