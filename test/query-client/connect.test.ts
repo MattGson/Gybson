@@ -1,7 +1,7 @@
-import { closeConnection } from '../environment/build-test-db';
+import { closeConnection } from 'test/environment/build-test-db';
 
 import Gybson from 'src/query-client';
-import { buildDBSchemas } from '../environment/build-test-db';
+import { buildDBSchemas } from 'test/environment/build-test-db';
 
 describe('Connect', () => {
     beforeAll(async (): Promise<void> => {

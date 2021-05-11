@@ -1,5 +1,6 @@
-import _, { join } from 'lodash';
+import _ from 'lodash';
 import fs from 'fs-extra';
+import { join } from 'path';
 
 // @ts-ignore
 import { format as prettify } from 'prettier';
@@ -68,5 +69,6 @@ export async function writeFormattedFile(args: {
 
     // append creates files if they don't exist - write overwrites contents
     await fs.appendFile(out, '');
+    // await fs.writeFile(out, content);
     await fs.writeFile(out, prettify(fileHeader + content, { parser, ...getPrettierConfig(prettierConfig) }));
 }

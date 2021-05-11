@@ -6,6 +6,7 @@ import {
     RelationDefinition,
     TableColumnsDefinition,
 } from 'relational-schema';
+import * as pluralize from 'pluralize';
 import { PascalCase } from '../printer';
 
 export type TableTypeNames = {
@@ -22,11 +23,23 @@ export type TableTypeNames = {
 
 export class TableTypeBuilder {
     /**
+     * Alias table name
+     * @param tableName
+     * @returns
+     */
+    private static tableNameAlias(tableName: string) {
+        return pluralize.singular(tableName);
+    }
+
+    /**
      * Get the type names for a table
      * @param params
      */
     public static typeNamesForTable(params: { tableName: string; rowTypeSuffix?: string }): TableTypeNames {
-        const { tableName, rowTypeSuffix } = params;
+        let { tableName, rowTypeSuffix } = params;
+
+        tableName = this.tableNameAlias(tableName);
+
         return {
             rowTypeName: `${tableName}${rowTypeSuffix || 'Row'}`,
             requiredRowTypeName: `${tableName}RequiredRow`,
@@ -50,6 +63,7 @@ export class TableTypeBuilder {
         gybsonLibPath: string;
     }) {
         const { relations, tableName, gybsonLibPath } = params;
+
         return `
              import { 
                 QueryClient,
@@ -69,7 +83,10 @@ export class TableTypeBuilder {
             ${_.uniqBy(relations, (r) => r.toTable)
                 .map((tbl) => {
                     if (tbl.toTable === tableName) return ''; // don't import own types
-                    return `import { ${tbl.toTable}RelationFilter } from "./${PascalCase(tbl.toTable)}"`;
+
+                    const names = this.typeNamesForTable({ tableName: tbl.toTable });
+
+                    return `import { ${names.relationFilterTypeName} } from "./${PascalCase(tbl.toTable)}"`;
                 })
                 .join(';')}
         `;
@@ -79,8 +96,9 @@ export class TableTypeBuilder {
      * Build enum type for table
      * @param params
      */
-    public static buildEnumTypes(params: { enums: EnumDefinitions }) {
+    public static buildEnumTypes(params: { enums?: EnumDefinitions }) {
         const { enums } = params;
+        if (!enums) return '';
         return `
             ${Object.entries(enums)
                 .map(([name, def]) => {
@@ -228,7 +246,8 @@ export class TableTypeBuilder {
                     .join('; ')}
                 ${TableTypeBuilder.buildWhereCombinersForTable({ whereTypeName })}
                 ${relations.map((relation) => {
-                    return `${relation.alias}?: ${relation.toTable}RelationFilter | null`;
+                    const typeNames = this.typeNamesForTable({ tableName: relation.toTable });
+                    return `${relation.alias}?: ${typeNames.relationFilterTypeName} | null`;
                 })}
             };
         `;

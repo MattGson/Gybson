@@ -1,5 +1,6 @@
 import { writeFormattedFile } from './printer';
 import { buildClient, TableClient } from './client-builder';
+import { join } from 'path';
 
 // **************************
 // generate client libs
@@ -12,24 +13,23 @@ import { buildClient, TableClient } from './client-builder';
  * @param gybsonLibPath- path to the gybson lib. Only configurable to improve testability
  */
 async function generateEntryPoint(builders: TableClient[], outdir: string, gybsonLibPath: string = 'gybson') {
-    let index = `import { runTransaction } from '${gybsonLibPath}';`;
+    let index = `import { GybsonBase } from '${gybsonLibPath}';`;
     let clients = ``;
     for (let { name } of builders) {
         index += `import ${name} from './${name}';`;
-        clients += `${name}: new ${name}(),`;
+        clients += `public readonly ${name} = new ${name}(this.clientConfig);`;
     }
     index += `
-        const Gybson = () => {
-        return {${clients} runTransaction };
-        };
-        export default Gybson;
-        export type Gybson = ReturnType<typeof Gybson>;
+
+        export class GybsonClient extends GybsonBase {
+            ${clients}
+        }
     `;
 
     await writeFormattedFile({
         content: index,
         directory: outdir,
-        filename: 'index.ts',
+        filename: 'index',
     });
 }
 
@@ -43,24 +43,24 @@ async function generateEntryPoint(builders: TableClient[], outdir: string, gybso
  * @param outdir - write files to this dir
  * @param gybsonLibPath - path to the gybson lib. Only configurable to improve testability
  */
-export async function generate(outdir: string, gybsonLibPath: string = 'gybson') {
-    const schema: any = {};
+export async function generate(args: { outdir: string; schemaFile: string; gybsonLibPath?: string }) {
+    const { outdir, gybsonLibPath, schemaFile } = args;
 
-    console.log(`Generating client for schema: ${'TODO'}`);
+    const schemaFullPath = join(process.cwd(), schemaFile);
+    console.log('Loading schema from ', schemaFullPath);
+
+    let schema = require(schemaFullPath);
+    if (!schema) throw new Error('Schema not found');
+
+    // // get around different export behaviour of JS, TS schemas
+    if (schema.default) {
+        schema = schema.default;
+    }
+
+    console.log('Generating client in ', outdir);
 
     // const schema = await introspectSchema({ conn });
-    const clients = await buildClient({ schema, gybsonLibPath });
-
-    // write code to files
-    // await writeTypescriptFile(
-    //     `
-    //     import { DatabaseSchema } from '${gybsonLibPath}';
-
-    //     export const schema: DatabaseSchema = ${JSON.stringify(schema)}`,
-    //     outdir,
-    //     `gybson.schema.ts`,
-    // );
-
+    const clients = await buildClient({ schema, gybsonLibPath: gybsonLibPath ?? 'gybson' });
     await Promise.all(
         clients.map((cl) => {
             writeFormattedFile({
@@ -72,5 +72,5 @@ export async function generate(outdir: string, gybsonLibPath: string = 'gybson')
     );
     await generateEntryPoint(clients, outdir, gybsonLibPath);
 
-    console.log(`Generated for ${Object.keys(schema).length} tables in ${outdir}`);
+    console.log(`Generated for ${Object.keys(schema.tables).length} tables`);
 }

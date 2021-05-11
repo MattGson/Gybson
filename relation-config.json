@@ -1,0 +1,6 @@
+{
+    "schema": "public",
+    "outdir": "test/tmp",
+    "format": "ts",
+    "transitiveRelations": true
+}

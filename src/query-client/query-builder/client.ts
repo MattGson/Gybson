@@ -5,10 +5,10 @@ import { Connection, GybsonConfig } from '..';
 import { buildLogger, logger } from '../lib/logging';
 
 export class GybsonBase {
-    private logger: winston.Logger;
-    private engine: ClientEngine;
+    protected logger: winston.Logger;
+    protected engine: ClientEngine;
 
-    constructor(private knex: Knex<any, unknown>, private config?: GybsonConfig) {
+    constructor(protected knex: Knex<any, unknown>, protected config?: GybsonConfig) {
         this.logger = buildLogger({ logLevel: config?.logLevel ?? LogLevel.debug });
         this.engine = knex.client.config.client;
         if (this.engine !== 'pg' && this.engine !== 'mysql') {
@@ -23,6 +23,10 @@ export class GybsonBase {
     public async close() {
         await this.knex.destroy();
         this.logger.info('Gybson connection closed');
+    }
+
+    protected get clientConfig() {
+        return { knex: this.knex, logger: this.logger, engine: this.engine };
     }
 
     /**

@@ -1,21 +1,15 @@
-import { Introspection } from '../../../src/Generator/Introspection/IntrospectionTypes';
-import { buildDBSchemas, closeConnection, knex, schemaName } from '../../Setup/build-test-db';
-import { TableSchemaBuilder } from '../../../src/Generator/Introspection/TableSchemaBuilder';
+import { buildDBSchemas, closeConnection } from 'test/helpers/build-test-db';
 import 'jest-extended';
 // @ts-ignore - no types for prettier
 import { format } from 'prettier';
-import { TableTypeBuilder } from '../../../src/Generator/TableClientBuilder/TableTypeBuilder';
-import { prettier } from '../../../src/Generator/config';
-import { getIntrospection } from '../../Setup/test.env';
+import { TableTypeBuilder } from 'src/generate/client-builder/table-type-builder';
+import { prettierDefault } from 'src/generate/config';
+import { schema } from 'test/tmp/relational-schema';
 
 describe('TableTypeBuilder', () => {
-    let intro: Introspection;
-    beforeAll(
-        async (): Promise<void> => {
-            await buildDBSchemas();
-            intro = getIntrospection(knex(), schemaName);
-        },
-    );
+    beforeAll(async (): Promise<void> => {
+        await buildDBSchemas();
+    });
     afterAll(async () => {
         await closeConnection();
     });
@@ -53,13 +47,14 @@ describe('TableTypeBuilder', () => {
     });
     describe('buildTypeImports', () => {
         it('Generates the imports for types with relations', async (): Promise<void> => {
-            const { relations } = await new TableSchemaBuilder('users', intro).buildTableDefinition();
+            const { relations } = schema.tables.users;
             const imports = TableTypeBuilder.buildTypeImports({
                 tableName: 'users',
+                // @ts-ignore
                 relations,
                 gybsonLibPath: 'gybson',
             });
-            const formatted = format(imports, { parser: 'typescript', ...prettier });
+            const formatted = format(imports, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `import {
@@ -85,9 +80,9 @@ import { team_membersRelationFilter } from './TeamMembers';
     });
     describe('buildEnumTypes', () => {
         it('Generates the enum types for the table', async (): Promise<void> => {
-            const enums = await intro.getEnumTypesForTable('users');
+            const enums = schema.tables.users.enums;
             const result = TableTypeBuilder.buildEnumTypes({ enums });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export type users_permissions = 'ADMIN' | 'USER';
@@ -98,10 +93,10 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildRowType', () => {
         it('Generates the row type for the table', async (): Promise<void> => {
-            const enums = await intro.getEnumTypesForTable('users');
-            const columns = await intro.getTableTypes('users', enums);
+            const enums = schema.tables.users.enums;
+            const columns = schema.tables.users.columns;
             const result = TableTypeBuilder.buildRowType({ table: columns, rowTypeName: 'usersRow' });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export interface usersRow {
@@ -122,10 +117,10 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildColumnMapType', () => {
         it('Generates a boolean map of the columns', async (): Promise<void> => {
-            const enums = await intro.getEnumTypesForTable('users');
-            const columns = await intro.getTableTypes('users', enums);
+            const enums = schema.tables.users.enums;
+            const columns = schema.tables.users.columns;
             const result = TableTypeBuilder.buildColumnMapType({ columns, columnMapTypeName: 'usersColumnMap' });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export interface usersColumnMap {
@@ -150,7 +145,7 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
                 whereTypeName: 'usersWhere',
                 relationFilterTypeName: 'usersRelationFilter',
             });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export interface usersRelationFilter {
@@ -164,11 +159,11 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildWhereType', () => {
         it('Generates filters for every column, relation and combiner ', async (): Promise<void> => {
-            const { relations } = await new TableSchemaBuilder('posts', intro).buildTableDefinition();
-            const enums = await intro.getEnumTypesForTable('posts');
-            const columns = await intro.getTableTypes('posts', enums);
+            const columns = schema.tables.posts.columns;
+            const relations = schema.tables.posts.relations;
+            // @ts-ignore
             const result = TableTypeBuilder.buildWhereType({ columns, relations, whereTypeName: 'postsWhere' });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export interface postsWhere {
@@ -195,15 +190,14 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildLoadOneWhereType', () => {
         it('Generates filters for unique keys', async (): Promise<void> => {
-            const { uniqueKeyCombinations } = await new TableSchemaBuilder('team_members', intro).buildTableDefinition();
-            const enums = await intro.getEnumTypesForTable('team_members');
-            const columns = await intro.getTableTypes('team_members', enums);
+            const columns = schema.tables.team_members.columns;
+            const uniqueKeyCombinations = schema.tables.team_members.uniqueKeyCombinations;
             const result = TableTypeBuilder.buildLoadOneWhereType({
                 uniqueKeys: uniqueKeyCombinations,
                 columns,
                 loadOneWhereTypeName: 'team_membersLoadOneWhere',
             });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export interface team_membersLoadOneWhere {
@@ -218,15 +212,14 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildLoadManyWhereType', () => {
         it('Generates filters for non-unique keys', async (): Promise<void> => {
-            const { uniqueKeyCombinations } = await new TableSchemaBuilder('posts', intro).buildTableDefinition();
-            const enums = await intro.getEnumTypesForTable('posts');
-            const columns = await intro.getTableTypes('posts', enums);
+            const columns = schema.tables.posts.columns;
+            const uniqueKeyCombinations = schema.tables.posts.uniqueKeyCombinations;
             const result = TableTypeBuilder.buildLoadManyWhereType({
                 columns,
                 uniqueKeys: uniqueKeyCombinations,
                 loadManyWhereTypeName: 'postsLoadManyWhere',
             });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export interface postsLoadManyWhere {
@@ -244,10 +237,9 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildOrderType', () => {
         it('Generates an Order clause for every column', async (): Promise<void> => {
-            const enums = await intro.getEnumTypesForTable('posts');
-            const columns = await intro.getTableTypes('posts', enums);
+            const columns = schema.tables.posts.columns;
             const result = TableTypeBuilder.buildOrderType({ orderByTypeName: 'postsOrderBy', columns });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export type postsOrderBy = {
@@ -270,7 +262,7 @@ export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
                 paginationTypeName: 'postsPaginate',
                 rowTypeName: 'postsDTO',
             });
-            const formatted = format(result, { parser: 'typescript', ...prettier });
+            const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
                 `export interface postsPaginate {

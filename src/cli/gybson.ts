@@ -46,11 +46,10 @@ yargs(hideBin(process.argv))
 async function generateClient(args: any) {
     try {
         // TODO:- options
-        const outdir = args.outdir;
 
-        const GENERATED_DIR = path.join(process.cwd(), outdir);
+        const GENERATED_DIR = path.join(process.cwd(), args.outdir);
 
-        await generate(GENERATED_DIR, 'gybson');
+        await generate({ outdir: GENERATED_DIR, gybsonLibPath: 'gybson', schemaFile: args.schemaFile });
     } catch (e) {
         console.error(e.message);
         console.log('Use: "gybson -h" to see help');

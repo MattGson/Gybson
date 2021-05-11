@@ -56,7 +56,10 @@ export class TableClientBuilder {
             requiredRowTypeName,
         } = this.typeNames;
         return `
-            import { schema } from './gybson.schema';
+            import { ClientEngine } from '${this.options.gybsonLibPath}';            
+            import * as schema from './relational-schema';
+            import Knex from 'knex';
+            import winston from 'winston';
 
             ${this.types}
 
@@ -69,10 +72,18 @@ export class TableClientBuilder {
                     ${paginationTypeName}, 
                     ${requiredRowTypeName}> {
                     
-                    constructor() {
+                    constructor(params: {
+                        knex: Knex<any, unknown>;
+                        logger: winston.Logger;
+                        engine: ClientEngine;
+                    }) {
+                        const { knex, logger, engine } = params;
                         super({ 
                             tableName: '${this.tableName}', 
-                            schema,
+                            schema: schema as any,
+                            knex,
+                            logger,
+                            engine,
                         });
                     }
                 ${this.loaders.join(`
@@ -137,7 +148,7 @@ export class TableClientBuilder {
 
         const { columns, relations, enums, uniqueKeyCombinations } = this.schema;
 
-        const rels = relations.filter((r) => r.type !== 'manyToMany');
+        const rels = relations?.filter((r) => r.type !== 'manyToMany');
 
         this.types = `
                 ${TableTypeBuilder.buildTypeImports({
