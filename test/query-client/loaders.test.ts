@@ -1,40 +1,42 @@
-import { closeConnection } from '../environment/build-test-db';
-import gybInit from '../../src/Client';
-import gybsonRefresh, { Gybson } from '../tmp';
-import { seed, SeedIds, seedPost, seedUser } from '../environment/seed';
-import { buildDBSchemas } from '../environment/build-test-db';
-import { DB } from '../environment/test.env';
-import { itif } from '../environment/helpers';
+import { GybsonClient } from 'test/tmp';
+import {
+    buildDBSchemas,
+    closeConnection,
+    closePoolConnection,
+    DB,
+    getPoolConnection,
+    itif,
+    knex,
+    seed,
+    SeedIds,
+    seedPost,
+    seedUser,
+} from 'test/helpers';
 
 describe('Loaders', () => {
     let ids: SeedIds;
-    let gybson: Gybson;
+    let gybson: GybsonClient;
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        await gybInit.init(connection);
-        gybson = gybsonRefresh();
-
-        // Seeds
-        ids = await seed(gybson);
+        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybInit.close();
+        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = gybsonRefresh();
+        gybson = new GybsonClient(knex());
 
         // Seeds
         ids = await seed(gybson);
     });
-
     describe('one by column load', () => {
         it('Can load one from a single unique key', async () => {
             // multi-load to debug batching
             const [loadOne] = await Promise.all([
-                gybson.Users.oneByUserId({ user_id: ids.user1Id }),
-                gybson.Users.oneByUserId({ user_id: 12 }),
+                gybson.Users.loadOne({ where: { user_id: ids.user1Id } }),
+                gybson.Users.loadOne({ where: { user_id: 12 } }),
             ]);
             expect(loadOne).toEqual(
                 expect.objectContaining({
@@ -53,7 +55,7 @@ describe('Loaders', () => {
                         user_id: ids.user1Id,
                     },
                 }),
-                gybson.Users.oneByUserId({ user_id: 12 }),
+                gybson.Users.loadOne({ where: { user_id: 12 } }),
             ]);
             expect(loadOne).toEqual(
                 expect.objectContaining({
@@ -65,9 +67,13 @@ describe('Loaders', () => {
             );
         });
         it('Can load one from a compound unique key', async () => {
-            const member = await gybson.TeamMembers.oneByTeamIdAndUserId({
-                user_id: ids.user1Id,
-                team_id: ids.team1Id,
+            const member = await gybson.TeamMembers.loadOne({
+                where: {
+                    team_id__user_id: {
+                        user_id: ids.user1Id,
+                        team_id: ids.team1Id,
+                    },
+                },
             });
             expect(member).toEqual(
                 expect.objectContaining({
@@ -87,9 +93,13 @@ describe('Loaders', () => {
                         },
                     },
                 }),
-                gybson.TeamMembers.oneByTeamIdAndUserId({
-                    user_id: 5,
-                    team_id: 3,
+                gybson.TeamMembers.loadOne({
+                    where: {
+                        team_id__user_id: {
+                            user_id: 5,
+                            team_id: 3,
+                        },
+                    },
                 }),
             ]);
             expect(member).toEqual(
@@ -105,7 +115,7 @@ describe('Loaders', () => {
                     user_id: ids.user1Id,
                 },
             });
-            const loadOne = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            const loadOne = await gybson.Users.loadOne({ where: { user_id: ids.user1Id } });
             expect(loadOne).toEqual(null);
         });
         it('Returns deleted rows when requested', async () => {
@@ -114,7 +124,7 @@ describe('Loaders', () => {
                     user_id: ids.user1Id,
                 },
             });
-            const loadOne = await gybson.Users.oneByUserId({ user_id: ids.user1Id, includeDeleted: true });
+            const loadOne = await gybson.Users.loadOne({ where: { user_id: ids.user1Id }, includeDeleted: true });
             expect(loadOne).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -122,7 +132,7 @@ describe('Loaders', () => {
             );
         });
         it('Caches the result of load', async () => {
-            await gybson.Users.oneByUserId({ user_id: ids.user1Id }); // run twice to debug load cache
+            await gybson.Users.loadOne({ where: { user_id: ids.user1Id } }); // run twice to debug load cache
 
             await gybson.Users.update({
                 values: {
@@ -134,7 +144,7 @@ describe('Loaders', () => {
             });
 
             // check name has not changed
-            const loadOne = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            const loadOne = await gybson.Users.loadOne({ where: { user_id: ids.user1Id } });
             expect(loadOne).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -144,7 +154,7 @@ describe('Loaders', () => {
             // clear cache
             await gybson.Users.purge();
             // should be up to date
-            const loadOne2 = await gybson.Users.oneByUserId({ user_id: ids.user1Id });
+            const loadOne2 = await gybson.Users.loadOne({ where: { user_id: ids.user1Id } });
             expect(loadOne2).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -155,7 +165,7 @@ describe('Loaders', () => {
     });
     describe('many by column load', () => {
         it('Can load many from a single non-unique key', async () => {
-            const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            const loadMany = await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
             expect(loadMany).toContainEqual(
                 expect.objectContaining({
                     author_id: ids.user1Id,
@@ -177,7 +187,7 @@ describe('Loaders', () => {
                         author_id: ids.user1Id,
                     },
                 }),
-                gybson.Posts.manyByAuthorId({ author_id: 8 }),
+                gybson.Posts.loadMany({ where: { author_id: 8 } }),
             ]);
             expect(loadMany).toContainEqual(
                 expect.objectContaining({
@@ -193,9 +203,11 @@ describe('Loaders', () => {
             );
         });
         it('Can load many from a compound non-unique key', async () => {
-            const member = await gybson.TeamMembers.manyByMemberPostIdAndTeamId({
-                team_id: ids.team1Id,
-                member_post_id: ids.post2Id,
+            const member = await gybson.TeamMembers.loadMany({
+                where: {
+                    team_id: ids.team1Id,
+                    member_post_id: ids.post2Id,
+                },
             });
             expect(member).toContainEqual(
                 expect.objectContaining({
@@ -224,8 +236,10 @@ describe('Loaders', () => {
             const u = await seedUser(gybson);
             const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
-            const member = await gybson.Posts.manyByAuthorId({
-                author_id: u,
+            const member = await gybson.Posts.loadMany({
+                where: {
+                    author_id: u,
+                },
                 orderBy: {
                     message: 'asc',
                 },
@@ -253,8 +267,10 @@ describe('Loaders', () => {
                         message: 'asc',
                     },
                 }),
-                gybson.Posts.manyByAuthorId({
-                    author_id: 2,
+                gybson.Posts.loadMany({
+                    where: {
+                        author_id: 2,
+                    },
                     orderBy: {
                         post_id: 'asc',
                     },
@@ -275,7 +291,7 @@ describe('Loaders', () => {
                     post_id: ids.post1Id,
                 },
             });
-            const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            const loadMany = await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
             expect(loadMany).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
         it('Returns deleted rows when requested', async () => {
@@ -284,11 +300,14 @@ describe('Loaders', () => {
                     post_id: ids.post1Id,
                 },
             });
-            const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id, includeDeleted: true });
+            const loadMany = await gybson.Posts.loadMany({
+                where: { author_id: ids.user1Id },
+                includeDeleted: true,
+            });
             expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
         it('Caches the result of load', async () => {
-            await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
 
             await gybson.Posts.softDelete({
                 where: {
@@ -297,13 +316,13 @@ describe('Loaders', () => {
             });
 
             // check result has not changed
-            const loadMany = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            const loadMany = await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
             expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
 
             // clear cache
             await gybson.Posts.purge();
             // should be up to date
-            const loadMany2 = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            const loadMany2 = await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
             expect(loadMany2).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
     });
@@ -318,7 +337,7 @@ describe('Loaders', () => {
                     user_id: ids.user1Id,
                 },
             });
-            const user = await gybson.Users.oneByEmail({ email: 'cased@gmail.com' });
+            const user = await gybson.Users.loadOne({ where: { email: 'cased@gmail.com' } });
             expect(user).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -335,7 +354,7 @@ describe('Loaders', () => {
                     position: 'A position',
                 },
             });
-            const members = await gybson.TeamMembersPositions.manyByManager({ manager: 'casedManager' });
+            const members = await gybson.TeamMembersPositions.loadMany({ where: { manager: 'casedManager' } });
             expect(members).toContainEqual(
                 expect.objectContaining({
                     manager: 'CasedManager',

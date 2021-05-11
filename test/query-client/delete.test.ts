@@ -1,30 +1,36 @@
-import { seed, SeedIds } from '../environment/seed';
-import gybsonRefresh, { Gybson } from '../tmp';
-import { buildDBSchemas, closeConnection, closePoolConnection, getPoolConnection } from '../environment/build-test-db';
-import gybInit, { LogLevel } from '../../src/Client';
+import { GybsonClient } from 'test/tmp';
+import {
+    buildDBSchemas,
+    closeConnection,
+    closePoolConnection,
+    getPoolConnection,
+    knex,
+    seed,
+    SeedIds,
+} from 'test/helpers';
 import 'jest-extended';
 
 describe('Delete', () => {
     let ids: SeedIds;
-    let gybson: Gybson;
+    let gybson: GybsonClient;
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
+        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybInit.close();
+        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = gybsonRefresh();
+        gybson = new GybsonClient(knex());
 
         // Seeds
         ids = await seed(gybson);
     });
     describe('usage', () => {
         it('Can delete using where filters', async () => {
-            const post = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            const post = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: ids.post1Id,
@@ -39,12 +45,12 @@ describe('Delete', () => {
                 },
             });
             await gybson.Posts.purge();
-            const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            const post2 = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
             expect(post2).toEqual(null);
         });
         it('Can use an external connection', async () => {
             const connection = await getPoolConnection();
-            const post = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            const post = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: ids.post1Id,
@@ -60,7 +66,7 @@ describe('Delete', () => {
                 },
             });
             await gybson.Posts.purge();
-            const post2 = await gybson.Posts.oneByPostId({ post_id: ids.post1Id });
+            const post2 = await gybson.Posts.loadOne({ where: { post_id: ids.post1Id } });
             expect(post2).toEqual(null);
             await closePoolConnection(connection);
         });

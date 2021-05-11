@@ -4,7 +4,7 @@ import 'jest-extended';
 import { format } from 'prettier';
 import { TableTypeBuilder } from 'src/generate/client-builder/table-type-builder';
 import { prettierDefault } from 'src/generate/config';
-import { schema } from 'test/tmp/relational-schema';
+import schema from 'test/tmp/relational-schema';
 
 describe('TableTypeBuilder', () => {
     beforeAll(async (): Promise<void> => {

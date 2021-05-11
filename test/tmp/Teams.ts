@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { ClientEngine } from '../../src/query-client';
-import * as schema from './relational-schema';
+import schema from './relational-schema';
 import Knex from 'knex';
 import winston from 'winston';
 

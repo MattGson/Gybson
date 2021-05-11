@@ -19,6 +19,9 @@ async function generateEntryPoint(builders: TableClient[], outdir: string, gybso
         index += `import ${name} from './${name}';`;
         clients += `public readonly ${name} = new ${name}(this.clientConfig);`;
     }
+    for (let { name } of builders) {
+        index += `export * from './${name}';`;
+    }
     index += `
 
         export class GybsonClient extends GybsonBase {

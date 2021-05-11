@@ -44,6 +44,7 @@ export const closePoolConnection = async (connection: PoolConnection): Promise<v
 
 export const knex = (): Knex => state.knex;
 export const closeConnection = async (): Promise<void> => state.knex.destroy();
+export const getPoolConnection = async () => state.knex.client.getConnection();
 
 export const openConnection = async (): Promise<Knex<any, unknown>> => {
     if (DB() === 'pg') {

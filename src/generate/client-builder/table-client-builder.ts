@@ -57,7 +57,7 @@ export class TableClientBuilder {
         } = this.typeNames;
         return `
             import { ClientEngine } from '${this.options.gybsonLibPath}';            
-            import * as schema from './relational-schema';
+            import schema from './relational-schema';
             import Knex from 'knex';
             import winston from 'winston';
 

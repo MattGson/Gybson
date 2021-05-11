@@ -1,34 +1,40 @@
-import { seed, SeedIds } from '../environment/seed';
-import gybsonRefresh, { Gybson } from '../tmp';
-import { closeConnection } from '../environment/build-test-db';
-import gybInit, { LogLevel } from '../../src/Client';
+import { GybsonClient } from 'test/tmp';
+import {
+    buildDBSchemas,
+    closeConnection,
+    closePoolConnection,
+    getPoolConnection,
+    knex,
+    seed,
+    SeedIds,
+    seedPost,
+    seedUser,
+} from 'test/helpers';
 import faker from 'faker';
-import { Transaction } from 'knex';
-import { buildDBSchemas } from '../environment/build-test-db';
 
 describe('Transaction', () => {
     let ids: SeedIds;
-    let gybson: Gybson;
+    let gybson: GybsonClient;
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
+        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybInit.close();
+        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = gybsonRefresh();
+        gybson = new GybsonClient(knex());
 
         // Seeds
         ids = await seed(gybson);
     });
     describe('Insert multiple rows', () => {
         it('Can insert multiple rows as a transaction', async () => {
-            const result = await gybson.runTransaction(async (trx) => {
+            const result = await gybson._transaction(async (connection) => {
                 const userId = await gybson.Users.insert({
-                    connection: trx,
+                    connection,
                     values: {
                         first_name: 'John',
                         last_name: 'Doe',
@@ -38,7 +44,7 @@ describe('Transaction', () => {
                     },
                 });
                 const tm = await gybson.TeamMembers.insert({
-                    connection: trx,
+                    connection,
                     values: {
                         user_id: userId,
                         team_id: ids.team1Id,
@@ -46,7 +52,7 @@ describe('Transaction', () => {
                 });
                 return userId;
             });
-            const user = await gybson.Users.oneByUserId({ user_id: result });
+            const user = await gybson.Users.loadOne({ where: { user_id: result } });
             expect(user).toEqual(
                 expect.objectContaining({
                     user_id: result,
@@ -61,7 +67,7 @@ describe('Transaction', () => {
                 const users = await gybson.Users.findMany({});
                 const numUsers = users.length;
                 await expect(
-                    gybson.runTransaction(async (trx) => {
+                    gybson._transaction(async (trx) => {
                         const userId = await gybson.Users.insert({
                             connection: trx,
                             values: {
@@ -90,7 +96,7 @@ describe('Transaction', () => {
         });
         describe('Query support', () => {
             it('Can transact insert, upsert, soft-delete, update', async () => {
-                await gybson.runTransaction(async (trx) => {
+                await gybson._transaction(async (trx) => {
                     await gybson.Users.insert({
                         connection: trx,
                         values: {

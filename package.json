@@ -20,8 +20,8 @@
         "dependency-check": "dependency-check . --entry src/Generator/cli/gybson.js --missing --no-dev",
         "introspect:mysql": "relations introspect --client mysql --host localhost --port 3306 --user root --database tests",
         "introspect:pg": "relations introspect --client pg --host localhost --port 5432 --user postgres --database tests",
-        "test:pg": "npm run test:introspect && DB=pg tsnd --files --transpile-only -r tsconfig-paths/register ./test/helpers/build-test-client.ts && DB=pg jest --runInBand",
-        "test:mysql": "npm run test:introspect && DB=mysql tsnd --files --transpile-only -r tsconfig-paths/register ./test/helpers/build-test-client.ts && DB=mysql jest --runInBand",
+        "test:pg": "npm run introspect:pg && DB=pg tsnd --files --transpile-only -r tsconfig-paths/register ./test/helpers/build-test-client.ts && DB=pg jest --runInBand",
+        "test:mysql": "npm run introspect:mysql && DB=mysql tsnd --files --transpile-only -r tsconfig-paths/register ./test/helpers/build-test-client.ts && DB=mysql jest --runInBand",
         "semantic-release": "semantic-release",
         "prepare": "npm run build",
         "typecheck": "tsc --p ./tsconfig.typecheck.json"

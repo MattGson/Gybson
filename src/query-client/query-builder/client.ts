@@ -34,7 +34,7 @@ export class GybsonBase {
      * @param fn
      * @returns
      */
-    public async transaction<T>(fn: (conn: Connection) => T): Promise<T> {
+    public async _transaction<T>(fn: (conn: Connection) => T): Promise<T> {
         let conn = await this.knex.client.acquireConnection();
 
         try {

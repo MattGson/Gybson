@@ -5,7 +5,7 @@
 export default {
     database: 'tests',
     connection: { host: 'localhost', port: 5432, user: 'postgres' },
-    generatedAt: '2021-05-11T06:06:59.645Z',
+    generatedAt: '2021-05-11T06:51:46.470Z',
     tables: {
         teams: {
             primaryKey: { constraintName: 'teams_pkey', constraintType: 'PRIMARY KEY', columnNames: ['team_id'] },
@@ -450,11 +450,11 @@ export default {
             },
             enums: {
                 subscription_level: {
-                    id: '23402',
+                    id: '24555',
                     enumName: 'subscription_level',
                     values: ['BRONZE', 'GOLD', 'SILVER'],
                 },
-                permissions: { id: '23410', enumName: 'permissions', values: ['ADMIN', 'USER'] },
+                permissions: { id: '24562', enumName: 'permissions', values: ['ADMIN', 'USER'] },
             },
         },
         posts: {

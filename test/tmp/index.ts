@@ -7,11 +7,16 @@ import TeamMembers from './TeamMembers';
 import TeamMembersPositions from './TeamMembersPositions';
 import Users from './Users';
 import Posts from './Posts';
+export * from './Teams';
+export * from './TeamMembers';
+export * from './TeamMembersPositions';
+export * from './Users';
+export * from './Posts';
 
 export class GybsonClient extends GybsonBase {
     public readonly Teams = new Teams(this.clientConfig);
-    public TeamMembers = new TeamMembers(this.clientConfig);
-    public TeamMembersPositions = new TeamMembersPositions(this.clientConfig);
-    public Users = new Users(this.clientConfig);
-    public Posts = new Posts(this.clientConfig);
+    public readonly TeamMembers = new TeamMembers(this.clientConfig);
+    public readonly TeamMembersPositions = new TeamMembersPositions(this.clientConfig);
+    public readonly Users = new Users(this.clientConfig);
+    public readonly Posts = new Posts(this.clientConfig);
 }

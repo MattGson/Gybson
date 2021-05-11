@@ -1,24 +1,30 @@
-import { closeConnection } from '../environment/build-test-db';
-import gybInit, { LogLevel } from '../../src/Client';
-import gybsonRefresh, { Gybson } from '../tmp';
-import { seed, SeedIds, seedPost, seedUser } from '../environment/seed';
-import 'jest-extended';
-import { buildDBSchemas } from '../environment/build-test-db';
+import { GybsonClient } from 'test/tmp';
+import {
+    buildDBSchemas,
+    closeConnection,
+    closePoolConnection,
+    getPoolConnection,
+    knex,
+    seed,
+    SeedIds,
+    seedPost,
+    seedUser,
+} from 'test/helpers';
 
 describe('FindMany', () => {
     let ids: SeedIds;
-    let gybson: Gybson;
+    let gybson: GybsonClient;
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
+        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybInit.close();
+        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = gybsonRefresh();
+        gybson = new GybsonClient(knex());
 
         // Seeds
         ids = await seed(gybson);

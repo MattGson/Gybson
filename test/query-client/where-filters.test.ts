@@ -1,24 +1,30 @@
-import { closeConnection } from 'test/environment/build-test-db';
-import gybInit, { LogLevel } from 'src/query-client';
-import gybsonRefresh, { Gybson } from 'test/tmp';
-import { seed, SeedIds, seedPost, seedUser } from 'test/environment/seed';
-import 'jest-extended';
-import { buildDBSchemas } from '../environment/build-test-db';
+import { GybsonClient } from 'test/tmp';
+import {
+    buildDBSchemas,
+    closeConnection,
+    closePoolConnection,
+    getPoolConnection,
+    knex,
+    seed,
+    SeedIds,
+    seedPost,
+    seedUser,
+} from 'test/helpers';
 
 describe('WhereFilters', () => {
     let ids: SeedIds;
-    let gybson: Gybson;
+    let gybson: GybsonClient;
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
+        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybInit.close();
+        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = gybsonRefresh();
+        gybson = new GybsonClient(knex());
 
         // Seeds
         ids = await seed(gybson);
@@ -620,7 +626,7 @@ describe('WhereFilters', () => {
                                     message: {
                                         contains: 'hip',
                                     },
-                                    author_: {
+                                    author_relation: {
                                         notExistsWhere: {
                                             first_name: 'steve',
                                         },

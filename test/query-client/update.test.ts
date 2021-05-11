@@ -1,23 +1,31 @@
-import { seed, SeedIds, seedPost } from '../environment/seed';
-import gybsonRefresh, { Gybson } from 'test/tmp';
-import { buildDBSchemas, closeConnection, closePoolConnection, getPoolConnection } from '../environment/build-test-db';
-import { LogLevel } from 'src/query-client';
+import { GybsonClient } from 'test/tmp';
+import {
+    buildDBSchemas,
+    closeConnection,
+    closePoolConnection,
+    getPoolConnection,
+    knex,
+    seed,
+    SeedIds,
+    seedPost,
+    seedUser,
+} from 'test/helpers';
 import 'jest-extended';
 
 describe('Update', () => {
     let ids: SeedIds;
-    let gybson: Gybson;
+    let gybson: GybsonClient;
     let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
+        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybInit.close();
+        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = gybsonRefresh();
+        gybson = new GybsonClient(knex());
 
         // Seeds
         ids = await seed(gybson);
@@ -36,7 +44,7 @@ describe('Update', () => {
                     },
                 },
             });
-            const post = await gybson.Posts.oneByPostId({ post_id: p1 });
+            const post = await gybson.Posts.loadOne({ where: { post_id: p1 } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: p1,

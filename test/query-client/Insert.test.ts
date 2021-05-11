@@ -1,24 +1,30 @@
-import { seed, SeedIds } from '../environment/seed';
-import gybsonRefresh, { Gybson } from '../tmp';
-import { buildDBSchemas, closeConnection, closePoolConnection, getPoolConnection } from '../environment/build-test-db';
-import gybInit, { LogLevel } from '../../src/Client';
-import 'jest-extended';
-import { Connection } from '../../src/Generator/Introspection';
+import { GybsonClient } from 'test/tmp';
+import {
+    buildDBSchemas,
+    closeConnection,
+    closePoolConnection,
+    getPoolConnection,
+    knex,
+    seed,
+    SeedIds,
+    seedPost,
+    seedUser,
+} from 'test/helpers';
 
 describe('Insert', () => {
     let ids: SeedIds;
-    let gybson: Gybson;
-    let connection: Connection;
+    let gybson: GybsonClient;
+    let connection;
     beforeAll(async (): Promise<void> => {
         connection = await buildDBSchemas();
-        await gybInit.init({ ...connection, options: { logLevel: LogLevel.debug } });
+        gybson = new GybsonClient(knex());
     });
     afterAll(async () => {
         await closeConnection();
-        await gybInit.close();
+        await gybson.close();
     });
     beforeEach(async () => {
-        gybson = gybsonRefresh();
+        gybson = new GybsonClient(knex());
 
         // Seeds
         ids = await seed(gybson);
@@ -34,7 +40,7 @@ describe('Insert', () => {
                     created: new Date(2003, 20, 4),
                 },
             });
-            const post = await gybson.Posts.oneByPostId({ post_id: postId });
+            const post = await gybson.Posts.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: postId,
@@ -63,7 +69,7 @@ describe('Insert', () => {
                     },
                 ],
             });
-            const posts = await gybson.Posts.manyByAuthorId({ author_id: ids.user1Id });
+            const posts = await gybson.Posts.loadMany({ where: { author_id: ids.user1Id } });
             expect(posts).toIncludeAllMembers([
                 expect.objectContaining({
                     post_id: postId,
@@ -91,7 +97,7 @@ describe('Insert', () => {
                 },
             });
             expect(postId).toBeDefined();
-            const post = await gybson.Posts.oneByPostId({ post_id: postId });
+            const post = await gybson.Posts.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
                 expect.objectContaining({
                     post_id: postId,
