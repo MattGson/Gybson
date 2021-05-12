@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/MattGson/Gybson/compare/v1.0.1...v1.1.0) (2021-05-12)
+
+
+### Features
+
+* **upsert:** upsert strategy support ([53c565d](https://github.com/MattGson/Gybson/commit/53c565d0f8beeb3f2e8a7fc4c2a7932b5be1553e))
+
 ## [1.0.1](https://github.com/MattGson/Gybson/compare/v1.0.0...v1.0.1) (2021-05-12)
 
 
