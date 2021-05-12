@@ -12,6 +12,7 @@ module.exports = {
         node: true,
     },
     rules: {
+        '@typescript-eslint/no-this-alias': 'off',
         '@typescript-eslint/explicit-function-return-type': 'off',
         '@typescript-eslint/no-floating-promises': 'off',
         '@typescript-eslint/no-parameter-properties': 'off',

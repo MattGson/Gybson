@@ -1,5 +1,6 @@
 import { openConnection, closeConnection, getKnex, seed, SeedIds, seedPost, seedUser } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
+import * as faker from "faker";
 
 describe('WhereFilters', () => {
     let ids: SeedIds;
@@ -30,22 +31,22 @@ describe('WhereFilters', () => {
                         user_id: ids.user1Id,
                     }),
                 );
-            });
-            it('Can filter by column equals (other syntax)', async () => {
-                const find = await gybson.user.findMany({
+                // other syntax
+                const find2 = await gybson.user.findMany({
                     where: {
                         user_id: {
                             equals: ids.user1Id,
                         },
                     },
                 });
-                expect(find).toHaveLength(1);
-                expect(find).toContainEqual(
+                expect(find2).toHaveLength(1);
+                expect(find2).toContainEqual(
                     expect.objectContaining({
                         user_id: ids.user1Id,
                     }),
                 );
             });
+
             it('Can filter by column not equals', async () => {
                 const find = await gybson.user.findMany({
                     where: {
@@ -143,7 +144,9 @@ describe('WhereFilters', () => {
                         },
                     },
                 });
-                expect(find).toHaveLength(0);
+                find.forEach((post) => {
+                    expect(post.rating_average).toBeLessThan(4.5);
+                });
             });
             it('Can filter by less than or equal', async () => {
                 const find = await gybson.post.findMany({
@@ -223,82 +226,144 @@ describe('WhereFilters', () => {
             });
         });
         describe('Column types filters', () => {
-            it('Can filter strings', async () => {
-                const find = await gybson.post.findMany({
-                    where: {
-                        message: {
-                            equals: 'test 2',
-                            startsWith: 'tes',
-                            endsWith: '2',
+            describe('strings', () => {
+                it('Can filter strings', async () => {
+                    const find = await gybson.post.findMany({
+                        where: {
+                            message: {
+                                equals: 'test 2',
+                                startsWith: 'tes',
+                                endsWith: '2',
+                            },
+                            author: {
+                                lt: 'owen',
+                                gte: 'andy',
+                            },
                         },
-                        author: {
-                            lt: 'owen',
-                            gte: 'andy',
-                        },
-                    },
+                    });
+                    expect(find).toContainEqual(
+                        expect.objectContaining({
+                            post_id: ids.post2Id,
+                            author: 'name',
+                        }),
+                    );
                 });
-                expect(find).toContainEqual(
-                    expect.objectContaining({
-                        post_id: ids.post2Id,
-                        author: 'name',
-                    }),
-                );
             });
-            it('Can filter numbers', async () => {
-                const find = await gybson.post.findMany({
-                    where: {
-                        rating_average: {
-                            equals: 4,
-                            lt: 5,
-                            gt: 3,
-                            not: 7,
+            describe('numbers', () => {
+                it('Can filter numbers', async () => {
+                    const find = await gybson.post.findMany({
+                        where: {
+                            rating_average: {
+                                equals: 4.5,
+                            },
                         },
-                    },
+                    });
+                    find.forEach((post) => {
+                        expect(post.rating_average).toEqual(4.5);
+                    });
                 });
-                expect(find).toHaveLength(0);
-            });
-            it('Can filter dates', async () => {
-                const p3 = await seedPost(gybson, { author_id: ids.user1Id, created: new Date(2009, 4) });
-                const find = await gybson.post.findMany({
-                    where: {
-                        created: {
-                            lt: new Date(),
-                            gt: new Date(2005, 5, 2),
+                it('Can filter numbers ranges', async () => {
+                    const find = await gybson.post.findMany({
+                        where: {
+                            rating_average: {
+                                lt: 5,
+                                gt: 3,
+                            },
                         },
-                    },
+                    });
+                    find.forEach((post) => {
+                        expect(post.rating_average).toBeLessThan(5);
+                        expect(post.rating_average).toBeGreaterThan(3);
+                    });
                 });
-                expect(find).toContainEqual(
-                    expect.objectContaining({
-                        post_id: p3,
-                    }),
-                );
-                expect(find).not.toContainEqual(
-                    expect.objectContaining({
-                        post_id: ids.post2Id,
-                    }),
-                );
             });
-            it('Can filter booleans', async () => {
-                await gybson.teamMembersPosition.insert({
-                    values: {
-                        team_id: ids.team1Id,
-                        user_id: ids.user1Id,
-                        verified: true,
-                        position: 'pos',
-                        manager: 'a manager',
-                    },
+            describe('dates', () => {
+                it('Can filter dates', async () => {
+                    const created = new Date(2009, 4);
+                    const p3 = await seedPost(gybson, { author_id: ids.user1Id, created });
+                    const find = await gybson.post.findMany({
+                        where: {
+                            created,
+                        },
+                    });
+                    expect(find).toContainEqual(
+                        expect.objectContaining({
+                            post_id: p3,
+                        }),
+                    );
+                    expect(find).not.toContainEqual(
+                        expect.objectContaining({
+                            post_id: ids.post2Id,
+                        }),
+                    );
+                    // other syntax
+                    const find2 = await gybson.post.findMany({
+                        where: {
+                            created: {
+                                equals: created
+                            },
+                        },
+                    });
+                    expect(find2).toContainEqual(
+                        expect.objectContaining({
+                            post_id: p3,
+                        }),
+                    );
+                    expect(find2).not.toContainEqual(
+                        expect.objectContaining({
+                            post_id: ids.post2Id,
+                        }),
+                    );
                 });
-                const find = await gybson.teamMembersPosition.findMany({
-                    where: {
-                        verified: true,
-                    },
+                it('Can filter dates range', async () => {
+                    const created = new Date(2009, 4);
+                    const p3 = await seedPost(gybson, { author_id: ids.user1Id, created });
+                    const find = await gybson.post.findMany({
+                        where: {
+                            created: {
+                                lt: new Date(),
+                                gt: new Date(2005, 5, 2),
+                            },
+                        },
+                    });
+                    expect(find).toContainEqual(
+                        expect.objectContaining({
+                            post_id: p3,
+                        }),
+                    );
+                    expect(find).not.toContainEqual(
+                        expect.objectContaining({
+                            post_id: ids.post2Id,
+                        }),
+                    );
                 });
-                expect(find).toContainEqual(
-                    expect.objectContaining({
-                        team_id: ids.team1Id,
-                        user_id: ids.user1Id,
-                    }),
-                );
+            });
+            describe('booleans', () => {
+                it('Can filter booleans', async () => {
+                    await gybson.teamMembersPosition.upsert({
+                        values: {
+                            team_id: ids.team1Id,
+                            user_id: ids.user1Id,
+                            verified: true,
+                            position: faker.random.alphaNumeric(12),
+                            manager: 'a manager',
+                        },
+                        updateColumns: {
+                            verified: true,
+                        },
+                    });
+                    const find = await gybson.teamMembersPosition.findMany({
+                        where: {
+                            verified: true,
+                        },
+                    });
+                    expect(find).toContainEqual(
+                        expect.objectContaining({
+                            team_id: ids.team1Id,
+                            user_id: ids.user1Id,
+                        }),
+                    );
+                });
             });
         });
         describe('Multiple column filters', () => {

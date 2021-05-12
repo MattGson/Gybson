@@ -1,7 +1,7 @@
 import { GybsonClient } from '../tmp';
 import faker from 'faker';
-import { User } from '../tmp/User';
-import { Post } from '../tmp/Post';
+import { User } from 'test/tmp/User';
+import { Post } from 'test/tmp/Post';
 
 export type SeedIds = {
     user1Id: number;

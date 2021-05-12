@@ -113,6 +113,30 @@ describe('Insert', () => {
                 }),
             ).rejects.toThrow(Error);
         });
+        it('Can ignore insert on duplicate rows', async () => {
+            // show not throw an error
+            await gybson.post.insert({
+                values: [
+                    {
+                        post_id: 3455,
+                        message: 'test 2',
+                        author_id: ids.user1Id,
+                        rating_average: 6,
+                        author: 'name',
+                        created: new Date(2003, 20, 4),
+                    },
+                    {
+                        post_id: 3455,
+                        message: 'test 3',
+                        author_id: ids.user1Id,
+                        rating_average: 8,
+                        author: 'name 2',
+                        created: new Date(2005, 20, 4),
+                    },
+                ],
+                ignoreDuplicates: true,
+            });
+        });
         it('Can use an external connection', async () => {
             const connection = await getPoolConnection();
             const postId = await gybson.post.insert({

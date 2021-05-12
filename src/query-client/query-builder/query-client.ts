@@ -27,8 +27,9 @@ export abstract class QueryClient<
     private readonly knex: Knex<any, unknown>;
     private readonly logger: winston.Logger;
     private readonly engine: ClientEngine;
+    protected readonly whereResolver: WhereResolver;
 
-    protected loader = new Loader<TblRow, PartialTblRow, TblOrderBy>({
+    protected readonly loader = new Loader<TblRow, PartialTblRow, TblOrderBy>({
         getMultis: (args) => this.stableGetMany(args),
         getOnes: (args) => this.stableGetSingles(args),
     });
@@ -47,6 +48,7 @@ export abstract class QueryClient<
         this.tableName = tableName;
         this.schema = schema;
         this.tableAlias = `${this.tableName}_q_root`;
+        this.whereResolver = new WhereResolver(schema);
     }
 
     private get primaryKey(): string[] {
@@ -260,10 +262,9 @@ export abstract class QueryClient<
         const query = this.knex(this.aliasedTable).select(`${this.tableAlias}.*`);
 
         if (where) {
-            WhereResolver.resolveWhereClause({
+            this.whereResolver.resolveWhereClause({
                 where,
                 queryBuilder: query,
-                schema: this.schema,
                 tableName: this.tableName,
                 tableAlias: this.tableAlias,
             });
@@ -427,10 +428,9 @@ export abstract class QueryClient<
         if (type === Comparable.Date) query.update({ [colAlias]: new Date() });
         if (type === Comparable.boolean) query.update({ [colAlias]: true });
 
-        WhereResolver.resolveWhereClause({
+        this.whereResolver.resolveWhereClause({
             queryBuilder: query,
             where,
-            schema: this.schema,
             tableName: this.tableName,
             tableAlias: this.tableAlias,
         });
@@ -451,21 +451,36 @@ export abstract class QueryClient<
         const { where, connection } = params;
         if (this.hasSoftDelete)
             this.logger.warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
-        if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
+        if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition for delete');
 
         const query = this.knex(this.tableName).del();
 
         // Note - can't use an alias with delete statement in knex
-        WhereResolver.resolveWhereClause({
+        this.whereResolver.resolveWhereClause({
             queryBuilder: query,
             where,
-            schema: this.schema,
             tableName: this.tableName,
             tableAlias: this.tableName,
         });
         if (connection) query.connection(connection);
 
         this.logger.debug('Executing delete: %s', query.toSQL().sql);
+
+        return query;
+    }
+
+    /**
+     * Truncate a table
+     * @param params
+     */
+    public async truncate(params: { connection?: Connection; }): Promise<any> {
+        const { connection } = params;
+
+        this.logger.warn(`Running truncate for table: "${this.tableName}". This is a dangerous operation and is rarely required in production.`);
+
+        const query = this.knex(this.tableAlias).truncate();
+        this.logger.debug('Executing truncate: %s', query.toSQL().sql);
+        if (connection) query.connection(connection);
 
         return query;
     }
@@ -483,10 +498,9 @@ export abstract class QueryClient<
 
         const query = this.knex(this.aliasedTable).update(values);
         if (where) {
-            WhereResolver.resolveWhereClause({
+            this.whereResolver.resolveWhereClause({
                 queryBuilder: query,
                 where,
-                schema: this.schema,
                 tableName: this.tableName,
                 tableAlias: this.tableAlias,
             });

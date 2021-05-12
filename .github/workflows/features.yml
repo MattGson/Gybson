@@ -22,6 +22,7 @@ on:
 jobs:
     lint:
         runs-on: ubuntu-latest
+        timeout-minutes: 15
         steps:
             - uses: actions/checkout@v2
             - uses: actions/setup-node@v2
@@ -30,6 +31,7 @@ jobs:
 
     test-mysql:
         runs-on: ubuntu-latest
+        timeout-minutes: 15
         strategy:
             matrix:
                 node: [12, 14]
@@ -55,6 +57,7 @@ jobs:
 
     test-postgres:
         runs-on: ubuntu-latest
+        timeout-minutes: 15
         strategy:
             matrix:
                 node: [12, 14]
