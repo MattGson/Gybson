@@ -348,7 +348,7 @@ describe('WhereFilters', () => {
                             position: faker.random.alphaNumeric(12),
                             manager: 'a manager',
                         },
-                        updateColumns: {
+                        mergeColumns: {
                             verified: true,
                         },
                     });
