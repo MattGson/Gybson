@@ -41,10 +41,22 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
 
     /**
      * Generate a unique hash key for a filter combination (used for loaders)
+     * This determines which loads will be batched together
      * @param filter
+     * @param extras
      */
-    private filterHashKey<K extends { filter: Filter }>(filter: K) {
-        return keyify(filter).sort().join(':');
+    private filterHashKey<K extends { filter: Filter }>(filter: K, extras?: SoftDeleteQueryFilter & OrderQueryFilter<Order>) {
+        let filterKey = keyify(filter).sort().join(':');
+        if (extras?.orderBy) {
+            // we need to make sure different orderings on the same filter are batched separately
+            // stringify is a good enough key here
+            filterKey += ':orderBy.';
+            filterKey += JSON.stringify(extras.orderBy);
+        }
+        if (extras?.includeDeleted) {
+            filterKey += ':includeDeleted.true'
+        }
+        return filterKey;
     }
 
     /**
@@ -78,7 +90,7 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
         const { filter, orderBy, includeDeleted } = params;
 
         // different loader for each param combination
-        const loadAngle = this.filterHashKey({ filter, orderBy, includeDeleted });
+        const loadAngle = this.filterHashKey({ filter }, { includeDeleted, orderBy });
         let loader = this.loaders.manyLoaders[loadAngle];
 
         if (!loader) {
@@ -104,7 +116,7 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
         const { filter, includeDeleted } = params;
 
         // different loader for each param combination
-        const loadAngle = this.filterHashKey({ filter, includeDeleted });
+        const loadAngle = this.filterHashKey({ filter }, { includeDeleted });
         let loader = this.loaders.oneLoaders[loadAngle];
 
         if (!loader) {
