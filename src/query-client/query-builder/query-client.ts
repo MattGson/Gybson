@@ -158,9 +158,11 @@ export abstract class QueryClient<
         const loadValues = keys.map<(string | number | Date)[]>((k: any) => {
             return columns.map((col) => k[col]);
         });
+        // reduce number of keys sent to DB
+        const uniqueLoads = _.uniqBy(loadValues, value => value.join(':'));
 
         // build query
-        const query = this.knex(this.aliasedTable).select().whereIn(columns, loadValues);
+        const query = this.knex(this.aliasedTable).select().whereIn(columns, uniqueLoads);
 
         if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
 
@@ -170,7 +172,7 @@ export abstract class QueryClient<
             }
         }
 
-        this.logger.debug('Executing many load: %s with keys %j', query.toSQL().sql, loadValues);
+        this.logger.debug('Executing many load: %s with keys %j', query.toSQL().sql, uniqueLoads);
 
         const rows = await query;
 
@@ -213,10 +215,13 @@ export abstract class QueryClient<
             return columns.map((col) => k[col]);
         });
 
-        const query = this.knex(this.aliasedTable).select().whereIn(columns, loadValues);
+        // reduce number of keys sent to DB
+        const uniqueLoads = _.uniqBy(loadValues, value => value.join(':'));
+
+        const query = this.knex(this.aliasedTable).select().whereIn(columns, uniqueLoads);
         if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
 
-        this.logger.debug('Executing single load: %s with keys %j', query.toSQL().sql, loadValues);
+        this.logger.debug('Executing single load: %s with keys %j', query.toSQL().sql, uniqueLoads);
 
         const rows = await query;
 
@@ -404,7 +409,10 @@ export abstract class QueryClient<
         const result: any = await query;
 
         // wrong behaviour for compound keys
-        if (this.engine == 'pg') return result[0][this.primaryKey[0]];
+        if (this.engine == 'pg') {
+            if (result[0]) return result[0][this.primaryKey[0]];
+            return 0;
+        }
         // MySQL seems to return 0 for non-auto-increment inserts (or compound inserts)
         return result[0];
     }

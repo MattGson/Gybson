@@ -1,5 +1,6 @@
 import { closeConnection, DB, itif, getKnex, seed, SeedIds, seedPost, seedUser, openConnection } from 'test/helpers';
-import { GybsonClient } from 'test/tmp';
+import { GybsonClient, UserRequiredRow } from 'test/tmp';
+import * as faker from 'faker';
 
 describe('Loaders', () => {
     let ids: SeedIds;
@@ -16,7 +17,7 @@ describe('Loaders', () => {
         // Seeds
         ids = await seed(gybson);
     });
-    describe('one by column load', () => {
+    describe('one load', () => {
         it('Can load one from a single unique key', async () => {
             // multi-load to debug batching
             const [loadOne] = await Promise.all([
@@ -32,42 +33,7 @@ describe('Loaders', () => {
                 }),
             );
         });
-        it('Can load one from a single unique key using common interface', async () => {
-            // multi-load to debug batching - should batch across both methods
-            const [loadOne] = await Promise.all([
-                gybson.user.loadOne({
-                    where: {
-                        user_id: ids.user1Id,
-                    },
-                }),
-                gybson.user.loadOne({ where: { user_id: 12 } }),
-            ]);
-            expect(loadOne).toEqual(
-                expect.objectContaining({
-                    user_id: ids.user1Id,
-                    first_name: 'John',
-                    last_name: 'Doe',
-                    permissions: 'USER',
-                }),
-            );
-        });
         it('Can load one from a compound unique key', async () => {
-            const member = await gybson.teamMember.loadOne({
-                where: {
-                    team_id__user_id: {
-                        user_id: ids.user1Id,
-                        team_id: ids.team1Id,
-                    },
-                },
-            });
-            expect(member).toEqual(
-                expect.objectContaining({
-                    user_id: ids.user1Id,
-                    team_id: ids.team1Id,
-                }),
-            );
-        });
-        it('Can load one from a compound unique key using common interface', async () => {
             // run both to debug batching
             const [member] = await Promise.all([
                 gybson.teamMember.loadOne({
@@ -147,24 +113,67 @@ describe('Loaders', () => {
                 }),
             );
         });
-    });
-    describe('many by column load', () => {
-        it('Can load many from a single non-unique key', async () => {
-            const loadMany = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
-            expect(loadMany).toContainEqual(
-                expect.objectContaining({
-                    author_id: ids.user1Id,
-                    message: 'test 2',
+        it('Can load same row from multiple places', async () => {
+            const p1 = await seedPost(gybson, { author_id: ids.user1Id, message: 'z' });
+            const p2 = await seedPost(gybson, { author_id: ids.user1Id, message: 'a' });
+
+            // Should batch and return value to each caller
+            const [post1, post2, post3] = await Promise.all([
+                gybson.post.loadOne({
+                    where: {
+                        post_id: p1,
+                    },
                 }),
-            );
-            expect(loadMany).toContainEqual(
-                expect.objectContaining({
-                    author_id: ids.user1Id,
-                    message: 'first',
+                gybson.post.loadOne({
+                    where: {
+                        post_id: p2,
+                    },
                 }),
-            );
+                gybson.post.loadOne({
+                    where: {
+                        post_id: p1,
+                    },
+                }),
+            ]);
+            expect(post1!.post_id).toEqual(p1);
+            expect(post2!.post_id).toEqual(p2);
+            expect(post3!.post_id).toEqual(p1);
+
         });
-        it('Can load many from a single non-unique key from the common interface', async () => {
+        it('Can bulk load', async () => {
+            await gybson.user.delete({
+                where: {
+                    user_id: {
+                        gte: 1000,
+                        lte: 5000,
+                    },
+                },
+            });
+
+            // create many rows
+            const users: UserRequiredRow[] = [];
+            for (let i = 1000; i < 5000; i++) {
+                users.push({
+                    user_id: i,
+                    email: faker.random.alphaNumeric(10) + faker.internet.email(),
+                    password: 'fi23jf',
+                });
+            }
+            await gybson.user.insert({
+                values: users,
+                ignoreDuplicates: true,
+            });
+
+            // load all at once
+            const results = await Promise.all(users.map((u) => gybson.user.loadOne({ where: { user_id: u.user_id } })));
+            expect(results).toHaveLength(4000);
+            const [first, second] = results;
+            expect(first!.email).toEqual(users[0].email);
+            expect(second!.email).toEqual(users[1].email);
+        });
+    });
+    describe('many load', () => {
+        it('Can load many from a single non-unique key', async () => {
             // run both to debug batch
             const [loadMany] = await Promise.all([
                 gybson.post.loadMany({
@@ -202,43 +211,7 @@ describe('Loaders', () => {
                 }),
             );
         });
-        it('Can load many from a compound non-unique key from the common interface', async () => {
-            const member = await gybson.teamMember.loadMany({
-                where: {
-                    member_post_id: ids.post2Id,
-                    team_id: ids.team1Id,
-                },
-            });
-            expect(member).toContainEqual(
-                expect.objectContaining({
-                    user_id: ids.user1Id,
-                    team_id: ids.team1Id,
-                    member_post_id: ids.post2Id,
-                }),
-            );
-        });
         it('Can order loaded rows', async () => {
-            const u = await seedUser(gybson);
-            const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
-            const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
-            const member = await gybson.post.loadMany({
-                where: {
-                    author_id: u,
-                },
-                orderBy: {
-                    message: 'asc',
-                },
-            });
-            expect(member).toEqual([
-                expect.objectContaining({
-                    post_id: p2,
-                }),
-                expect.objectContaining({
-                    post_id: p1,
-                }),
-            ]);
-        });
-        it('Can order loaded rows using the common interface', async () => {
             const u = await seedUser(gybson);
             const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
             const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
@@ -303,6 +276,83 @@ describe('Loaders', () => {
             // check result has changed
             const loadMany = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
             expect(loadMany).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
+        });
+        it('Can load same rows from multiple places', async () => {
+            const u = await seedUser(gybson);
+            const p1 = await seedPost(gybson, { author_id: u, message: 'z' });
+            const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
+
+            // Should batch and return value to each caller
+            const [posts1, posts2, posts3] = await Promise.all([
+                gybson.post.loadMany({
+                    where: {
+                        author_id: u,
+                    },
+                }),
+                gybson.post.loadMany({
+                    where: {
+                        author_id: ids.user1Id
+                    },
+                }),
+                gybson.post.loadMany({
+                    where: {
+                        author_id: u
+                    },
+                }),
+            ]);
+            // both posts1 and posts3 should have same values
+            expect(posts1).toHaveLength(2);
+            expect(posts1).toIncludeAllMembers([
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+                expect.objectContaining({
+                    post_id: p2,
+                })
+            ]);
+            expect(posts3).toHaveLength(2);
+            expect(posts3).toIncludeAllMembers([
+                expect.objectContaining({
+                    post_id: p1,
+                }),
+                expect.objectContaining({
+                    post_id: p2,
+                })
+            ])
+        });
+        it('Can bulk load', async () => {
+            await gybson.user.delete({
+                where: {
+                    user_id: {
+                        gte: 6000,
+                        lte: 10_000,
+                    },
+                },
+            });
+
+            // create many rows
+            const users: UserRequiredRow[] = [];
+            for (let i = 6000; i < 10_000; i++) {
+                users.push({
+                    user_id: i,
+                    email: faker.random.alphaNumeric(10) + faker.internet.email(),
+                    password: 'fi23jf',
+                    first_name: faker.name.firstName(),
+                });
+            }
+            await gybson.user.insert({
+                values: users,
+                ignoreDuplicates: true,
+            });
+
+            // load all at once
+            const results = await Promise.all(
+                users.map((u) => gybson.user.loadMany({ where: { first_name: u.first_name } })),
+            );
+            expect(results).toHaveLength(4000);
+            const [first, second] = results;
+            expect(first[0].first_name).toEqual(users[0].first_name);
+            expect(second[0].first_name).toEqual(users[1].first_name);
         });
     });
     describe('MySQL only', () => {
