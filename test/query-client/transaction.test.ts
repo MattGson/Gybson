@@ -103,7 +103,7 @@ describe('Transaction', () => {
                             email: faker.internet.email(),
                             password: 'my password',
                         },
-                        updateColumns: { first_name: true },
+                        mergeColumns: { first_name: true },
                     });
                     await gybson.user.softDelete({
                         connection: trx,

@@ -26,99 +26,197 @@ describe('Upsert', () => {
         ids = await seed(gybson);
     });
     describe('inserting rows with conflicts', () => {
-        it('Updates only the specified fields on conflicting rows', async () => {
-            const postId = await gybson.post.upsert({
-                values: {
-                    post_id: ids.post1Id,
-                    message: 'new message',
-                    author_id: ids.user1Id,
-                    rating_average: 6,
-                    author: 'new name',
-                },
-                updateColumns: {
-                    message: true,
-                    author: true,
-                },
-            });
+        describe('mergeColumns', () => {
+            it('Updates only the specified columns on conflicting rows', async () => {
+                const postId = await gybson.post.upsert({
+                    values: {
+                        post_id: ids.post1Id,
+                        message: 'new message',
+                        author_id: ids.user1Id,
+                        rating_average: 6,
+                        author: 'new name',
+                    },
+                    mergeColumns: {
+                        message: true,
+                        author: true,
+                    },
+                });
 
-            if (!postId) throw new Error('Post id not found');
-            const post = await gybson.post.loadOne({ where: { post_id: postId } });
-            expect(post).toEqual(
-                expect.objectContaining({
-                    post_id: ids.post1Id,
-                    message: 'new message',
-                    author_id: ids.user1Id,
-                    rating_average: 4.5,
-                    author: 'new name',
-                }),
-            );
-        });
-        it('Updates specified fields on a subset of multi-rows that conflict', async () => {
-            // first post has conflict second doesn't
-            const postId = await gybson.post.upsert({
-                values: [
-                    {
+                if (!postId) throw new Error('Post id not found');
+                const post = await gybson.post.loadOne({ where: { post_id: postId } });
+                expect(post).toEqual(
+                    expect.objectContaining({
+                        post_id: ids.post1Id,
+                        message: 'new message',
+                        author_id: ids.user1Id,
+                        rating_average: 4.5,
+                        author: 'new name',
+                    }),
+                );
+            });
+            it('Updates specified columns on a subset of multi-rows that conflict', async () => {
+                // first post has conflict second doesn't
+                const postId = await gybson.post.upsert({
+                    values: [
+                        {
+                            post_id: ids.post1Id,
+                            message: 'another new message',
+                            author_id: ids.user1Id,
+                            rating_average: 6,
+                            author: 'name',
+                        },
+                        {
+                            message: 'test 100',
+                            author_id: ids.user1Id,
+                            rating_average: 8,
+                            author: 'name',
+                        },
+                    ],
+                    mergeColumns: {
+                        message: true,
+                    },
+                });
+                const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
+                expect(posts).toIncludeAllMembers([
+                    expect.objectContaining({
                         post_id: ids.post1Id,
                         message: 'another new message',
                         author_id: ids.user1Id,
-                        rating_average: 6,
-                        author: 'name',
-                    },
-                    {
+                    }),
+                    expect.objectContaining({
                         message: 'test 100',
                         author_id: ids.user1Id,
                         rating_average: 8,
                         author: 'name',
+                    }),
+                ]);
+            });
+            it('Can reinstate soft-deleted rows', async () => {
+                await gybson.post.softDelete({
+                    where: {
+                        post_id: ids.post1Id,
                     },
-                ],
-                updateColumns: {
-                    message: true,
-                },
-            });
-            const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
-            expect(posts).toIncludeAllMembers([
-                expect.objectContaining({
-                    post_id: ids.post1Id,
-                    message: 'another new message',
-                    author_id: ids.user1Id,
-                }),
-                expect.objectContaining({
-                    message: 'test 100',
-                    author_id: ids.user1Id,
-                    rating_average: 8,
-                    author: 'name',
-                }),
-            ]);
-        });
-        it('Can reinstate soft-deleted rows', async () => {
-            await gybson.post.softDelete({
-                where: {
-                    post_id: ids.post1Id,
-                },
-            });
-            const post = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
-            expect(post).toEqual(null);
+                });
+                const post = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
+                expect(post).toEqual(null);
 
-            const postId = await gybson.post.upsert({
-                values: {
-                    post_id: ids.post1Id,
-                    message: 'new message',
-                    rating_average: 6,
-                    author: 'name',
-                    author_id: ids.user1Id,
-                },
-                updateColumns: {
-                    message: true,
-                },
-                reinstateSoftDeletedRows: true,
+                const postId = await gybson.post.upsert({
+                    values: {
+                        post_id: ids.post1Id,
+                        message: 'new message',
+                        rating_average: 6,
+                        author: 'name',
+                        author_id: ids.user1Id,
+                    },
+                    mergeColumns: {
+                        message: true,
+                    },
+                    reinstateSoftDeletedRows: true,
+                });
+                await gybson.post.purge();
+                const post2 = await gybson.post.loadOne({ where: { post_id: postId } });
+                expect(post2).toEqual(
+                    expect.objectContaining({
+                        post_id: ids.post1Id,
+                    }),
+                );
             });
-            await gybson.post.purge();
-            const post2 = await gybson.post.loadOne({ where: { post_id: postId } });
-            expect(post2).toEqual(
-                expect.objectContaining({
-                    post_id: ids.post1Id,
-                }),
-            );
+        });
+        describe('update', () => {
+            it('Makes the specified updates on conflicts', async () => {
+                const postId = await gybson.post.upsert({
+                    values: {
+                        post_id: ids.post1Id,
+                        message: 'new message',
+                        author_id: ids.user1Id,
+                        rating_average: 6,
+                        author: 'new name',
+                    },
+                    update: {
+                        message: 'another message',
+                        author: 'another author',
+                    },
+                });
+
+                if (!postId) throw new Error('Post id not found');
+                const post = await gybson.post.loadOne({ where: { post_id: postId } });
+                expect(post).toEqual(
+                    expect.objectContaining({
+                        post_id: ids.post1Id,
+                        message: 'another message',
+                        author_id: ids.user1Id,
+                        rating_average: 4.5,
+                        author: 'another author',
+                    }),
+                );
+            });
+            it('Makes specified updates on a subset of multi-rows that conflict', async () => {
+                // first post has conflict second doesn't
+                await gybson.post.upsert({
+                    values: [
+                        {
+                            post_id: ids.post1Id,
+                            message: 'another new message',
+                            author_id: ids.user1Id,
+                            rating_average: 6,
+                            author: 'name',
+                        },
+                        {
+                            message: 'test 100',
+                            author_id: ids.user1Id,
+                            rating_average: 8,
+                            author: 'name',
+                        },
+                    ],
+                    update: {
+                        message: 'latest message',
+                    },
+                });
+                const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
+                expect(posts).toIncludeAllMembers([
+                    expect.objectContaining({
+                        post_id: ids.post1Id,
+                        message: 'latest message',
+                        author_id: ids.user1Id,
+                    }),
+                    expect.objectContaining({
+                        message: 'test 100',
+                        author_id: ids.user1Id,
+                        rating_average: 8,
+                        author: 'name',
+                    }),
+                ]);
+            });
+            it('Can reinstate soft-deleted rows', async () => {
+                await gybson.post.softDelete({
+                    where: {
+                        post_id: ids.post1Id,
+                    },
+                });
+                const post = await gybson.post.loadOne({ where: { post_id: ids.post1Id } });
+                expect(post).toEqual(null);
+
+                const postId = await gybson.post.upsert({
+                    values: {
+                        post_id: ids.post1Id,
+                        message: 'new message',
+                        rating_average: 6,
+                        author: 'name',
+                        author_id: ids.user1Id,
+                    },
+                    update: {
+                        message: 'latest',
+                    },
+                    reinstateSoftDeletedRows: true,
+                });
+                await gybson.post.purge();
+                const post2 = await gybson.post.loadOne({ where: { post_id: postId } });
+                expect(post2).toEqual(
+                    expect.objectContaining({
+                        post_id: ids.post1Id,
+                    }),
+                );
+            });
         });
         it('Returns the id of the first upserted row', async () => {
             const postId = await gybson.post.upsert({
@@ -129,7 +227,7 @@ describe('Upsert', () => {
                     author: 'name',
                     created: new Date(2003, 20, 4),
                 },
-                updateColumns: {
+                mergeColumns: {
                     message: true,
                 },
             });
@@ -147,7 +245,7 @@ describe('Upsert', () => {
                     team_id: ids.team1Id,
                     user_id: ids.user1Id,
                 },
-                updateColumns: {
+                mergeColumns: {
                     team_id: true,
                 },
             });
@@ -161,62 +259,123 @@ describe('Upsert', () => {
         });
     });
     describe('inserting rows without conflicts', () => {
-        it('Can insert a single row', async () => {
-            const postId = await gybson.post.upsert({
-                values: {
-                    message: 'test 2',
-                    author_id: ids.user1Id,
-                    rating_average: 6,
-                    author: 'name',
-                },
-                updateColumns: {
-                    message: true,
-                },
-            });
-            const post = await gybson.post.loadOne({ where: { post_id: postId } });
-            expect(post).toEqual(
-                expect.objectContaining({
-                    post_id: postId,
-                    message: 'test 2',
-                    rating_average: 6,
-                    author: 'name',
-                }),
-            );
-        });
-        it('Can insert multiple rows', async () => {
-            const postId = await gybson.post.upsert({
-                values: [
-                    {
+        describe('mergeColumns', () => {
+            it('Can insert a single row', async () => {
+                const postId = await gybson.post.upsert({
+                    values: {
                         message: 'test 2',
                         author_id: ids.user1Id,
                         rating_average: 6,
                         author: 'name',
                     },
-                    {
+                    mergeColumns: {
+                        message: true,
+                    },
+                });
+                const post = await gybson.post.loadOne({ where: { post_id: postId } });
+                expect(post).toEqual(
+                    expect.objectContaining({
+                        post_id: postId,
+                        message: 'test 2',
+                        rating_average: 6,
+                        author: 'name',
+                    }),
+                );
+            });
+            it('Can insert multiple rows', async () => {
+                const postId = await gybson.post.upsert({
+                    values: [
+                        {
+                            message: 'test 2',
+                            author_id: ids.user1Id,
+                            rating_average: 6,
+                            author: 'name',
+                        },
+                        {
+                            message: 'test 3',
+                            author_id: ids.user1Id,
+                            rating_average: 8,
+                            author: 'name',
+                        },
+                    ],
+                    mergeColumns: {
+                        message: true,
+                    },
+                });
+                const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
+                expect(posts).toIncludeAllMembers([
+                    expect.objectContaining({
+                        post_id: postId,
+                        message: 'test 2',
+                        rating_average: 6,
+                    }),
+                    expect.objectContaining({
+                        post_id: postId + 1,
                         message: 'test 3',
                         author_id: ids.user1Id,
                         rating_average: 8,
+                    }),
+                ]);
+            });
+        });
+        describe('update', () => {
+            it('Can insert a single row', async () => {
+                const postId = await gybson.post.upsert({
+                    values: {
+                        message: 'test 2',
+                        author_id: ids.user1Id,
+                        rating_average: 6,
                         author: 'name',
                     },
-                ],
-                updateColumns: {
-                    message: true,
-                },
+                    update: {
+                        message: 'hello',
+                    },
+                });
+                const post = await gybson.post.loadOne({ where: { post_id: postId } });
+                expect(post).toEqual(
+                    expect.objectContaining({
+                        post_id: postId,
+                        message: 'test 2',
+                        rating_average: 6,
+                        author: 'name',
+                    }),
+                );
             });
-            const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
-            expect(posts).toIncludeAllMembers([
-                expect.objectContaining({
-                    post_id: postId,
-                    message: 'test 2',
-                    rating_average: 6,
-                }),
-                expect.objectContaining({
-                    post_id: postId + 1,
-                    message: 'test 3',
-                    author_id: ids.user1Id,
-                    rating_average: 8,
-                }),
-            ]);
+            it('Can insert multiple rows', async () => {
+                const postId = await gybson.post.upsert({
+                    values: [
+                        {
+                            message: 'test 2',
+                            author_id: ids.user1Id,
+                            rating_average: 6,
+                            author: 'name',
+                        },
+                        {
+                            message: 'test 3',
+                            author_id: ids.user1Id,
+                            rating_average: 8,
+                            author: 'name',
+                        },
+                    ],
+                    update: {
+                        message: 'hello',
+                    },
+                });
+                const posts = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
+                expect(posts).toIncludeAllMembers([
+                    expect.objectContaining({
+                        post_id: postId,
+                        message: 'test 2',
+                        rating_average: 6,
+                    }),
+                    expect.objectContaining({
+                        post_id: postId + 1,
+                        message: 'test 3',
+                        author_id: ids.user1Id,
+                        rating_average: 8,
+                    }),
+                ]);
+            });
         });
         it('Returns the id of the first inserted row', async () => {
             const postId = await gybson.post.upsert({
@@ -227,7 +386,7 @@ describe('Upsert', () => {
                     author: 'name',
                     created: new Date(2003, 20, 4),
                 },
-                updateColumns: {
+                mergeColumns: {
                     message: true,
                 },
             });
@@ -251,7 +410,7 @@ describe('Upsert', () => {
                         rating_average: 6,
                         created: new Date(2003, 20, 4),
                     },
-                    updateColumns: {
+                    mergeColumns: {
                         author_id: true,
                     },
                 }),
@@ -269,7 +428,7 @@ describe('Upsert', () => {
                 author: 'name',
                 created: new Date(2003, 20, 4),
             },
-            updateColumns: {
+            mergeColumns: {
                 message: true,
             },
         });

@@ -159,7 +159,7 @@ export abstract class QueryClient<
             return columns.map((col) => k[col]);
         });
         // reduce number of keys sent to DB
-        const uniqueLoads = _.uniqBy(loadValues, value => value.join(':'));
+        const uniqueLoads = _.uniqBy(loadValues, (value) => value.join(':'));
 
         // build query
         const query = this.knex(this.aliasedTable).select().whereIn(columns, uniqueLoads);
@@ -216,7 +216,7 @@ export abstract class QueryClient<
         });
 
         // reduce number of keys sent to DB
-        const uniqueLoads = _.uniqBy(loadValues, value => value.join(':'));
+        const uniqueLoads = _.uniqBy(loadValues, (value) => value.join(':'));
 
         const query = this.knex(this.aliasedTable).select().whereIn(columns, uniqueLoads);
         if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
@@ -321,20 +321,21 @@ export abstract class QueryClient<
      *     * This should be set to false if the table does not support soft deletes
      * Will replace undefined values with DEFAULT which will use a default column value if available.
      * Will take the superset of all columns in the insert values
+     * Supports merge and update strategies.
+     *  Merge -> will merge the new values into the conflicting row for the specified columns
+     *  Update -> will update the specified values on conflicting rows
      * @param params
      */
     public async upsert(params: {
         connection?: Connection;
         values: RequiredTblRow | RequiredTblRow[];
         reinstateSoftDeletedRows?: boolean;
-        updateColumns: Partial<TblColumnMap>;
+        mergeColumns?: Partial<TblColumnMap>;
+        update?: PartialTblRow;
     }): Promise<number> {
-        const { values, connection, reinstateSoftDeletedRows, updateColumns } = params;
+        const { values, connection, reinstateSoftDeletedRows, mergeColumns, update } = params;
 
-        const columnsToUpdate: string[] = [];
-        for (const [column, update] of Object.entries(updateColumns)) {
-            if (update) columnsToUpdate.push(column);
-        }
+        if (update && mergeColumns) throw new Error('Upsert: Cannot specify both mergeColumns and update');
 
         let insertRows: RequiredTblRow[];
         if (Array.isArray(values)) insertRows = values;
@@ -343,28 +344,47 @@ export abstract class QueryClient<
         if (insertRows.length < 1) {
             throw new Error('Upsert: No values passed.');
         }
-        if (columnsToUpdate.length < 1 && !reinstateSoftDeletedRows) {
-            throw new Error('Upsert: No reinstateSoftDelete nor updateColumns. Use insert.');
-        }
 
-        // add deleted column to all records
-        if (reinstateSoftDeletedRows && this.softDeleteColumn) {
-            columnsToUpdate.push(this.softDeleteColumn.columnName);
-            insertRows = insertRows.map((value) => {
-                return {
-                    ...value,
-                    // set soft delete value back to default
+        const query = this.knex(this.tableName).insert(insertRows);
+
+        if (mergeColumns) {
+            const columnsToMerge: string[] = [];
+
+            for (const [column, update] of Object.entries(mergeColumns)) {
+                if (update) columnsToMerge.push(column);
+            }
+            if (reinstateSoftDeletedRows && this.softDeleteColumn) {
+                // set soft delete column to merge
+                columnsToMerge.push(this.softDeleteColumn.columnName);
+                // add soft delete reset to all records
+                insertRows = insertRows.map((value) => {
+                    return {
+                        ...value,
+                        ...this.softDeleteFilter(false),
+                    };
+                });
+            }
+
+            if (columnsToMerge.length < 1) {
+                throw new Error('Upsert: No reinstateSoftDelete nor mergeColumns specified. Use insert.');
+            }
+
+            query.onConflict(this.primaryKey).merge(columnsToMerge);
+        }
+        if (update) {
+            let updates: PartialTblRow = update!;
+            if (reinstateSoftDeletedRows) {
+                updates = {
+                    ...update!,
                     ...this.softDeleteFilter(false),
                 };
-            });
+            }
+            query.onConflict(this.primaryKey).merge(updates);
         }
 
         // TODO:- onConflict only works on the primary key of the table (MySQL behvaiour, PG limitation)
 
-        const query = this.knex(this.tableName).insert(insertRows).onConflict(this.primaryKey).merge(columnsToUpdate);
-
         if (this.engine === 'pg') query.returning(this.primaryKey);
-
         if (connection) query.connection(connection);
 
         this.logger.debug('Executing upsert: %s with values: %j', query.toSQL().sql, insertRows);
@@ -481,10 +501,12 @@ export abstract class QueryClient<
      * Truncate a table
      * @param params
      */
-    public async truncate(params: { connection?: Connection; }): Promise<any> {
+    public async truncate(params: { connection?: Connection }): Promise<any> {
         const { connection } = params;
 
-        this.logger.warn(`Running truncate for table: "${this.tableName}". This is a dangerous operation and is rarely required in production.`);
+        this.logger.warn(
+            `Running truncate for table: "${this.tableName}". This is a dangerous operation and is rarely required in production.`,
+        );
 
         const query = this.knex(this.tableAlias).truncate();
         this.logger.debug('Executing truncate: %s', query.toSQL().sql);
