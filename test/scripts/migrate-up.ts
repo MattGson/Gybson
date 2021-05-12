@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 
-export const migrateDb = async (knex: Knex, pg = false) => {
+export const migrateDb = async (knex: Knex, pg = false): Promise<void> => {
     await knex.schema.dropTableIfExists('team_members_positions');
     await knex.schema.dropTableIfExists('team_members');
     await knex.schema.dropTableIfExists('teams');

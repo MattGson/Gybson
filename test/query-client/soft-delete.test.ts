@@ -1,20 +1,19 @@
 import {
-    buildDBSchemas,
     closeConnection,
     closePoolConnection,
     getPoolConnection,
     getKnex,
     seed,
     SeedIds,
+    openConnection,
 } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
 
 describe('SoftDelete', () => {
     let ids: SeedIds;
     let gybson: GybsonClient;
-    let connection;
     beforeAll(async (): Promise<void> => {
-        connection = await buildDBSchemas();
+        await openConnection();
     });
     afterAll(async () => {
         await closeConnection();

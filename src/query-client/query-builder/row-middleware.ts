@@ -1,7 +1,8 @@
-import { SoftDeleteQueryFilter, SoftDeletable } from '../../types';
+import { SoftDeleteQueryFilter, SoftDeletable, RecordAny } from '../../types';
 
 type RowMiddleware = <T>(rows: T[], params: SoftDeleteQueryFilter) => T[];
 
+// example middleware
 const SoftDeleteMiddleware: RowMiddleware = (rows, params) => {
     return rows.filter((row: SoftDeletable) => {
         if (row?.deleted && !params.includeDeleted) return false;
@@ -11,9 +12,9 @@ const SoftDeleteMiddleware: RowMiddleware = (rows, params) => {
 };
 
 // could configure with custom middleware in the future
-const middlewares = [SoftDeleteMiddleware];
+const middlewares: RowMiddleware[] = [];
 
-export const runMiddleWares = <T>(rows: T[], params: any): T[] => {
+export const runMiddleWares = <T>(rows: T[], params: RecordAny): T[] => {
     let result = [...rows];
     middlewares.forEach((m) => (result = m(result, params)));
     return result;

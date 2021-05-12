@@ -3,7 +3,7 @@ import * as winston from 'winston';
 import { LogLevel } from '../../types';
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 
-let state: {
+const state: {
     logger?: winston.Logger;
 } = {};
 

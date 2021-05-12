@@ -8,7 +8,6 @@ import {
 } from 'relational-schema';
 import * as pluralize from 'pluralize';
 import { PascalCase } from '../printer';
-import { camelCase } from 'lodash';
 
 export type TableTypeNames = {
     rowTypeName: string;
@@ -28,7 +27,7 @@ export class TableTypeBuilder {
      * @param tableName
      * @returns
      */
-    public static tableNameAlias(tableName: string) {
+    public static tableNameAlias(tableName: string): string {
         return PascalCase(pluralize.singular(tableName));
     }
 
@@ -62,7 +61,7 @@ export class TableTypeBuilder {
         relations: RelationDefinition[];
         tableName: string;
         gybsonLibPath: string;
-    }) {
+    }): string {
         const { relations, tableName, gybsonLibPath } = params;
 
         return `
@@ -97,7 +96,7 @@ export class TableTypeBuilder {
      * Build enum type for table
      * @param params
      */
-    public static buildEnumTypes(params: { enums?: EnumDefinitions }) {
+    public static buildEnumTypes(params: { enums?: EnumDefinitions }): string {
         const { enums } = params;
         if (!enums) return '';
         return `
@@ -114,14 +113,14 @@ export class TableTypeBuilder {
      * Build row type for table
      * @param params
      */
-    public static buildRowType(params: { table: TableColumnsDefinition; rowTypeName: string }) {
+    public static buildRowType(params: { table: TableColumnsDefinition; rowTypeName: string }): string {
         const { table, rowTypeName } = params;
         return `
             export interface ${rowTypeName} {
                 ${Object.entries(table)
                     .map(([columnName, columnDefinition]) => {
-                        let type = columnDefinition.tsType;
-                        let nullable = columnDefinition.nullable ? '| null' : '';
+                        const type = columnDefinition.tsType;
+                        const nullable = columnDefinition.nullable ? '| null' : '';
                         return `${columnName}: ${type}${nullable};`;
                     })
                     .join(' ')}
@@ -133,7 +132,7 @@ export class TableTypeBuilder {
      * Build row type for table with all non-required insert values optional
      * @param params
      */
-    public static buildRequiredRowType(params: { table: TableColumnsDefinition; requiredRowTypeName: string }) {
+    public static buildRequiredRowType(params: { table: TableColumnsDefinition; requiredRowTypeName: string }): string {
         const { table, requiredRowTypeName } = params;
         return `
             export interface ${requiredRowTypeName} {
@@ -155,7 +154,7 @@ export class TableTypeBuilder {
      * Build a boolean map of table columns
      * @param params
      */
-    public static buildColumnMapType(params: { columnMapTypeName: string; columns: TableColumnsDefinition }) {
+    public static buildColumnMapType(params: { columnMapTypeName: string; columns: TableColumnsDefinition }): string {
         const { columnMapTypeName, columns } = params;
         return `
             export interface ${columnMapTypeName} {
@@ -170,7 +169,7 @@ export class TableTypeBuilder {
      * Build the relation filter type for a table
      * @param params
      */
-    public static buildRelationFilterType(params: { whereTypeName: string; relationFilterTypeName: string }) {
+    public static buildRelationFilterType(params: { whereTypeName: string; relationFilterTypeName: string }): string {
         const { whereTypeName, relationFilterTypeName } = params;
         return `
             export interface ${relationFilterTypeName} {
@@ -184,7 +183,7 @@ export class TableTypeBuilder {
      * Get the where type for a column
      * @param params
      */
-    private static whereFilterForColumn(params: { column: ColumnDefinition }) {
+    private static whereFilterForColumn(params: { column: ColumnDefinition }): string {
         const { column: col } = params;
 
         const type = `${col.columnName}?: ${col.tsType}`;
@@ -221,14 +220,14 @@ export class TableTypeBuilder {
         }
     }
 
-    private static buildWhereCombinersForTable = (params: { whereTypeName: string }) => {
+    private static buildWhereCombinersForTable(params: { whereTypeName: string }): string {
         const { whereTypeName } = params;
         return `
             AND?: Enumerable<${whereTypeName}>;
             OR?: Enumerable<${whereTypeName}>;
             NOT?: Enumerable<${whereTypeName}>;
         `;
-    };
+    }
 
     /**
      * Build the where clause type for a table
@@ -238,7 +237,7 @@ export class TableTypeBuilder {
         whereTypeName: string;
         columns: TableColumnsDefinition;
         relations: RelationDefinition[];
-    }) {
+    }): string {
         const { whereTypeName, columns, relations } = params;
         return `
             export interface ${whereTypeName} {
@@ -262,7 +261,7 @@ export class TableTypeBuilder {
         loadOneWhereTypeName: string;
         columns: TableColumnsDefinition;
         uniqueKeys: string[][];
-    }) {
+    }): string {
         const { loadOneWhereTypeName, columns, uniqueKeys } = params;
 
         const uniqueColumns = uniqueKeys.map((key) => {
@@ -296,7 +295,7 @@ export class TableTypeBuilder {
         columns: TableColumnsDefinition;
         uniqueKeys: string[][];
         loadManyWhereTypeName: string;
-    }) {
+    }): string {
         const { columns, uniqueKeys, loadManyWhereTypeName } = params;
 
         // get columns that are not unique constraints
@@ -308,8 +307,8 @@ export class TableTypeBuilder {
             export interface ${loadManyWhereTypeName} {
                 ${nonUniqueColumns
                     .map((columnDefinition) => {
-                        let type = columnDefinition.tsType;
-                        let nullable = columnDefinition.nullable ? '| null' : '';
+                        const type = columnDefinition.tsType;
+                        const nullable = columnDefinition.nullable ? '| null' : '';
                         return `${columnDefinition.columnName}?: ${type}${nullable};`;
                     })
                     .join(' ')}
@@ -321,7 +320,7 @@ export class TableTypeBuilder {
      * Build order by type for table
      * @param params
      */
-    public static buildOrderType(params: { orderByTypeName: string; columns: TableColumnsDefinition }) {
+    public static buildOrderType(params: { orderByTypeName: string; columns: TableColumnsDefinition }): string {
         const { orderByTypeName, columns } = params;
         return `
             export type ${orderByTypeName} = {
@@ -336,7 +335,7 @@ export class TableTypeBuilder {
      * Build pagination type for table
      * @param params
      */
-    public static buildPaginateType(params: { paginationTypeName: string; rowTypeName: string }) {
+    public static buildPaginateType(params: { paginationTypeName: string; rowTypeName: string }): string {
         const { paginationTypeName, rowTypeName } = params;
         return `
             export interface ${paginationTypeName} {

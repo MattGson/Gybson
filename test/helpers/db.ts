@@ -1,38 +1,9 @@
 import { knex, Knex } from 'knex';
 import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
-import { migrateDb } from './migrate-db';
+import { mysqlConnection, pgConnection } from 'test/config';
 import { DB } from './helpers';
 type PoolConnection = PGConn | MySQLConn;
-
-export const databaseName = 'tests';
-export const mysqlConnection = {
-    client: 'mysql',
-    connection: {
-        host: 'localhost',
-        port: 3306,
-        user: 'root',
-        password: '',
-        database: databaseName,
-        multipleStatements: true,
-    },
-};
-
-export const pgConnection = {
-    client: 'pg',
-    connection: {
-        host: 'localhost',
-        port: 5432,
-        user: 'postgres',
-        password: '',
-        database: databaseName,
-        schema: 'public',
-    },
-    pool: {
-        min: 2,
-        max: 50,
-    },
-};
 
 const state: any = {
     knex: undefined,
@@ -47,6 +18,7 @@ export const closeConnection = async (): Promise<void> => state.knex.destroy();
 export const getPoolConnection = async () => state.knex.client.acquireConnection();
 
 export const openConnection = async (): Promise<Knex<any, unknown>> => {
+    if (state.knex) return state.knex;
     if (DB() === 'pg') {
         state.knex = knex(pgConnection);
         return state.knex;
@@ -58,8 +30,8 @@ export const openConnection = async (): Promise<Knex<any, unknown>> => {
     throw new Error('No db specified while opening connection');
 };
 
-export const buildDBSchemas = async (): Promise<Knex<any, unknown>> => {
-    const conn = await openConnection();
-    await migrateDb(state.knex, DB() === 'pg');
-    return conn;
-};
+// export const buildDBSchemas = async (): Promise<Knex<any, unknown>> => {
+//     const conn = await openConnection();
+//     await migrateDb(state.knex, DB() === 'pg');
+//     return conn;
+// };

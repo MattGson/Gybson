@@ -1,6 +1,4 @@
-import { buildDBSchemas, closeConnection } from 'test/helpers/build-test-db';
 import 'jest-extended';
-// @ts-ignore - no types for prettier
 import { format } from 'prettier';
 import { TableTypeBuilder } from 'src/generate/client-builder/table-type-builder';
 import { prettierDefault } from 'src/generate/config';
@@ -8,12 +6,6 @@ import schema from 'test/tmp/relational-schema';
 import { DB, itif } from 'test/helpers';
 
 describe('TableTypeBuilder', () => {
-    beforeAll(async (): Promise<void> => {
-        await buildDBSchemas();
-    });
-    afterAll(async () => {
-        await closeConnection();
-    });
     describe('typeNamesForTable', () => {
         it('Generates the type names for table', async (): Promise<void> => {
             const typeNames = TableTypeBuilder.typeNamesForTable({ tableName: 'users' });
@@ -91,7 +83,6 @@ export type subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildRowType', () => {
         itif(DB() === 'mysql')('Generates the row type for the table', async (): Promise<void> => {
-            const enums = schema.tables.users.enums;
             const columns = schema.tables.users.columns;
             const result = TableTypeBuilder.buildRowType({ table: columns, rowTypeName: 'User' });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
@@ -113,7 +104,6 @@ export type subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
             );
         });
         itif(DB() === 'pg')('Generates the row type for the table', async (): Promise<void> => {
-            const enums = schema.tables.users.enums;
             const columns = schema.tables.users.columns;
             const result = TableTypeBuilder.buildRowType({ table: columns, rowTypeName: 'User' });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
@@ -137,7 +127,6 @@ export type subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildColumnMapType', () => {
         it('Generates a boolean map of the columns', async (): Promise<void> => {
-            const enums = schema.tables.users.enums;
             const columns = schema.tables.users.columns;
             const result = TableTypeBuilder.buildColumnMapType({ columns, columnMapTypeName: 'UserColumnMap' });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });

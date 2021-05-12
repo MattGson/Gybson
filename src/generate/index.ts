@@ -8,7 +8,7 @@ import { writeFormattedFile } from './printer';
  * @param outdir - write files to this dir
  * @param gybsonLibPath - path to the gybson lib. Only configurable to improve testability
  */
-export async function generate(args: { outdir: string; schemaFile: string; gybsonLibPath?: string }) {
+export async function generate(args: { outdir: string; schemaFile: string; gybsonLibPath?: string }): Promise<void> {
     const { outdir, gybsonLibPath, schemaFile } = args;
 
     const schemaFullPath = join(process.cwd(), schemaFile);

@@ -1,5 +1,5 @@
 import {
-    buildDBSchemas,
+    openConnection,
     closeConnection,
     closePoolConnection,
     getPoolConnection,
@@ -12,9 +12,8 @@ import { GybsonClient } from 'test/tmp';
 describe('Insert', () => {
     let ids: SeedIds;
     let gybson: GybsonClient;
-    let connection;
     beforeAll(async (): Promise<void> => {
-        connection = await buildDBSchemas();
+        await openConnection();
     });
     afterAll(async () => {
         await closeConnection();

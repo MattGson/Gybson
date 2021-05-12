@@ -1,3 +1,3 @@
-export * from './build-test-db';
+export * from './db';
 export * from './helpers';
 export * from './seed';

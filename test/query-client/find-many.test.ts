@@ -1,12 +1,11 @@
-import { buildDBSchemas, closeConnection, getKnex, seed, SeedIds, seedPost, seedUser } from 'test/helpers';
+import { closeConnection, getKnex, openConnection, seed, SeedIds, seedPost, seedUser } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
 
 describe('FindMany', () => {
     let ids: SeedIds;
     let gybson: GybsonClient;
-    let connection;
     beforeAll(async (): Promise<void> => {
-        connection = await buildDBSchemas();
+        await openConnection();
     });
     afterAll(async () => {
         await closeConnection();

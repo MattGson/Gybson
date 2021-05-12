@@ -1,5 +1,8 @@
 export declare type Enumerable<T> = Array<T>;
 
+export declare type RecordAny = Record<string, any>;
+export declare type RecordUnknown = Record<string, unknown>;
+
 // These are just for helping write the query builder
 export type OrderBy = { [column: string]: Order | undefined };
 export type Paginate = {
@@ -125,6 +128,6 @@ export type SoftDeleteQueryFilter = {
     includeDeleted?: boolean;
 };
 
-export type OrderQueryFilter = {
-    orderBy?: OrderBy;
+export type OrderQueryFilter<Order = OrderBy> = {
+    orderBy?: Order;
 };

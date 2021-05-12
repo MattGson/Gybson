@@ -1,6 +1,5 @@
 import 'jest-extended';
 import {
-    buildDBSchemas,
     closeConnection,
     closePoolConnection,
     getPoolConnection,
@@ -8,15 +7,15 @@ import {
     seed,
     SeedIds,
     seedPost,
+    openConnection,
 } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
 
 describe('Update', () => {
     let ids: SeedIds;
     let gybson: GybsonClient;
-    let connection;
     beforeAll(async (): Promise<void> => {
-        connection = await buildDBSchemas();
+        await openConnection();
     });
     afterAll(async () => {
         await closeConnection();

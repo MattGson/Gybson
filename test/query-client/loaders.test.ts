@@ -1,12 +1,11 @@
-import { buildDBSchemas, closeConnection, DB, itif, getKnex, seed, SeedIds, seedPost, seedUser } from 'test/helpers';
+import { closeConnection, DB, itif, getKnex, seed, SeedIds, seedPost, seedUser, openConnection } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
 
 describe('Loaders', () => {
     let ids: SeedIds;
     let gybson: GybsonClient;
-    let connection;
     beforeAll(async (): Promise<void> => {
-        connection = await buildDBSchemas();
+        await openConnection();
     });
     afterAll(async () => {
         await closeConnection();
@@ -292,7 +291,7 @@ describe('Loaders', () => {
             });
             expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
-        it('Caches the result of load', async () => {
+        it('Does not cache the result of load', async () => {
             await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
 
             await gybson.post.softDelete({
@@ -301,15 +300,9 @@ describe('Loaders', () => {
                 },
             });
 
-            // check result has not changed
+            // check result has changed
             const loadMany = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
-            expect(loadMany).toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
-
-            // clear cache
-            await gybson.post.purge();
-            // should be up to date
-            const loadMany2 = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
-            expect(loadMany2).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
+            expect(loadMany).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
     });
     describe('MySQL only', () => {

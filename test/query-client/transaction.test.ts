@@ -1,13 +1,12 @@
 import faker from 'faker';
-import { buildDBSchemas, closeConnection, getKnex, seed, SeedIds } from 'test/helpers';
+import { openConnection, closeConnection, getKnex, seed, SeedIds } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
 
 describe('Transaction', () => {
     let ids: SeedIds;
     let gybson: GybsonClient;
-    let connection;
     beforeAll(async (): Promise<void> => {
-        connection = await buildDBSchemas();
+        await openConnection();
     });
     afterAll(async () => {
         await closeConnection();

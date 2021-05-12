@@ -1,21 +1,20 @@
 import { GybsonClient } from 'test/tmp';
 import {
-    buildDBSchemas,
     closeConnection,
     closePoolConnection,
     getPoolConnection,
     getKnex,
     seed,
     SeedIds,
+    openConnection,
 } from 'test/helpers';
 import 'jest-extended';
 
 describe('Delete', () => {
     let ids: SeedIds;
     let gybson: GybsonClient;
-    let connection;
     beforeAll(async (): Promise<void> => {
-        connection = await buildDBSchemas();
+        await openConnection();
     });
     afterAll(async () => {
         await closeConnection();

@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { ClientEngine, LogLevel } from 'src/types';
-import winston from 'winston';
+import winston, { Logger } from 'winston';
 import { Connection, GybsonConfig } from '..';
 import { buildLogger, logger } from '../lib/logging';
 
@@ -20,12 +20,12 @@ export class GybsonBase {
         this.logger.info('Initialising Gybson...');
     }
 
-    public async _close() {
+    public async _close(): Promise<void> {
         await this.knex.destroy();
         this.logger.info('Gybson connection closed');
     }
 
-    protected get clientConfig() {
+    protected get clientConfig(): { knex: Knex<any, unknown>; logger: Logger; engine: ClientEngine } {
         return { knex: this.knex, logger: this.logger, engine: this.engine };
     }
 
@@ -35,7 +35,7 @@ export class GybsonBase {
      * @returns
      */
     public async _transaction<T>(fn: (conn: Connection) => T): Promise<T> {
-        let conn = await this.knex.client.acquireConnection();
+        const conn = await this.knex.client.acquireConnection();
 
         try {
             await this.knex.raw('START TRANSACTION').connection(conn);

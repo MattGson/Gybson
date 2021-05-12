@@ -24,7 +24,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-            - uses: actions/setup-node@v1
+            - uses: actions/setup-node@v2
             - run: npm ci
             - run: npm run lint
 
@@ -46,9 +46,11 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-            - uses: actions/setup-node@v1
+            - uses: actions/setup-node@v2
             - run: npm ci
+            - run: npm run migrate:mysql
             - run: npm run introspect:mysql
+            - run: npm run generate-client
             - run: npm run test:mysql
 
     test-postgres:
@@ -71,7 +73,9 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-            - uses: actions/setup-node@v1
+            - uses: actions/setup-node@v2
             - run: npm ci
+            - run: npm run migrate:pg
             - run: npm run introspect:pg
+            - run: npm run generate-client
             - run: npm run test:pg

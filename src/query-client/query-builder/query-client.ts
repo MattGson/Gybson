@@ -4,14 +4,14 @@ import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
 import { ColumnDefinition, Comparable, DatabaseSchema } from 'relational-schema';
 import winston from 'winston';
-import { ClientEngine, OrderBy, Paginate } from '../../types';
+import { ClientEngine, OrderBy, Paginate, RecordAny } from '../../types';
 import { Loader, OrderQueryFilter, runMiddleWares, SoftDeleteQueryFilter } from '../index';
 import { WhereResolver } from './where-resolver';
 
 type Connection = PGConn | MySQLConn;
 
 export abstract class QueryClient<
-    TblRow extends Record<string, any>,
+    TblRow extends RecordAny,
     TblColumnMap,
     TblWhere,
     TblUniqueWhere,
@@ -28,7 +28,7 @@ export abstract class QueryClient<
     private readonly logger: winston.Logger;
     private readonly engine: ClientEngine;
 
-    protected loader = new Loader<TblRow>({
+    protected loader = new Loader<TblRow, PartialTblRow, TblOrderBy>({
         getMultis: (args) => this.stableGetMany(args),
         getOnes: (args) => this.stableGetSingles(args),
     });
@@ -75,12 +75,12 @@ export abstract class QueryClient<
         return `${this.aliasedColumn(column.columnName)}`;
     }
 
-    private softDeleteFilter(alias: boolean = false): Record<string, Date | boolean | null> {
+    private softDeleteFilter(alias: boolean): Record<string, Date | boolean | null> {
         const colAlias = this.aliasedSoftDeleteColumn;
         const column = this.softDeleteColumn;
         if (!colAlias || !column) return {};
 
-        let colName = alias ? colAlias : column.columnName;
+        const colName = alias ? colAlias : column.columnName;
         const type = column?.tsType;
         if (type === Comparable.Date) return { [colName]: null };
         if (type === Comparable.boolean) return { [colName]: false };
@@ -91,7 +91,7 @@ export abstract class QueryClient<
      * un-nest filters i.e. team_id__user_id: { ... } -> team_id: ..., user_id: ...,
      * @param where
      */
-    private unNestFilters(where: TblUniqueWhere | TblNonUniqueWhere) {
+    private unNestFilters(where: TblUniqueWhere | TblNonUniqueWhere): PartialTblRow {
         const filter: any = {};
         Object.entries(where).map(([k, v]) => {
             if (v instanceof Object) Object.assign(filter, v);
@@ -112,13 +112,12 @@ export abstract class QueryClient<
      * @param params
      */
     public async loadOne(params: { where: TblUniqueWhere } & SoftDeleteQueryFilter): Promise<TblRow | null> {
-        const { where, ...options } = params;
+        const { where, includeDeleted } = params;
 
         const filter = this.unNestFilters(where);
-        const row = await this.loader.loadOne({ filter });
+        const row = await this.loader.loadOne({ filter, includeDeleted });
 
-        // TODO:- why can't soft delete filter run at DB layer? Can just add `includeDeleted` to filterHash like orderBy ?
-        const [result] = runMiddleWares([row], options);
+        const [result] = runMiddleWares([row], params);
         return result || null;
     }
 
@@ -127,14 +126,14 @@ export abstract class QueryClient<
      * @param params
      */
     public async loadMany(
-        params: { where: TblNonUniqueWhere } & SoftDeleteQueryFilter & OrderQueryFilter,
+        params: { where: TblNonUniqueWhere } & SoftDeleteQueryFilter & OrderQueryFilter<TblOrderBy>,
     ): Promise<TblRow[]> {
-        const { where, orderBy, ...options } = params;
+        const { where, orderBy, includeDeleted } = params;
 
         const filter = this.unNestFilters(where);
-        const rows = await this.loader.loadMany({ filter, orderBy });
+        const rows = await this.loader.loadMany({ filter, orderBy, includeDeleted });
 
-        const result = runMiddleWares(rows, options);
+        const result = runMiddleWares(rows, params);
         return result || null;
     }
 
@@ -146,23 +145,25 @@ export abstract class QueryClient<
     protected async stableGetMany(params: {
         keys: readonly PartialTblRow[];
         orderBy?: TblOrderBy;
+        includeDeleted?: boolean;
     }): Promise<TblRow[][]> {
-        const { keys, orderBy } = params;
+        const { keys, orderBy, includeDeleted } = params;
 
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
 
         // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [3, 5]
-        const loadValues = keys.map<(string | number)[]>((k) => {
-            // @ts-ignore - k[col] typing
+        const loadValues = keys.map<(string | number | Date)[]>((k: any) => {
             return columns.map((col) => k[col]);
         });
 
         // build query
-        let query = this.knex(this.tableName).select().whereIn(columns, loadValues);
+        const query = this.knex(this.aliasedTable).select().whereIn(columns, loadValues);
+
+        if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
 
         if (orderBy) {
-            for (let [column, direction] of Object.entries(orderBy)) {
+            for (const [column, direction] of Object.entries(orderBy)) {
                 query.orderBy(column, direction);
             }
         }
@@ -172,11 +173,10 @@ export abstract class QueryClient<
         const rows = await query;
 
         // join multiple keys into a unique string to allow mapping to dictionary
+        // i.e. [{ user_id: 3, post_id: 5 }, { user_id: 6, post_id: 7 }] -> ["3:5", "6:7"]
         // again map columns to make sure order is preserved
-        // @ts-ignore
-        const sortKeys = keys.map((k) =>
+        const sortKeys = keys.map((k: any) =>
             columns
-                // @ts-ignore
                 .map((col) => k[col])
                 .join(':')
                 .toLowerCase(),
@@ -197,29 +197,32 @@ export abstract class QueryClient<
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    protected async stableGetSingles(params: { keys: readonly PartialTblRow[] }): Promise<(TblRow | null)[]> {
-        const { keys } = params;
+    protected async stableGetSingles(params: {
+        keys: readonly PartialTblRow[];
+        includeDeleted?: boolean;
+    }): Promise<(TblRow | null)[]> {
+        const { keys, includeDeleted } = params;
 
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
 
         // Need to make sure order of values matches order of columns in WHERE i.e. { user_id: 3, post_id: 5 } -> [3, 5]
-        const loadValues = keys.map<(string | number)[]>((k) => {
-            // @ts-ignore
+        const loadValues = keys.map<(string | number)[]>((k: any) => {
             return columns.map((col) => k[col]);
         });
 
-        let query = this.knex(this.tableName).select().whereIn(columns, loadValues);
+        const query = this.knex(this.aliasedTable).select().whereIn(columns, loadValues);
+        if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
 
         this.logger.debug('Executing single load: %s with keys %j', query.toSQL().sql, loadValues);
 
         const rows = await query;
 
         // join multiple keys into a unique string to allow mapping to dictionary
+        // i.e. [{ user_id: 3, post_id: 5 }, { user_id: 6, post_id: 7 }] -> ["3:5", "6:7"]
         // again map columns to make sure order is preserved
-        const sortKeys = keys.map((k) =>
+        const sortKeys = keys.map((k: any) =>
             columns
-                // @ts-ignore
                 .map((col) => k[col])
                 .join(':')
                 .toLowerCase(),
@@ -254,7 +257,7 @@ export abstract class QueryClient<
         includeDeleted?: boolean;
     }): Promise<TblRow[]> {
         const { orderBy, paginate, where, includeDeleted, connection } = params;
-        let query = this.knex(this.aliasedTable).select(`${this.tableAlias}.*`);
+        const query = this.knex(this.aliasedTable).select(`${this.tableAlias}.*`);
 
         if (where) {
             WhereResolver.resolveWhereClause({
@@ -269,7 +272,7 @@ export abstract class QueryClient<
         if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
 
         if (orderBy) {
-            for (let [column, direction] of Object.entries(orderBy)) {
+            for (const [column, direction] of Object.entries(orderBy)) {
                 query.orderBy(this.aliasedColumn(column), direction);
             }
         }
@@ -292,7 +295,7 @@ export abstract class QueryClient<
         }
 
         if (paginate && paginate.afterCursor && orderBy) {
-            for (let key of Object.keys(paginate.afterCursor)) {
+            for (const key of Object.keys(paginate.afterCursor)) {
                 if (!orderBy[key])
                     this.logger.warn(
                         'You are ordering by different keys to your cursor. This may lead to unexpected results',
@@ -323,7 +326,7 @@ export abstract class QueryClient<
         const { values, connection, reinstateSoftDeletedRows, updateColumns } = params;
 
         const columnsToUpdate: string[] = [];
-        for (let [column, update] of Object.entries(updateColumns)) {
+        for (const [column, update] of Object.entries(updateColumns)) {
             if (update) columnsToUpdate.push(column);
         }
 
@@ -410,7 +413,7 @@ export abstract class QueryClient<
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      * @param params
      */
-    public async softDelete(params: { connection?: Connection; where: TblWhere }) {
+    public async softDelete(params: { connection?: Connection; where: TblWhere }): Promise<any> {
         const { where, connection } = params;
         if (!this.hasSoftDelete) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
@@ -444,7 +447,7 @@ export abstract class QueryClient<
      * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      * @param params
      */
-    public async delete(params: { connection?: Connection; where: TblWhere }) {
+    public async delete(params: { connection?: Connection; where: TblWhere }): Promise<any> {
         const { where, connection } = params;
         if (this.hasSoftDelete)
             this.logger.warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
@@ -471,12 +474,11 @@ export abstract class QueryClient<
      * Update
      * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
      */
-    public async update(params: { connection?: Connection; values: PartialTblRow; where: TblWhere }) {
+    public async update(params: { connection?: Connection; values: PartialTblRow; where: TblWhere }): Promise<any> {
         const { values, connection, where } = params;
         if (Object.keys(values).length < 1) throw new Error('Must update least one column');
-        if (Object.keys(where).length < 1) this.logger.warn('Running update without a where clause');
+        if (Object.keys(where).length < 1) this.logger.warn('Running update without a where clause!');
 
-        // @ts-ignore - PartialTblRow extends object
         // Note cannot use col aliases as PG does not support on update
 
         const query = this.knex(this.aliasedTable).update(values);

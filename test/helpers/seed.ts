@@ -38,7 +38,7 @@ export const seedUser = async (gybson: GybsonClient, values?: Partial<User>): Pr
     return user1Id;
 };
 
-export const seed = async (gybson: GybsonClient) => {
+export const seed = async (gybson: GybsonClient): Promise<SeedIds> => {
     const user1Id = await seedUser(gybson);
     const team1Id = await gybson.team.insert({
         values: {
