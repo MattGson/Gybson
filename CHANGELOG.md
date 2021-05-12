@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/MattGson/Gybson/compare/v1.0.0...v1.0.1) (2021-05-12)
+
+
+### Bug Fixes
+
+* **batching:** fixes batching behaviour on ordering, soft-delete filters ([a272948](https://github.com/MattGson/Gybson/commit/a272948c6219bed04197397d03ecec12c6e304ed)), closes [#43](https://github.com/MattGson/Gybson/issues/43) [#44](https://github.com/MattGson/Gybson/issues/44)
+
 # [1.0.0](https://github.com/MattGson/Gybson/compare/v0.8.0...v1.0.0) (2021-05-12)
 
 
