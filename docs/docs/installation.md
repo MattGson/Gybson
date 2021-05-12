@@ -120,5 +120,5 @@ For a full list of query options see [Querying](querying.md)
 To close the connection pool, simply call:
 
 ```typescript
-Gybson.close();
+gybson._close();
 ```

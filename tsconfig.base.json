@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es6",
+        "esModuleInterop": true,
+        "declaration": true,
+        "newLine": "LF",
+        "sourceMap": true,
+        "outDir": "build",
+        "rootDir": "./",
+        "baseUrl": "./",
+        "noEmitOnError": true,
+        "allowJs": true,
+
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+
+        "noUnusedLocals": false,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "paths": {
+            "test/*": ["./test/*"]
+        }
+    }
+}

@@ -345,4 +345,4 @@ test/actual/*
 coverage/
 *.map
 .DS_Store
-/test/Gen/*.ts
+/test/tmp/*.ts
