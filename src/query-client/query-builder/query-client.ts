@@ -47,7 +47,7 @@ export abstract class QueryClient<
         this.logger = logger;
         this.tableName = tableName;
         this.schema = schema;
-        this.tableAlias = `${this.tableName}_q_root`;
+        this.tableAlias = `${this.tableName}_1`;
         this.whereResolver = new WhereResolver(schema);
     }
 
@@ -310,7 +310,7 @@ export abstract class QueryClient<
         }
         if (connection) query.connection(connection);
 
-        this.logger.debug('Executing findMany: %s', query.toSQL().sql);
+        this.logger.debug('Executing findMany: %s with values %j', query.toSQL().sql, query.toSQL().bindings);
         return query;
     }
     /**

@@ -1,6 +1,13 @@
 import { Knex } from 'knex';
-import { RelationFilters, Combiners, Operators, RecordAny } from '../../types';
-import { Comparable, RelationDefinition, DatabaseSchema } from 'relational-schema';
+import {
+    HasOneRelationFilter,
+    HasOneRequiredRelationFilter,
+    HasManyRelationFilter,
+    Combiners,
+    Operators,
+    RecordAny,
+} from '../../types';
+import { Comparable, RelationDefinition, DatabaseSchema, TableSchemaDefinition } from 'relational-schema';
 
 export class WhereResolver {
     constructor(private schema: DatabaseSchema) {}
@@ -18,6 +25,25 @@ export class WhereResolver {
             if (relation.type === 'manyToMany') continue;
             if (relation.alias === alias) return relation;
         }
+        return null;
+    }
+
+    /**
+     * Get a soft delete filter for a table
+     * @param tableAlias
+     * @param tableName
+     * @returns
+     */
+    private getSoftDeleteFilter(tableAlias: string, tableName: string): RecordAny | null {
+        const definition = this.schema.tables[tableName];
+        const column = definition.softDelete;
+        if (!column) return null;
+
+        const columnAlias = `${tableAlias}.${column.columnName}`;
+
+        const type = column?.tsType;
+        if (type === Comparable.Date) return { [columnAlias]: null };
+        if (type === Comparable.boolean) return { [columnAlias]: false };
         return null;
     }
 
@@ -188,12 +214,13 @@ export class WhereResolver {
                 }
             }
             // TODO:- multiple relations at same query level breaks query - maybe just need a good error message?
-            //  TODO:- filter soft delete on relations?
             if (possibleRelation) {
                 const childTable = possibleRelation.toTable;
+                const childTableDefinition = this.schema.tables[childTable];
                 const childTableAlias = childTable + depth;
                 const aliasClause = `${childTable} as ${childTableAlias}`;
                 const joins = possibleRelation.joins;
+                const softDeleteFilter = this.getSoftDeleteFilter(childTableAlias, childTable);
 
                 if (typeof filterValue !== 'object') {
                     throw new Error('relation filters expected an object for field ' + field);
@@ -201,55 +228,60 @@ export class WhereResolver {
 
                 for (const [relationFilter, clause] of Object.entries(filterValue as RecordAny)) {
                     switch (relationFilter) {
-                        case RelationFilters.existsWhere:
-                            builder.whereExists(function () {
-                                // join the child table in a correlated sub-query for exists
-                                this.select(`${childTableAlias}.*`).from(aliasClause);
-                                for (const { toColumn, fromColumn } of joins) {
-                                    this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
-                                }
-                                // resolve for child table
-                                context.resolveWhere({
-                                    subQuery: clause,
-                                    builder: this,
-                                    depth: depth + 1,
-                                    table: childTable,
-                                    tableAlias: childTableAlias,
+                        case HasOneRelationFilter.exists:
+                        case HasManyRelationFilter.exists:
+                            // accept any truthy value for exists
+                            if (clause) {
+                                builder.leftJoin(aliasClause, function () {
+                                    for (const { toColumn, fromColumn } of joins) {
+                                        this.on(`${childTableAlias}.${toColumn}`, `${tableAlias}.${fromColumn}`);
+                                    }
                                 });
+                                if (softDeleteFilter) builder.where(softDeleteFilter);
+                                builder.whereNotNull(
+                                    `${childTableAlias}.${childTableDefinition.primaryKey?.columnNames[0] ?? '*'}`,
+                                );
+                            } else {
+                                builder.leftJoin(aliasClause, function () {
+                                    for (const { toColumn, fromColumn } of joins) {
+                                        this.on(`${childTableAlias}.${toColumn}`, `${tableAlias}.${fromColumn}`);
+                                    }
+                                });
+                                builder.whereNull(
+                                    `${childTableAlias}.${childTableDefinition.primaryKey?.columnNames[0] ?? '*'}`,
+                                );
+                            }
+                            break;
+                        case HasOneRelationFilter.where:
+                        case HasOneRequiredRelationFilter.where:
+                        case HasManyRelationFilter.where:
+                            builder.leftJoin(aliasClause, function () {
+                                for (const { toColumn, fromColumn } of joins) {
+                                    this.on(`${childTableAlias}.${toColumn}`, `${tableAlias}.${fromColumn}`);
+                                }
+                            });
+                            if (softDeleteFilter) builder.where(softDeleteFilter);
+                            context.resolveWhere({
+                                subQuery: clause,
+                                builder: builder,
+                                depth: depth + 1,
+                                table: childTable,
+                                tableAlias: childTableAlias,
                             });
                             break;
-                        case RelationFilters.notExistsWhere:
+
+                        case HasManyRelationFilter.whereEvery:
+                            // Use double negation
                             builder.whereNotExists(function () {
-                                // join the child table in a correlated sub-query for exists
                                 this.select(`${childTableAlias}.*`).from(aliasClause);
                                 for (const { toColumn, fromColumn } of joins) {
                                     this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
                                 }
-                                // resolve for child table
+                                if (softDeleteFilter) this.where(softDeleteFilter);
                                 context.resolveWhere({
-                                    subQuery: clause,
-                                    builder: this,
-                                    depth: depth + 1,
-                                    table: childTable,
-                                    tableAlias: childTableAlias,
-                                });
-                            });
-                            break;
-                        case RelationFilters.whereEvery:
-                            // Use double negation TODO:- change this?
-                            // WHERE NOT EXISTS ( SELECT where NOT ...)
-                            builder.whereNotExists(function () {
-                                // join the child table in a correlated sub-query for exists
-                                this.select(`${childTableAlias}.*`).from(aliasClause);
-                                for (const { toColumn, fromColumn } of joins) {
-                                    this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
-                                }
-                                const negation = {
-                                    NOT: [clause],
-                                };
-                                // resolve for child table
-                                context.resolveWhere({
-                                    subQuery: negation,
+                                    subQuery: {
+                                        NOT: [clause],
+                                    },
                                     builder: this,
                                     depth: depth + 1,
                                     table: childTable,

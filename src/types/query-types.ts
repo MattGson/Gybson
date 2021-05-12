@@ -14,10 +14,19 @@ export type Paginate = {
 
 export type Order = 'asc' | 'desc';
 
-export enum RelationFilters {
-    existsWhere = 'existsWhere',
-    notExistsWhere = 'notExistsWhere',
+export enum HasOneRelationFilter {
+    exists = 'exists',
+    where = 'where',
+}
+
+export enum HasManyRelationFilter {
+    exists = 'exists',
+    where = 'where',
     whereEvery = 'whereEvery',
+}
+
+export enum HasOneRequiredRelationFilter {
+    where = 'where',
 }
 
 export enum Combiners {

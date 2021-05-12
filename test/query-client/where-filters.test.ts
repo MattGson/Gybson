@@ -1,6 +1,6 @@
 import { openConnection, closeConnection, getKnex, seed, SeedIds, seedPost, seedUser } from 'test/helpers';
 import { GybsonClient } from 'test/tmp';
-import * as faker from "faker";
+import * as faker from 'faker';
 
 describe('WhereFilters', () => {
     let ids: SeedIds;
@@ -300,7 +300,7 @@ describe('WhereFilters', () => {
                     const find2 = await gybson.post.findMany({
                         where: {
                             created: {
-                                equals: created
+                                equals: created,
                             },
                         },
                     });
@@ -407,96 +407,163 @@ describe('WhereFilters', () => {
             });
         });
         describe('Relation filters', () => {
-            it('Can filter by where every related row meets a condition', async () => {
-                const u2 = await seedUser(gybson);
-                await seedPost(gybson, { author_id: u2, message: 'filter-me' });
-                await seedPost(gybson, { author_id: u2, message: 'nope' });
-                // both posts meet the condition
-                const users = await gybson.user.findMany({
-                    where: {
-                        author_posts: {
-                            whereEvery: {
-                                message: {
-                                    contains: 'e',
+            describe('HasMany relations', () => {
+                it('Can filter by relation "exists"', async () => {
+                    const u2 = await seedUser(gybson);
+                    const u3 = await seedUser(gybson);
+                    await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                    const users = await gybson.user.findMany({
+                        where: {
+                            author_posts: {
+                                exists: true,
+                            },
+                        },
+                    });
+                    expect(users).toContainEqual(
+                        expect.objectContaining({
+                            user_id: u2,
+                        }),
+                    );
+                    expect(users).not.toContainEqual(
+                        expect.objectContaining({
+                            user_id: u3,
+                        }),
+                    );
+                });
+                it('Can filter by relation "not exists"', async () => {
+                    const u2 = await seedUser(gybson);
+                    const u3 = await seedUser(gybson);
+                    await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                    const users = await gybson.user.findMany({
+                        where: {
+                            author_posts: {
+                                exists: false,
+                            },
+                        },
+                    });
+                    expect(users).toContainEqual(
+                        expect.objectContaining({
+                            user_id: u3,
+                        }),
+                    );
+                    expect(users).not.toContainEqual(
+                        expect.objectContaining({
+                            user_id: u2,
+                        }),
+                    );
+                });
+                it('Can filter by "where" any related row meets the condition', async () => {
+                    const u2 = await seedUser(gybson);
+                    await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                    await seedPost(gybson, { author_id: u2, message: 'not' });
+                    const users = await gybson.user.findMany({
+                        where: {
+                            author_posts: {
+                                where: {
+                                    message: {
+                                        contains: 'filter-m',
+                                    },
                                 },
                             },
                         },
-                    },
+                    });
+                    expect(users).toContainEqual(
+                        expect.objectContaining({
+                            user_id: u2,
+                        }),
+                    );
+                    expect(users).not.toContainEqual(
+                        expect.objectContaining({
+                            user_id: ids.user1Id,
+                        }),
+                    );
                 });
-                expect(users).toContainEqual(
-                    expect.objectContaining({
-                        user_id: u2,
-                    }),
-                );
-                // tighten the condition so only one post meets it
-                const users2 = await gybson.user.findMany({
-                    where: {
-                        author_posts: {
-                            whereEvery: {
-                                message: {
-                                    contains: 'me',
+
+                it('Can filter "where every" related row meets a condition', async () => {
+                    const u2 = await seedUser(gybson);
+                    await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                    await seedPost(gybson, { author_id: u2, message: 'nope' });
+                    // both posts meet the condition
+                    const users = await gybson.user.findMany({
+                        where: {
+                            author_posts: {
+                                whereEvery: {
+                                    message: {
+                                        contains: 'e',
+                                    },
                                 },
                             },
                         },
-                    },
+                    });
+                    expect(users).toContainEqual(
+                        expect.objectContaining({
+                            user_id: u2,
+                        }),
+                    );
+                    // tighten the condition so only one post meets it
+                    const users2 = await gybson.user.findMany({
+                        where: {
+                            author_posts: {
+                                whereEvery: {
+                                    message: {
+                                        contains: 'me',
+                                    },
+                                },
+                            },
+                        },
+                    });
+                    expect(users2).not.toContainEqual(
+                        expect.objectContaining({
+                            user_id: u2,
+                        }),
+                    );
                 });
-                expect(users2).not.toContainEqual(
-                    expect.objectContaining({
-                        user_id: u2,
-                    }),
-                );
             });
-            it('Can filter by exists', async () => {
-                const u2 = await seedUser(gybson);
-                await seedPost(gybson, { author_id: u2, message: 'filter-me' });
-                await seedPost(gybson, { author_id: u2, message: 'not' });
-                const users = await gybson.user.findMany({
-                    where: {
-                        author_posts: {
-                            existsWhere: {
-                                message: {
-                                    contains: 'filter-m',
-                                },
+            describe('hasOne, BelongsTo optional relations', () => {
+                it('Can filter by relation "exists"', async () => {
+                    const u2 = await seedUser(gybson);
+                    const u3 = await seedUser(gybson);
+                    await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                    const users = await gybson.user.findMany({
+                        where: {
+                            author_posts: {
+                                exists: true,
                             },
                         },
-                    },
+                    });
+                    expect(users).toContainEqual(
+                        expect.objectContaining({
+                            user_id: u2,
+                        }),
+                    );
+                    expect(users).not.toContainEqual(
+                        expect.objectContaining({
+                            user_id: u3,
+                        }),
+                    );
                 });
-                expect(users).toContainEqual(
-                    expect.objectContaining({
-                        user_id: u2,
-                    }),
-                );
-                expect(users).not.toContainEqual(
-                    expect.objectContaining({
-                        user_id: ids.user1Id,
-                    }),
-                );
-            });
-            it('Can filter by not exists', async () => {
-                const u2 = await seedUser(gybson);
-                await seedPost(gybson, { author_id: u2, message: 'filter-me' });
-                await seedPost(gybson, { author_id: u2, message: 'not' });
-                const users = await gybson.user.findMany({
-                    where: {
-                        author_posts: {
-                            notExistsWhere: {
-                                message: {
-                                    contains: 'filter-m',
-                                },
+                it('Can filter by relation not "exists"', async () => {
+                    const u2 = await seedUser(gybson);
+                    const u3 = await seedUser(gybson);
+                    await seedPost(gybson, { author_id: u2, message: 'filter-me' });
+                    const users = await gybson.user.findMany({
+                        where: {
+                            author_posts: {
+                                exists: false,
                             },
                         },
-                    },
+                    });
+                    expect(users).toContainEqual(
+                        expect.objectContaining({
+                            user_id: u2,
+                        }),
+                    );
+                    expect(users).not.toContainEqual(
+                        expect.objectContaining({
+                            user_id: u3,
+                        }),
+                    );
                 });
-                expect(users).not.toContainEqual(
-                    expect.objectContaining({
-                        user_id: u2,
-                    }),
-                );
-                expect(users).toContainEqual(
-                    expect.objectContaining({
-                        user_id: ids.user1Id,
-                    }),
-                );
             });
         });
         describe('Combiners (gates)', () => {
@@ -679,7 +746,7 @@ describe('WhereFilters', () => {
                                         contains: 'hip',
                                     },
                                     author_relation: {
-                                        notExistsWhere: {
+                                        where: {
                                             first_name: 'steve',
                                         },
                                     },

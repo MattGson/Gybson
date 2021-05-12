@@ -95,7 +95,9 @@ export class TableClientBuilder {
             loadManyWhereTypeName,
             orderByTypeName,
             paginationTypeName,
-            relationFilterTypeName,
+            hasOneRelationFilterTypeName,
+            hasManyRelationFilterTypeName,
+            hasOneRequiredRelationFilterTypeName,
             requiredRowTypeName,
         } = this.typeNames;
 
@@ -119,7 +121,12 @@ export class TableClientBuilder {
  
                 ${TableTypeBuilder.buildColumnMapType({ columnMapTypeName, columns })}
                 
-                ${TableTypeBuilder.buildRelationFilterType({ relationFilterTypeName, whereTypeName })}
+                ${TableTypeBuilder.buildRelationFilterTypes({
+                    hasOneRelationFilterTypeName,
+                    hasManyRelationFilterTypeName,
+                    hasOneRequiredRelationFilterTypeName,
+                    whereTypeName,
+                })}
                 
                 
                 ${
