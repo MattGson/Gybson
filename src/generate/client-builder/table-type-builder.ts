@@ -279,7 +279,7 @@ export class TableTypeBuilder {
                         return `${relation.alias}?: ${typeNames.hasManyRelationFilterTypeName} | null`;
 
                     let required = true;
-                    relation.joins.forEach((join) => {
+                    relation.joins?.forEach((join) => {
                         if (columns[join.fromColumn].nullable) required = false;
                     });
                     if (required) return `${relation.alias}?: ${typeNames.hasOneRequiredRelationFilterTypeName} | null`;

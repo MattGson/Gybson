@@ -8,6 +8,7 @@ export enum LogLevel {
     warn = 'warn',
     error = 'error',
     debug = 'debug',
+    silly = 'silly',
 }
 
 export type ClientEngine = 'pg' | 'mysql';

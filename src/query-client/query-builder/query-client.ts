@@ -266,8 +266,10 @@ export abstract class QueryClient<
         const { orderBy, paginate, where, includeDeleted, connection } = params;
         const query = this.knex(this.aliasedTable).select(`${this.tableAlias}.*`);
 
+        const whereResolver = new WhereResolver(this.schema);
+
         if (where) {
-            this.whereResolver.resolveWhereClause({
+            whereResolver.resolveWhereClause({
                 where,
                 queryBuilder: query,
                 tableName: this.tableName,
@@ -439,7 +441,7 @@ export abstract class QueryClient<
 
     /**
      * Soft delete
-     * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
+     * Deletes all rows matching conditions
      * @param params
      */
     public async softDelete(params: { connection?: Connection; where: TblWhere }): Promise<any> {
@@ -456,11 +458,19 @@ export abstract class QueryClient<
         if (type === Comparable.Date) query.update({ [colAlias]: new Date() });
         if (type === Comparable.boolean) query.update({ [colAlias]: true });
 
+        const innerQuery = this.knex(this.aliasedTable).select(this.primaryKey);
         this.whereResolver.resolveWhereClause({
-            queryBuilder: query,
+            queryBuilder: innerQuery,
             where,
             tableName: this.tableName,
             tableAlias: this.tableAlias,
+        });
+
+        query.whereIn(this.primaryKey, function () {
+            // extra wrapping query required for MySQL to allow this
+            this.select('sub.*').from({
+                sub: innerQuery as any, // ts types wrong for knex
+            });
         });
 
         if (connection) query.connection(connection);
@@ -472,7 +482,9 @@ export abstract class QueryClient<
 
     /**
      * Delete
-     * Deletes all rows matching conditions i.e. WHERE a = 1 AND b = 2;
+     * Deletes all rows matching conditions
+     * Note:- due to the inconsistency with how PG and MySQL handle updates and deletes
+     *        with joins, the query uses a nested sub-query to get the correct rows to delete
      * @param params
      */
     public async delete(params: { connection?: Connection; where: TblWhere }): Promise<any> {
@@ -481,15 +493,24 @@ export abstract class QueryClient<
             this.logger.warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition for delete');
 
-        const query = this.knex(this.tableName).del();
-
-        // Note - can't use an alias with delete statement in knex
+        const innerQuery = this.knex(this.aliasedTable).select(this.primaryKey);
         this.whereResolver.resolveWhereClause({
-            queryBuilder: query,
+            queryBuilder: innerQuery,
             where,
             tableName: this.tableName,
-            tableAlias: this.tableName,
+            tableAlias: this.tableAlias,
         });
+
+        // Note - can't use an alias with delete statement in knex
+        const query = this.knex(this.tableName)
+            .whereIn(this.primaryKey, function () {
+                // extra wrapping query required for MySQL to allow this
+                this.select('sub.*').from({
+                    sub: innerQuery as any, // ts types wrong for knex
+                });
+            })
+            .del();
+
         if (connection) query.connection(connection);
 
         this.logger.debug('Executing delete: %s', query.toSQL().sql);
@@ -524,10 +545,23 @@ export abstract class QueryClient<
         if (Object.keys(values).length < 1) throw new Error('Must update least one column');
         if (Object.keys(where).length < 1) this.logger.warn('Running update without a where clause!');
 
-        // Note cannot use col aliases as PG does not support on update
-
         const query = this.knex(this.aliasedTable).update(values);
-        if (where) {
+
+        // pg uses a weird update join syntax which isn't properly supported in knex
+        // use sub-query instead
+        if (this.engine === 'pg') {
+            const innerQuery = this.knex(this.aliasedTable).select(this.primaryKey);
+            this.whereResolver.resolveWhereClause({
+                queryBuilder: innerQuery,
+                where,
+                tableName: this.tableName,
+                tableAlias: this.tableAlias,
+            });
+
+            if (where) {
+                query.whereIn(this.primaryKey, innerQuery);
+            }
+        } else if (where) {
             this.whereResolver.resolveWhereClause({
                 queryBuilder: query,
                 where,
@@ -535,9 +569,10 @@ export abstract class QueryClient<
                 tableAlias: this.tableAlias,
             });
         }
+
         if (connection) query.connection(connection);
 
-        this.logger.debug('Executing update: %s with conditions %j and values %j', query.toSQL().sql, where, values);
+        this.logger.debug('Executing update: %s with values: %j', query.toSQL().sql, values);
 
         return query;
     }

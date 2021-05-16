@@ -19,7 +19,9 @@ describe('TableTypeBuilder', () => {
                 loadManyWhereTypeName: `UserLoadManyWhere`,
                 orderByTypeName: `UserOrderBy`,
                 paginationTypeName: `UserPaginate`,
-                relationFilterTypeName: `UserRelationFilter`,
+                hasOneRelationFilterTypeName: 'UserHasOneRelationFilter',
+                hasOneRequiredRelationFilterTypeName: 'UserHasOneRequiredRelationFilter',
+                hasManyRelationFilterTypeName: 'UserHasManyRelationFilter',
             });
         });
     });
@@ -50,9 +52,13 @@ describe('TableTypeBuilder', () => {
     Loader,
 } from 'gybson';
 
-import { PostRelationFilter } from './Post';
-import { TeamMemberRelationFilter } from './TeamMember';
-import { TeamRelationFilter } from './Team';
+import { PostHasOneRelationFilter, PostHasManyRelationFilter, PostHasOneRequiredRelationFilter } from './Post';
+import {
+    TeamMemberHasOneRelationFilter,
+    TeamMemberHasManyRelationFilter,
+    TeamMemberHasOneRequiredRelationFilter,
+} from './TeamMember';
+import { TeamHasOneRelationFilter, TeamHasManyRelationFilter, TeamHasOneRequiredRelationFilter } from './Team';
 `,
             );
         });
@@ -150,17 +156,28 @@ export type subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     });
     describe('buildRelationFilterType', () => {
         it('Generates a filter for relation queries for the table', async (): Promise<void> => {
-            const result = TableTypeBuilder.buildRelationFilterType({
+            const result = TableTypeBuilder.buildRelationFilterTypes({
                 whereTypeName: 'UserWhere',
-                relationFilterTypeName: 'UserRelationFilter',
+                hasOneRelationFilterTypeName: 'UserHasOneRelationFilter',
+                hasOneRequiredRelationFilterTypeName: 'UserHasOneRequiredRelationFilter',
+                hasManyRelationFilterTypeName: 'UserHasManyRelationFilter',
             });
             const formatted = format(result, { parser: 'typescript', ...prettierDefault });
 
             expect(formatted).toEqual(
-                `export interface UserRelationFilter {
-    existsWhere?: UserWhere;
-    notExistsWhere?: UserWhere;
+                `export interface UserHasManyRelationFilter {
+    exists?: boolean;
+    where?: UserWhere;
     whereEvery?: UserWhere;
+}
+
+export interface UserHasOneRelationFilter {
+    exists?: boolean;
+    where?: UserWhere;
+}
+
+export interface UserHasOneRequiredRelationFilter {
+    where?: UserWhere;
 }
 `,
             );
@@ -189,11 +206,11 @@ export type subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
     OR?: Enumerable<PostWhere>;
     NOT?: Enumerable<PostWhere>;
 
-    author_relation?: UserRelationFilter | null;
-    co_author_relation?: UserRelationFilter | null;
-    team_members?: TeamMemberRelationFilter | null;
-    teams?: TeamRelationFilter | null;
-    users?: UserRelationFilter | null;
+    author_relation?: UserHasOneRequiredRelationFilter | null;
+    co_author_relation?: UserHasOneRelationFilter | null;
+    team_members?: TeamMemberHasManyRelationFilter | null;
+    teams?: TeamHasOneRequiredRelationFilter | null;
+    users?: UserHasOneRequiredRelationFilter | null;
 }
 `,
             );
