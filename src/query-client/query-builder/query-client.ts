@@ -161,7 +161,6 @@ export abstract class QueryClient<
         // reduce number of keys sent to DB
         const uniqueLoads = _.uniqBy(loadValues, (value) => value.join(':'));
 
-        // build query
         const query = this.knex(this.aliasedTable).select().whereIn(columns, uniqueLoads);
 
         if (!includeDeleted && this.hasSoftDelete) query.where(this.softDeleteFilter(true));
@@ -266,10 +265,8 @@ export abstract class QueryClient<
         const { orderBy, paginate, where, includeDeleted, connection } = params;
         const query = this.knex(this.aliasedTable).select(`${this.tableAlias}.*`);
 
-        const whereResolver = new WhereResolver(this.schema);
-
         if (where) {
-            whereResolver.resolveWhereClause({
+            this.whereResolver.resolveWhereClause({
                 where,
                 queryBuilder: query,
                 tableName: this.tableName,
@@ -315,14 +312,13 @@ export abstract class QueryClient<
         this.logger.debug('Executing findMany: %s with values %j', query.toSQL().sql, query.toSQL().bindings);
         return query;
     }
+
     /**
      * Upsert function
      * Inserts all rows. If duplicate key then will update specified columns for that row.
-     *     * Pass a constant column (usually primary key) to ignore duplicates without updating any rows.
      * Can automatically remove soft deletes if desired instead of specifying the column and values manually.
      *     * This should be set to false if the table does not support soft deletes
      * Will replace undefined values with DEFAULT which will use a default column value if available.
-     * Will take the superset of all columns in the insert values
      * Supports merge and update strategies.
      *  Merge -> will merge the new values into the conflicting row for the specified columns
      *  Update -> will update the specified values on conflicting rows
@@ -356,7 +352,6 @@ export abstract class QueryClient<
                 if (update) columnsToMerge.push(column);
             }
             if (reinstateSoftDeletedRows && this.softDeleteColumn) {
-                // set soft delete column to merge
                 columnsToMerge.push(this.softDeleteColumn.columnName);
                 // add soft delete reset to all records
                 insertRows = insertRows.map((value) => {
@@ -384,8 +379,7 @@ export abstract class QueryClient<
             query.onConflict(this.primaryKey).merge(updates);
         }
 
-        // TODO:- onConflict only works on the primary key of the table (MySQL behvaiour, PG limitation)
-
+        // TODO:- onConflict only works on the primary key of the table in PG, maybe need an alternative behvaiour?
         if (this.engine === 'pg') query.returning(this.primaryKey);
         if (connection) query.connection(connection);
 
@@ -401,9 +395,8 @@ export abstract class QueryClient<
     /**
      * Insert function
      * Inserts all rows. Fails on duplicate key error
-     *     * use upsert if you wish to ignore duplicate rows
+     *     * use ignoreDuplicates if you wish to ignore duplicate rows
      * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
-     * Will take the superset of all columns in the insert values
      * @param params
      */
     public async insert(params: {
@@ -440,8 +433,51 @@ export abstract class QueryClient<
     }
 
     /**
+     * Update
+     * Updates all rows matching conditions
+     * Note:- pg uses a weird update join syntax which isn't properly supported in knex.
+     *        In pg, a sub-query is used to get around this. MySQL uses regular join syntax.
+     */
+    public async update(params: { connection?: Connection; values: PartialTblRow; where: TblWhere }): Promise<any> {
+        const { values, connection, where } = params;
+        if (Object.keys(values).length < 1) throw new Error('Must update least one column');
+        if (Object.keys(where).length < 1) this.logger.warn('Running update without a where clause!');
+
+        const query = this.knex(this.aliasedTable).update(values);
+
+        if (this.engine === 'pg') {
+            const innerQuery = this.knex(this.aliasedTable).select(this.primaryKey);
+            this.whereResolver.resolveWhereClause({
+                queryBuilder: innerQuery,
+                where,
+                tableName: this.tableName,
+                tableAlias: this.tableAlias,
+            });
+
+            if (where) {
+                query.whereIn(this.primaryKey, innerQuery);
+            }
+        } else if (where) {
+            this.whereResolver.resolveWhereClause({
+                queryBuilder: query,
+                where,
+                tableName: this.tableName,
+                tableAlias: this.tableAlias,
+            });
+        }
+
+        if (connection) query.connection(connection);
+
+        this.logger.debug('Executing update: %s with values: %j', query.toSQL().sql, values);
+
+        return query;
+    }
+
+    /**
      * Soft delete
-     * Deletes all rows matching conditions
+     * Sets deleted flag for all rows matching conditions
+     * Note:- pg uses a weird update join syntax which isn't properly supported in knex.
+     *        In pg, a sub-query is used to get around this. MySQL uses regular join syntax.
      * @param params
      */
     public async softDelete(params: { connection?: Connection; where: TblWhere }): Promise<any> {
@@ -452,26 +488,31 @@ export abstract class QueryClient<
         const query = this.knex(this.aliasedTable);
 
         // support both soft delete types
-        // Note, cannot use alias on update due to PG
         const colAlias = this.softDeleteColumn!.columnName;
         const type = this.softDeleteColumn?.tsType;
         if (type === Comparable.Date) query.update({ [colAlias]: new Date() });
         if (type === Comparable.boolean) query.update({ [colAlias]: true });
 
-        const innerQuery = this.knex(this.aliasedTable).select(this.primaryKey);
-        this.whereResolver.resolveWhereClause({
-            queryBuilder: innerQuery,
-            where,
-            tableName: this.tableName,
-            tableAlias: this.tableAlias,
-        });
-
-        query.whereIn(this.primaryKey, function () {
-            // extra wrapping query required for MySQL to allow this
-            this.select('sub.*').from({
-                sub: innerQuery as any, // ts types wrong for knex
+        if (this.engine === 'pg') {
+            const innerQuery = this.knex(this.aliasedTable).select(this.primaryKey);
+            this.whereResolver.resolveWhereClause({
+                queryBuilder: innerQuery,
+                where,
+                tableName: this.tableName,
+                tableAlias: this.tableAlias,
             });
-        });
+
+            if (where) {
+                query.whereIn(this.primaryKey, innerQuery);
+            }
+        } else if (where) {
+            this.whereResolver.resolveWhereClause({
+                queryBuilder: query,
+                where,
+                tableName: this.tableName,
+                tableAlias: this.tableAlias,
+            });
+        }
 
         if (connection) query.connection(connection);
 
@@ -532,47 +573,6 @@ export abstract class QueryClient<
         const query = this.knex(this.tableAlias).truncate();
         this.logger.debug('Executing truncate: %s', query.toSQL().sql);
         if (connection) query.connection(connection);
-
-        return query;
-    }
-
-    /**
-     * Update
-     * Updates all rows matching conditions i.e. WHERE a = 1 AND b = 2;
-     */
-    public async update(params: { connection?: Connection; values: PartialTblRow; where: TblWhere }): Promise<any> {
-        const { values, connection, where } = params;
-        if (Object.keys(values).length < 1) throw new Error('Must update least one column');
-        if (Object.keys(where).length < 1) this.logger.warn('Running update without a where clause!');
-
-        const query = this.knex(this.aliasedTable).update(values);
-
-        // pg uses a weird update join syntax which isn't properly supported in knex
-        // use sub-query instead
-        if (this.engine === 'pg') {
-            const innerQuery = this.knex(this.aliasedTable).select(this.primaryKey);
-            this.whereResolver.resolveWhereClause({
-                queryBuilder: innerQuery,
-                where,
-                tableName: this.tableName,
-                tableAlias: this.tableAlias,
-            });
-
-            if (where) {
-                query.whereIn(this.primaryKey, innerQuery);
-            }
-        } else if (where) {
-            this.whereResolver.resolveWhereClause({
-                queryBuilder: query,
-                where,
-                tableName: this.tableName,
-                tableAlias: this.tableAlias,
-            });
-        }
-
-        if (connection) query.connection(connection);
-
-        this.logger.debug('Executing update: %s with values: %j', query.toSQL().sql, values);
 
         return query;
     }
