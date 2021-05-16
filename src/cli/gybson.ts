@@ -9,6 +9,7 @@ import yargs from 'yargs';
 const { hideBin } = require('yargs/helpers');
 import { generate } from '../generate/index';
 import { LogLevel } from '../types';
+import { logger } from '../generate/logger';
 
 type logLevel = LogLevel;
 const logLevels: ReadonlyArray<logLevel> = [LogLevel.debug, LogLevel.info];
@@ -51,8 +52,8 @@ async function generateClient(args: any) {
 
         await generate({ outdir: GENERATED_DIR, gybsonLibPath: 'gybson', schemaFile: args.schemaFile });
     } catch (e) {
-        console.error(e.message);
-        console.log('Use: "gybson -h" to see help');
+        logger.error(e.message);
+        logger.info('Use: "gybson -h" to see help');
         process.exit(1);
     }
 }
