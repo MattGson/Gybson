@@ -18,7 +18,9 @@ export type TableTypeNames = {
     loadManyWhereTypeName: string;
     orderByTypeName: string;
     paginationTypeName: string;
-    relationFilterTypeName: string;
+    hasOneRelationFilterTypeName: string;
+    hasManyRelationFilterTypeName: string;
+    hasOneRequiredRelationFilterTypeName: string;
 };
 
 export class TableTypeBuilder {
@@ -49,7 +51,9 @@ export class TableTypeBuilder {
             loadManyWhereTypeName: `${tableName}LoadManyWhere`,
             orderByTypeName: `${tableName}OrderBy`,
             paginationTypeName: `${tableName}Paginate`,
-            relationFilterTypeName: `${tableName}RelationFilter`,
+            hasOneRelationFilterTypeName: `${tableName}HasOneRelationFilter`,
+            hasManyRelationFilterTypeName: `${tableName}HasManyRelationFilter`,
+            hasOneRequiredRelationFilterTypeName: `${tableName}HasOneRequiredRelationFilter`,
         };
     }
 
@@ -86,7 +90,11 @@ export class TableTypeBuilder {
 
                     const names = this.typeNamesForTable({ tableName: tbl.toTable });
 
-                    return `import { ${names.relationFilterTypeName} } from "./${names.rowTypeName}"`;
+                    return `import { 
+                                ${names.hasOneRelationFilterTypeName}, 
+                                ${names.hasManyRelationFilterTypeName}, 
+                                ${names.hasOneRequiredRelationFilterTypeName}
+                            } from "./${names.rowTypeName}"`;
                 })
                 .join(';')}
         `;
@@ -169,13 +177,32 @@ export class TableTypeBuilder {
      * Build the relation filter type for a table
      * @param params
      */
-    public static buildRelationFilterType(params: { whereTypeName: string; relationFilterTypeName: string }): string {
-        const { whereTypeName, relationFilterTypeName } = params;
+    public static buildRelationFilterTypes(params: {
+        whereTypeName: string;
+        hasOneRelationFilterTypeName: string;
+        hasManyRelationFilterTypeName: string;
+        hasOneRequiredRelationFilterTypeName: string;
+    }): string {
+        const {
+            whereTypeName,
+            hasOneRelationFilterTypeName,
+            hasManyRelationFilterTypeName,
+            hasOneRequiredRelationFilterTypeName,
+        } = params;
         return `
-            export interface ${relationFilterTypeName} {
-                existsWhere?: ${whereTypeName};
-                notExistsWhere?: ${whereTypeName};
+            export interface ${hasManyRelationFilterTypeName} {
+                exists?: boolean;
+                where?: ${whereTypeName};
                 whereEvery?: ${whereTypeName};
+            }
+
+            export interface ${hasOneRelationFilterTypeName} {
+                exists?: boolean;
+                where?: ${whereTypeName};
+            }
+
+            export interface ${hasOneRequiredRelationFilterTypeName} {
+                where?: ${whereTypeName};
             }`;
     }
 
@@ -247,7 +274,17 @@ export class TableTypeBuilder {
                 ${TableTypeBuilder.buildWhereCombinersForTable({ whereTypeName })}
                 ${relations.map((relation) => {
                     const typeNames = this.typeNamesForTable({ tableName: relation.toTable });
-                    return `${relation.alias}?: ${typeNames.relationFilterTypeName} | null`;
+
+                    if (relation.type === 'hasMany')
+                        return `${relation.alias}?: ${typeNames.hasManyRelationFilterTypeName} | null`;
+
+                    let required = true;
+                    relation.joins?.forEach((join) => {
+                        if (columns[join.fromColumn].nullable) required = false;
+                    });
+                    if (required) return `${relation.alias}?: ${typeNames.hasOneRequiredRelationFilterTypeName} | null`;
+
+                    return `${relation.alias}?: ${typeNames.hasOneRelationFilterTypeName} | null`;
                 })}
             };
         `;

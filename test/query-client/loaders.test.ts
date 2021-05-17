@@ -138,7 +138,6 @@ describe('Loaders', () => {
             expect(post1!.post_id).toEqual(p1);
             expect(post2!.post_id).toEqual(p2);
             expect(post3!.post_id).toEqual(p1);
-
         });
         it('Can bulk load', async () => {
             await gybson.user.delete({
@@ -291,12 +290,12 @@ describe('Loaders', () => {
                 }),
                 gybson.post.loadMany({
                     where: {
-                        author_id: ids.user1Id
+                        author_id: ids.user1Id,
                     },
                 }),
                 gybson.post.loadMany({
                     where: {
-                        author_id: u
+                        author_id: u,
                     },
                 }),
             ]);
@@ -308,7 +307,7 @@ describe('Loaders', () => {
                 }),
                 expect.objectContaining({
                     post_id: p2,
-                })
+                }),
             ]);
             expect(posts3).toHaveLength(2);
             expect(posts3).toIncludeAllMembers([
@@ -317,8 +316,8 @@ describe('Loaders', () => {
                 }),
                 expect.objectContaining({
                     post_id: p2,
-                })
-            ])
+                }),
+            ]);
         });
         it('Can bulk load', async () => {
             await gybson.user.delete({
@@ -357,7 +356,6 @@ describe('Loaders', () => {
     });
     describe('MySQL only', () => {
         itif(DB() === 'mysql')('Loads are case-insensitive on alphabetical keys on single loaders', async () => {
-            console.log(DB());
             await gybson.user.update({
                 values: {
                     email: 'Cased@gmail.com',

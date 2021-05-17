@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { buildClient, buildTableClients } from './client-builder';
+import { logger } from './logger';
 import { writeFormattedFile } from './printer';
 
 /**
@@ -12,7 +13,7 @@ export async function generate(args: { outdir: string; schemaFile: string; gybso
     const { outdir, gybsonLibPath, schemaFile } = args;
 
     const schemaFullPath = join(process.cwd(), schemaFile);
-    console.log('Loading schema from ', schemaFullPath);
+    logger.info('Loading schema from ', schemaFullPath);
 
     let schema = require(schemaFullPath);
     if (!schema) throw new Error('Schema not found');
@@ -22,7 +23,7 @@ export async function generate(args: { outdir: string; schemaFile: string; gybso
         schema = schema.default;
     }
 
-    console.log('Generating client in ', outdir);
+    logger.info('Generating client in ', outdir);
 
     const tableClients = await buildTableClients({ schema, gybsonLibPath: gybsonLibPath ?? 'gybson' });
     const client = await buildClient({ tableClients, gybsonLibPath: gybsonLibPath ?? 'gybson' });
@@ -45,5 +46,5 @@ export async function generate(args: { outdir: string; schemaFile: string; gybso
 
     // await generateEntryPoint(clients, outdir, gybsonLibPath);
 
-    console.log(`Generated for ${Object.keys(schema.tables).length} tables`);
+    logger.info(`Generated for ${Object.keys(schema.tables).length} tables`);
 }

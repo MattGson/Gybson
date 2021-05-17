@@ -1,6 +1,13 @@
 import { Knex } from 'knex';
-import { RelationFilters, Combiners, Operators, RecordAny } from '../../types';
-import { Comparable, RelationDefinition, DatabaseSchema } from 'relational-schema';
+import { Comparable, DatabaseSchema, RelationDefinition } from 'relational-schema';
+import {
+    Combiners,
+    HasManyRelationFilter,
+    HasOneRelationFilter,
+    HasOneRequiredRelationFilter,
+    Operators,
+    RecordAny,
+} from '../../types';
 
 export class WhereResolver {
     constructor(private schema: DatabaseSchema) {}
@@ -18,6 +25,25 @@ export class WhereResolver {
             if (relation.type === 'manyToMany') continue;
             if (relation.alias === alias) return relation;
         }
+        return null;
+    }
+
+    /**
+     * Get a soft delete filter for a table
+     * @param tableAlias
+     * @param tableName
+     * @returns
+     */
+    private getSoftDeleteFilter(tableAlias: string, tableName: string): RecordAny | null {
+        const definition = this.schema.tables[tableName];
+        const column = definition.softDelete;
+        if (!column) return null;
+
+        const columnAlias = `${tableAlias}.${column.columnName}`;
+
+        const type = column?.tsType;
+        if (type === Comparable.Date) return { [columnAlias]: null };
+        if (type === Comparable.boolean) return { [columnAlias]: false };
         return null;
     }
 
@@ -48,6 +74,18 @@ export class WhereResolver {
      */
     private isBlock(value: any): value is RecordAny {
         return typeof value === 'object';
+    }
+
+    /**
+     * Build a deterministic alias for a given table at a depth and branch in the query tree
+     * @param tablename
+     * @param depth
+     * @param logical_branch - branch in logical combiner such as AND, OR
+     * @param clause_branch - branch within a clause
+     * @returns
+     */
+    private joinTableAlias(tablename: string, depth: number, logical_branch: number, clause_branch: number): string {
+        return `${tablename}_${depth}_${logical_branch}_${clause_branch}`;
     }
 
     /**
@@ -116,25 +154,32 @@ export class WhereResolver {
 
     /**
      * Recursive clause resolver
+     * Resolves each filter clause
      * @param params
      * @private
      */
-    private resolveWhere(params: {
+    private resolveFilters(params: {
         subQuery: RecordAny;
         builder: Knex.QueryBuilder;
         depth: number;
+        branch: number;
         table: string;
         tableAlias: string;
     }) {
         // capture context as knex creates it's own sub-contexts
         const context = this;
 
-        const { subQuery, builder, depth, table, tableAlias } = params;
+        const { subQuery, builder, depth, branch, table, tableAlias } = params;
+
+        // keep track of branches within a clause in case of join conflcits (same table referenced)
+        let clause_branch = 0;
 
         for (const [field, filterValue] of Object.entries(subQuery)) {
-            const possibleRelation = this.getRelationFromAlias(field, table);
+            clause_branch++;
 
-            if (!this.isCombiner(field) && !possibleRelation) {
+            const relation = this.getRelationFromAlias(field, table);
+
+            if (!this.isCombiner(field) && !relation) {
                 this.resolveWhereLeaf(field, filterValue, builder, tableAlias);
                 continue;
             }
@@ -142,11 +187,13 @@ export class WhereResolver {
                 switch (field) {
                     case Combiners.AND:
                         builder.where(function () {
-                            for (const clause of filterValue) {
-                                context.resolveWhere({
+                            for (let branch = 0; branch < filterValue.length; branch++) {
+                                const clause = filterValue[branch];
+                                context.resolveFilters({
                                     subQuery: clause,
                                     builder: this,
                                     depth: depth + 1,
+                                    branch,
                                     table,
                                     tableAlias,
                                 });
@@ -155,12 +202,14 @@ export class WhereResolver {
                         break;
                     case Combiners.OR:
                         builder.where(function () {
-                            for (const clause of filterValue) {
+                            for (let branch = 0; branch < filterValue.length; branch++) {
+                                const clause = filterValue[branch];
                                 this.orWhere(function () {
-                                    context.resolveWhere({
+                                    context.resolveFilters({
                                         subQuery: clause,
                                         builder: this,
                                         depth: depth + 1,
+                                        branch,
                                         table,
                                         tableAlias,
                                     });
@@ -170,12 +219,14 @@ export class WhereResolver {
                         break;
                     case Combiners.NOT:
                         builder.where(function () {
-                            for (const clause of filterValue) {
+                            for (let branch = 0; branch < filterValue.length; branch++) {
+                                const clause = filterValue[branch];
                                 this.andWhereNot(function () {
-                                    context.resolveWhere({
+                                    context.resolveFilters({
                                         subQuery: clause,
                                         builder: this,
                                         depth: depth + 1,
+                                        branch,
                                         table,
                                         tableAlias,
                                     });
@@ -186,72 +237,70 @@ export class WhereResolver {
                     default:
                         break;
                 }
-            }
-            // TODO:- multiple relations at same query level breaks query - maybe just need a good error message?
-            //  TODO:- filter soft delete on relations?
-            if (possibleRelation) {
-                const childTable = possibleRelation.toTable;
-                const childTableAlias = childTable + depth;
-                const aliasClause = `${childTable} as ${childTableAlias}`;
-                const joins = possibleRelation.joins;
-
-                if (typeof filterValue !== 'object') {
+            } else if (relation) {
+                if (!this.isBlock(filterValue)) {
                     throw new Error('relation filters expected an object for field ' + field);
                 }
 
+                const childTable = relation.toTable;
+                const childTableDefinition = this.schema.tables[childTable];
+                const childTableAlias = this.joinTableAlias(childTable, depth, branch, clause_branch);
+
+                const childSoftDeleteFilter = this.getSoftDeleteFilter(childTableAlias, childTable);
+                const childPrimarySelect = `${childTableAlias}.${
+                    childTableDefinition.primaryKey?.columnNames[0] ?? '*'
+                }`;
+
+                /**
+                 * Each clause i.e. exists, where, whereEvery
+                 */
                 for (const [relationFilter, clause] of Object.entries(filterValue as RecordAny)) {
                     switch (relationFilter) {
-                        case RelationFilters.existsWhere:
-                            builder.whereExists(function () {
-                                // join the child table in a correlated sub-query for exists
-                                this.select(`${childTableAlias}.*`).from(aliasClause);
-                                for (const { toColumn, fromColumn } of joins) {
-                                    this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
-                                }
-                                // resolve for child table
-                                context.resolveWhere({
-                                    subQuery: clause,
-                                    builder: this,
-                                    depth: depth + 1,
-                                    table: childTable,
-                                    tableAlias: childTableAlias,
+                        case HasOneRelationFilter.exists:
+                        case HasManyRelationFilter.exists:
+                            // accept any truthy value for exists
+                            if (clause) {
+                                if (childSoftDeleteFilter) builder.where(childSoftDeleteFilter);
+                                builder.whereNotNull(childPrimarySelect);
+                            } else {
+                                // doesn't exist if either is null or is soft deleted
+                                builder.where(function () {
+                                    this.whereNull(childPrimarySelect);
+                                    if (childSoftDeleteFilter) this.orWhereNot(childSoftDeleteFilter);
                                 });
-                            });
+                            }
                             break;
-                        case RelationFilters.notExistsWhere:
+                        case HasOneRelationFilter.where:
+                        case HasOneRequiredRelationFilter.where:
+                        case HasManyRelationFilter.where:
+                            if (childSoftDeleteFilter) builder.where(childSoftDeleteFilter);
+
+                            context.resolveFilters({
+                                subQuery: clause,
+                                builder,
+                                depth: depth + 1,
+                                branch,
+                                table: childTable,
+                                tableAlias: childTableAlias,
+                            });
+
+                            break;
+
+                        case HasManyRelationFilter.whereEvery:
+                            // Use double negation in sub-query as this is hard to implement with joins
                             builder.whereNotExists(function () {
-                                // join the child table in a correlated sub-query for exists
-                                this.select(`${childTableAlias}.*`).from(aliasClause);
-                                for (const { toColumn, fromColumn } of joins) {
+                                this.select(childPrimarySelect).from({ [childTableAlias]: childTable });
+                                for (const { toColumn, fromColumn } of relation.joins) {
                                     this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
                                 }
-                                // resolve for child table
-                                context.resolveWhere({
-                                    subQuery: clause,
+                                if (childSoftDeleteFilter) this.where(childSoftDeleteFilter);
+                                context.resolveFilters({
+                                    subQuery: {
+                                        NOT: [clause],
+                                    },
                                     builder: this,
                                     depth: depth + 1,
-                                    table: childTable,
-                                    tableAlias: childTableAlias,
-                                });
-                            });
-                            break;
-                        case RelationFilters.whereEvery:
-                            // Use double negation TODO:- change this?
-                            // WHERE NOT EXISTS ( SELECT where NOT ...)
-                            builder.whereNotExists(function () {
-                                // join the child table in a correlated sub-query for exists
-                                this.select(`${childTableAlias}.*`).from(aliasClause);
-                                for (const { toColumn, fromColumn } of joins) {
-                                    this.whereRaw(`${childTableAlias}.${toColumn} = ${tableAlias}.${fromColumn}`);
-                                }
-                                const negation = {
-                                    NOT: [clause],
-                                };
-                                // resolve for child table
-                                context.resolveWhere({
-                                    subQuery: negation,
-                                    builder: this,
-                                    depth: depth + 1,
+                                    branch,
                                     table: childTable,
                                     tableAlias: childTableAlias,
                                 });
@@ -259,6 +308,80 @@ export class WhereResolver {
                             break;
                         default:
                             break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Add all relation joins (recursive)
+     * Note:- it's important that this method uses the same
+     *  mechanism (depth, branch, clause_branch) to alias tables
+     *  as resolveFilters() else the alias' will not match up
+     * @param params
+     */
+    private buildJoins(params: {
+        subQuery: RecordAny;
+        builder: Knex.QueryBuilder;
+        depth: number;
+        branch: number;
+        table: string;
+        tableAlias: string;
+    }) {
+        const { subQuery, builder, depth, branch, table, tableAlias } = params;
+
+        // can't be a relation
+        if (typeof subQuery !== 'object') return;
+
+        // keep track of branches within a clause in case of join conflcits (same table referenced)
+        let clause_branch = 0;
+
+        for (const [field, filterValue] of Object.entries(subQuery)) {
+            clause_branch++;
+            const relation = this.getRelationFromAlias(field, table);
+
+            if (this.isCombiner(field)) {
+                // check each combiner branch for relations
+                for (let branch = 0; branch < filterValue.length; branch++) {
+                    const clause = filterValue[branch];
+                    this.buildJoins({
+                        subQuery: clause,
+                        builder,
+                        depth: depth + 1,
+                        branch,
+                        table,
+                        tableAlias,
+                    });
+                }
+            } else if (relation) {
+                const childTable = relation.toTable;
+                const childTableAlias = this.joinTableAlias(childTable, depth, branch, clause_branch);
+                const aliasClause = `${childTable} as ${childTableAlias}`;
+                const joins = relation.joins;
+
+                if (typeof filterValue !== 'object') {
+                    throw new Error('relation filters expected an object for field ' + field);
+                }
+
+                // just join each related table only once per depth
+                builder.leftJoin(aliasClause, function () {
+                    for (const { toColumn, fromColumn } of joins) {
+                        this.on(`${childTableAlias}.${toColumn}`, `${tableAlias}.${fromColumn}`);
+                    }
+                });
+
+                for (const [_clause, body] of Object.entries(filterValue as RecordAny)) {
+                    if (typeof body === 'object') {
+                        // recurse to check for nested relations
+                        this.buildJoins({
+                            subQuery: body,
+                            builder: builder,
+                            depth: depth + 1,
+                            branch: 0,
+                            table: childTable,
+                            tableAlias: childTableAlias,
+                        });
                     }
                 }
             }
@@ -277,16 +400,32 @@ export class WhereResolver {
     }): Knex.QueryBuilder {
         const { queryBuilder, where, tableName, tableAlias } = params;
 
-        // Resolve each sub-clause recursively
-        // Clause can be either a where-leaf, a combiner or a relation
-        // Depth is used to create unique table alias'
-        this.resolveWhere({
+        const tableSchema = this.schema.tables[tableName];
+
+        // build all relation joins in each sub-clause recursively
+        this.buildJoins({
             subQuery: where,
             builder: queryBuilder,
             depth: 1,
+            branch: 0,
             table: tableName,
             tableAlias: tableAlias,
         });
+
+        // Resolve the filters in each sub-clause recursively
+        this.resolveFilters({
+            subQuery: where,
+            builder: queryBuilder,
+            depth: 1,
+            branch: 0,
+            table: tableName,
+            tableAlias: tableAlias,
+        });
+
+        // remove any duplicates caused by joins
+        const groupColumns = tableSchema.primaryKey?.columnNames?.map((c) => `${tableAlias}.${c}`) ?? [];
+        queryBuilder.groupBy(groupColumns);
+
         return queryBuilder;
     }
 }

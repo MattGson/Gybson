@@ -45,7 +45,10 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
      * @param filter
      * @param extras
      */
-    private filterHashKey<K extends { filter: Filter }>(filter: K, extras?: SoftDeleteQueryFilter & OrderQueryFilter<Order>) {
+    private filterHashKey<K extends { filter: Filter }>(
+        filter: K,
+        extras?: SoftDeleteQueryFilter & OrderQueryFilter<Order>,
+    ) {
         let filterKey = keyify(filter).sort().join(':');
         if (extras?.orderBy) {
             // we need to make sure different orderings on the same filter are batched separately
@@ -54,7 +57,7 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
             filterKey += JSON.stringify(extras.orderBy);
         }
         if (extras?.includeDeleted) {
-            filterKey += ':includeDeleted.true'
+            filterKey += ':includeDeleted.true';
         }
         return filterKey;
     }
@@ -94,7 +97,6 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
         let loader = this.loaders.manyLoaders[loadAngle];
 
         if (!loader) {
-            // create new loader
             logger().debug(`No many-loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.manyLoaders[loadAngle] = new DataLoader<Filter, RowType[], string>(
                 // TODO:- check if this scope capture has memory implications?
@@ -120,7 +122,6 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
         let loader = this.loaders.oneLoaders[loadAngle];
 
         if (!loader) {
-            // create new loader
             logger().debug(`No single-loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.oneLoaders[loadAngle] = new DataLoader<Filter, RowType | null, string>(
                 // TODO:- check if this scope capture has memory implications?

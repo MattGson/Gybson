@@ -33,7 +33,7 @@ describe('Delete', () => {
                     author_id: ids.user1Id,
                     message: 'Hello',
                     rating_average: 2000,
-                }
+                },
             });
             const post = await gybson.post.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
@@ -60,7 +60,7 @@ describe('Delete', () => {
                     author_id: ids.user1Id,
                     message: 'Hello',
                     rating_average: 2000,
-                }
+                },
             });
             const post = await gybson.post.loadOne({ where: { post_id: postId } });
             expect(post).toEqual(
