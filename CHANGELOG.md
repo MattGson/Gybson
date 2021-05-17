@@ -1,3 +1,16 @@
+# [1.2.0](https://github.com/MattGson/Gybson/compare/v1.1.0...v1.2.0) (2021-05-17)
+
+
+### Bug Fixes
+
+* **filters:** fixes relation filters. Now account for cardinality. Also filter soft deletes ([6ef4551](https://github.com/MattGson/Gybson/commit/6ef45516146ef100a3e999dc505119b0c7f36dd5)), closes [#38](https://github.com/MattGson/Gybson/issues/38)
+* **soft-delete:** makes soft-delete function consistent with update behvaiour ([a2044ad](https://github.com/MattGson/Gybson/commit/a2044ad42092650e4f2046f97a3d838eaf895c88))
+
+
+### Features
+
+* **where:** updates where filters for relations to utilise left joins ([7b4fc6c](https://github.com/MattGson/Gybson/commit/7b4fc6ca3cfd74a4a7a22c77967b9be10f4efc94))
+
 # [1.1.0](https://github.com/MattGson/Gybson/compare/v1.0.1...v1.1.0) (2021-05-12)
 
 
