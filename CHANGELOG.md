@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/MattGson/Gybson/compare/v1.2.0...v1.2.1) (2021-05-26)
+
+
+### Bug Fixes
+
+* **types:** small style fix ([74fa21f](https://github.com/MattGson/Gybson/commit/74fa21f143ce0c98fd2df2432fb9317cab9bc13e))
+
 # [1.2.0](https://github.com/MattGson/Gybson/compare/v1.1.0...v1.2.0) (2021-05-17)
 
 
