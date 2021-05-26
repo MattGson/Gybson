@@ -1,9 +1,13 @@
 import type { Connection } from './client-types';
 
-export declare type Enumerable<T> = Array<T>;
+export type PromiseAble<T> = {
+    then(): T;
+};
 
-export declare type RecordAny = Record<string, any>;
-export declare type RecordUnknown = Record<string, unknown>;
+export type Enumerable<T> = Array<T>;
+
+export type RecordAny = Record<string, any>;
+export type RecordUnknown = Record<string, unknown>;
 
 // These are just for helping write the query builder
 export type OrderBy = { [column: string]: Order | undefined };

@@ -282,23 +282,63 @@ describe('Loaders', () => {
             const p2 = await seedPost(gybson, { author_id: u, message: 'a' });
 
             // Should batch and return value to each caller
-            const [posts1, posts2, posts3] = await Promise.all([
-                gybson.post.loadMany({
-                    where: {
-                        author_id: u,
+            // const [posts1, posts2, posts3] = await Promise.all([
+            // gybson.post.loadMany({
+            //     where: {
+            //         author_id: u,
+            //     },
+            // }).include({
+            //     post: {
+            //         where: {
+            //             id: 1
+            //         }
+            //     }
+            // }),
+
+            const q = gybson.post.one({ where: { post_id: 1 } }).paginate({
+                limit: 1,
+                offset: 12,
+            });
+
+            const c = q
+                .comments({ where: { title: 'test' } })
+                .with({
+                    author: true,
+                    tags: {
+                        category: true,
                     },
-                }),
-                gybson.post.loadMany({
-                    where: {
-                        author_id: ids.user1Id,
-                    },
-                }),
-                gybson.post.loadMany({
-                    where: {
-                        author_id: u,
-                    },
-                }),
-            ]);
+                })
+                .first();
+
+            const d = q.comments().only({ first: 12, after: { id: '232-434-1232' } });
+
+            gybson.comment.from(c).author().first();
+
+            // gybson.post.loadMany({
+            //     where: {
+            //         author_id: ids.user1Id,
+            //     },
+            // }).users({
+            //     where: {
+
+            //     }
+            // }).with({
+            //     posts: {
+            //         where: {
+
+            //         },
+            //         orderBy: {
+            //             id
+            //         }
+            //     }
+            // }).first()
+
+            // gybson.post.loadMany({
+            //     where: {
+            //         author_id: u,
+            //     },
+            // }),
+            // ]);
             // both posts1 and posts3 should have same values
             expect(posts1).toHaveLength(2);
             expect(posts1).toIncludeAllMembers([
