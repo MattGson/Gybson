@@ -36,7 +36,6 @@ export class GybsonBase {
      */
     public async _transaction<T>(fn: (conn: Connection) => T): Promise<T> {
         const conn = await this.knex.client.acquireConnection();
-
         try {
             await this.knex.raw('START TRANSACTION').connection(conn);
             const result = await fn(conn);
