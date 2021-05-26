@@ -5,6 +5,7 @@ export declare type RecordUnknown = Record<string, unknown>;
 
 // These are just for helping write the query builder
 export type OrderBy = { [column: string]: Order | undefined };
+
 export type Paginate = {
     limit?: number;
     afterCursor?: { [column: string]: any };
