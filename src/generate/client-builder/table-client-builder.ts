@@ -49,10 +49,9 @@ export class TableClientBuilder {
             requiredRowTypeName,
         } = this.typeNames;
         return `
-            import { ClientEngine } from '${this.options.gybsonLibPath}';            
+            import { ClientEngine, Logger } from '${this.options.gybsonLibPath}';            
             import schema from './relational-schema';
             import { Knex } from 'knex';
-            import winston from 'winston';
 
             ${this.types}
 
@@ -67,7 +66,7 @@ export class TableClientBuilder {
                     
                     constructor(params: {
                         knex: Knex<any, unknown>;
-                        logger: winston.Logger;
+                        logger: Logger;
                         engine: ClientEngine;
                     }) {
                         const { knex, logger, engine } = params;

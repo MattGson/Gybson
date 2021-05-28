@@ -111,7 +111,7 @@ describe('Upsert', () => {
                     mergeColumns: {
                         message: true,
                     },
-                    reinstateSoftDeletedRows: true,
+                    reinstateSoftDeletes: true,
                 });
                 await gybson.post.purge();
                 const post2 = await gybson.post.loadOne({ where: { post_id: postId } });
@@ -207,7 +207,7 @@ describe('Upsert', () => {
                     update: {
                         message: 'latest',
                     },
-                    reinstateSoftDeletedRows: true,
+                    reinstateSoftDeletes: true,
                 });
                 await gybson.post.purge();
                 const post2 = await gybson.post.loadOne({ where: { post_id: postId } });

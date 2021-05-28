@@ -6,34 +6,35 @@ sidebar_label: Query API
 
 ## Loaders
 
-Loaders are methods for each table that perform super fast [batched](https://github.com/graphql/dataloader#batching) and [cached](https://github.com/graphql/dataloader#batching) loads on key columns.
+Loaders are methods for each table that perform super fast [batched](https://github.com/graphql/dataloader#batching) and [cached](https://github.com/graphql/dataloader#batching) loads on indexed columns.
 This is designed to minimise performance issues from the [n+1 problem](https://stackoverflow.com/questions/97197/what-is-the-n1-selects-problem-in-orm-object-relational-mapping).
 
-Loaders are the primary way of getting data from your database.
+Loaders are the primary way of retrieving data using Gybson.
 
 ### loadOne
 
 `loadOne(...)` returns a single record or null.
 
-`loadOne` filters by a unique column or combination (often primary key).
+`loadOne` filters by a unique key (often primary key).
 
 ```typescript
-const user = await gybson.Users.loadOne({
+const user = await gybson.user.loadOne({
     where: {
         user_id: 1,
     },
 });
 // Return type: User | null
 ```
+
 A compound unique key example:
 
 ```typescript
-const posts = await gybson.Posts.loadOne({
+const posts = await gybson.post.loadOne({
     where: {
         tag_id__topic_id: {
             tag_id: 1,
-            topic_id: 4
-        }
+            topic_id: 4,
+        },
     },
 });
 
@@ -46,7 +47,7 @@ const posts = await gybson.Posts.loadOne({
 `loadMany` filters on non-unique key columns (often foreign keys).
 
 ```typescript
-const posts = await gybson.Posts.loadMany({
+const posts = await gybson.post.loadMany({
     where: {
         author_id: 1,
     },
@@ -54,10 +55,11 @@ const posts = await gybson.Posts.loadMany({
 
 // Return type: posts[]
 ```
+
 An order can be specified:
 
 ```typescript
-const posts = await gybson.Posts.loadMany({
+const posts = await gybson.post.loadMany({
     where: {
         author_id: 1,
     },
@@ -69,6 +71,7 @@ const posts = await gybson.Posts.loadMany({
 // Return type: posts[]
 ```
 
+---
 
 ## findMany
 
@@ -92,7 +95,7 @@ For all filtering options see [Filtering](where)
 **i.e.** Find all users where age is not 10 **and** they have a pet with the type "dog".
 
 ```typescript
-const users = await gybson.Users.findMany({
+const users = await gybson.user.findMany({
     where: {
         age: {
             not: 10,
@@ -115,7 +118,7 @@ You can specify one or more ordering columns as well as the order direction (asc
 **i.e.** Find all users ordered by first_name and last_name in descending order, age in ascending order.
 
 ```typescript
-const users = await gybson.Users.findMany({
+const users = await gybson.user.findMany({
     orderBy: {
         first_name: 'desc',
         last_name: 'desc',
@@ -141,7 +144,7 @@ Offset-limit pagination is simpler than cursor pagination but does not work as w
 **i.e.** Find the first 4 users in ascending last_name order after row 300.
 
 ```typescript
-const users = await gybson.Users.findMany({
+const users = await gybson.user.findMany({
     orderBy: {
         last_name: 'asc',
     },
@@ -166,7 +169,7 @@ When using cursor pagination, you should specify the same columns in orderBy as 
 **i.e.** Find the first 4 users in ascending order with a last_name after 'Jones'.
 
 ```typescript
-const users = await gybson.Users.findMany({
+const users = await gybson.user.findMany({
     orderBy: {
         last_name: 'asc',
     },
@@ -179,17 +182,19 @@ const users = await gybson.Users.findMany({
 });
 ```
 
+---
+
 ## insert
 
 Inserts one or more rows into the database. This will automatically apply _DEFAULT_ values for any
-columns that are undefined.
+columns that are `undefined`.
 
 Insert returns the id of the first row inserted.
 
 ### insert a single row
 
 ```typescript
-const user_id = await gybson.Users.insert({
+const user_id = await gybson.user.insert({
     values: {
         first_name: 'John',
         age: 25,
@@ -201,7 +206,7 @@ const user_id = await gybson.Users.insert({
 ### insert multiple rows
 
 ```typescript
-const user_id = await gybson.Users.insert({
+const user_id = await gybson.user.insert({
     values: [
         {
             first_name: 'John',
@@ -217,34 +222,89 @@ const user_id = await gybson.Users.insert({
 });
 ```
 
-## upsert
-
-Inserts multiple row into the database. If a row already exists with the primary key, the row will be updated.
-
-In the case of conflicts, you can specify which columns you want to update.
-
-You can also specify whether to reinstate (remove soft delete) on a row that has previously been soft-deleted.
-
-### Upsert one
+You can also choose to skip duplicate rows during a multi-row insert:
 
 ```typescript
-const users = await gybson.Users.upsert({
+const user_id = await gybson.user.insert({
+    values: [
+        {
+            first_name: 'John',
+            age: 25,
+            last_name: 'Doe',
+        },
+        {
+            first_name: 'Jane',
+            age: 30,
+            last_name: 'Doe',
+        },
+    ],
+    skipDuplicates: true,
+});
+```
+
+---
+
+## upsert
+
+Inserts multiple row into the database. If a row already exists with the same primary key, the row will be updated.
+
+:::tip
+
+Upsert is implemented using native SQL functionality:
+ON CONFLICT DO in Postgres
+ON DUPLICATE KEY UPDATE in MySQL
+
+Because of this, the databases may behave differently with the same query. For instance, MySQL will upsert on any unique constraint conflict.
+PostgreSQL will only conflict on the primary key.
+
+:::
+
+In the case of conflicts, you can specify how you want to update the existing row(s):
+
+### mergeColumns
+
+will overwrite the values on the existing row with the values of the new row for the selected columns:
+
+```typescript
+const users = await gybson.user.upsert({
     values: {
         first_name: 'John',
         age: 25,
         last_name: 'Doe',
     },
-    updateColumns: {
+    mergeColumns: {
         first_name: true,
         age: true,
     },
 });
 ```
 
-### Upsert many
+Will update only the `first_name` and `age` values if the row already exists.
+
+### update
+
+will update existing rows with the specifed values:
 
 ```typescript
-const users = await gybson.Users.upsert({
+const users = await gybson.user.upsert({
+    values: {
+        id: 12,
+        first_name: 'John',
+        age: 25,
+        last_name: 'Doe',
+    },
+    update: {
+        first_name: 'John 2',
+    },
+});
+```
+
+Will set the users first_name to `John 2` if they already exist.
+
+### Upsert multiple rows
+
+```typescript
+const users = await gybson.user.upsert({
     values: [
         {
             first_name: 'John',
@@ -257,12 +317,31 @@ const users = await gybson.Users.upsert({
             last_name: 'Doe',
         },
     ],
-    updateColumns: {
+    mergeColumns: {
         age: true,
     },
-    reinstateSoftDeletedRows: true,
 });
 ```
+
+### Upsert with soft-deletes
+
+You can also specify whether to reinstate (remove soft delete) on a row that has previously been soft-deleted:
+
+```typescript
+const users = await gybson.user.upsert({
+    values: {
+        first_name: 'John',
+        age: 25,
+        last_name: 'Doe',
+    },
+    mergeColumns: {
+        age: true,
+    },
+    reinstateSoftDelete: true,
+});
+```
+
+---
 
 ## update
 
@@ -271,7 +350,7 @@ Updates all rows that match a filter.
 `update` supports all [where](where) filter options.
 
 ```typescript
-await gybson.Users.update({
+await gybson.user.update({
     values: {
         first_name: 'Joe',
         age: 25,
@@ -284,6 +363,8 @@ await gybson.Users.update({
 });
 ```
 
+---
+
 ## softDelete
 
 A soft-delete allows you to treat a row as deleted while maintaining it for record-keeping or recovery purposes.
@@ -295,7 +376,7 @@ By default any tables with a column `deleted` or `deleted_at` support soft delet
 `softDelete` supports all [where](where) filter options.
 
 ```typescript
-await gybson.Users.softDelete({
+await gybson.user.softDelete({
     where: {
         user_id: {
             not: 5,
@@ -303,6 +384,8 @@ await gybson.Users.softDelete({
     },
 });
 ```
+
+---
 
 ## delete
 
@@ -311,7 +394,7 @@ await gybson.Users.softDelete({
 `delete` supports all [where](where) filter options.
 
 ```typescript
-await gybson.Users.delete({
+await gybson.user.delete({
     where: {
         user_id: {
             not: 5,
@@ -320,47 +403,51 @@ await gybson.Users.delete({
 });
 ```
 
-## runTransaction
+---
 
-Use `runTransaction` to run a set of queries as a single atomic query. This means if any
+## transactions
+
+Use `_transactions` to run a set of queries as a single atomic query. This means if any
 of the queries fail then none of the changes will be committed.
 
 You can include a query in the transaction by passing in the `connection` argument.
 
 ```typescript
-
-const newUser = await gybson.runTransaction(async (connection) => {
-    const users = await gybson.Users.softDelete({
+const newUserId = await gybson._transaction(async (connection) => {
+    const users = await gybson.user.softDelete({
         connection,
         where: {
             user_id: 1,
         },
     });
-    return await gybson.Users.insert({
+    const id = await gybson.user.insert({
         connection,
         values: { first_name: 'Steve' },
     });
+    return id;
 });
 ```
 
+---
+
 ## Manual connection handling
 
-Most query functions allow an optional `connection` argument. You can pass a MySQL or PG connection
-and the query will use it instead of the internal connection.
+Most query functions allow an optional `connection` argument. You can pass a MySQL or PostgreSQL connection
+and the query will use it instead of the internal Knex connection.
 
 This can be useful for apps with existing connection handling or more complex transaction handling requirements.
 
-Example with `insert` and MySQL:
+Example with MySQL:
 
 ```typescript
 import mysql from 'promise-mysql';
 
-const poolConn = mysql.getPoolConnection();
+const connection = mysql.getPoolConnection();
 
-return await gybson.Users.insert({
-    connection: poolConn,
+return await gybson.user.insert({
+    connection
     values: { first_name: 'Steve' },
 });
 
-poolConn.close();
+await connection.close();
 ```

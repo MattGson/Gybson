@@ -1,11 +1,10 @@
-import path from 'path';
 import { generate } from 'src/generate';
 
-const outdir = path.join(process.cwd(), 'test/tmp');
+const outdir = 'test/tmp';
 // fake lib path for tests
-const gybsonLibPath = path.join('../../src/query-client');
+const gybsonLibPath = '../../src/query-client';
 
-const schemaFile = 'test/tmp/relational-schema.ts';
+const schemaFile = 'test/tmp/relational-schema.js';
 
 // build a gybson client for testing
 generate({ outdir, gybsonLibPath, schemaFile }).catch((e) => console.log(e));

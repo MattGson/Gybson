@@ -4,39 +4,35 @@
  * Created by Matt Goodson
  */
 
-import path from 'path';
 import yargs from 'yargs';
-const { hideBin } = require('yargs/helpers');
 import { generate } from '../generate/index';
-import { LogLevel } from '../types';
 import { logger } from '../generate/logger';
-
-type logLevel = LogLevel;
-const logLevels: ReadonlyArray<logLevel> = [LogLevel.debug, LogLevel.info];
+const { hideBin } = require('yargs/helpers');
 
 yargs(hideBin(process.argv))
     .usage('Usage: $0 <command> [options]')
     .command(
         'generate',
-        'Generate client from relational-schema',
+        'Generate client from a relational-schema.js file',
         (yargs) => {
             yargs
                 .options({
                     schemaFile: {
                         type: 'string',
                         description: 'The location of the relations schema file',
+                        demandOption: true,
                     },
-                    outdir: { type: 'string', default: './gen' },
+                    outdir: {
+                        type: 'string',
+                        default: './gen',
+                        description: 'The directory to generate the client code in',
+                    },
                     prettierConfig: { type: 'string', description: 'Path to a prettierrc file' },
-                    logLevel: { choices: logLevels, default: LogLevel.info },
                 })
                 .global('config')
-                .default('config', 'relation-config.json')
+                .default('config', 'gybson.json')
                 .config('config', 'Configure using a json file')
-                .example(
-                    '$0 introspect',
-                    'generate the schema using a introspect-config.json file in the current directory',
-                );
+                .example('$0 generate', 'generate the client using a gybson.json file in the current directory');
         },
         async (argv) => {
             await generateClient(argv);
@@ -46,11 +42,9 @@ yargs(hideBin(process.argv))
 
 async function generateClient(args: any) {
     try {
-        // TODO:- options
+        const { schemaFile, outdir, prettierConfig } = args;
 
-        const GENERATED_DIR = path.join(process.cwd(), args.outdir);
-
-        await generate({ outdir: GENERATED_DIR, gybsonLibPath: 'gybson', schemaFile: args.schemaFile });
+        await generate({ outdir, gybsonLibPath: 'gybson', schemaFile, prettierConfig });
     } catch (e) {
         logger.error(e.message);
         logger.info('Use: "gybson -h" to see help');

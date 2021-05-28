@@ -3,9 +3,8 @@ import _ from 'lodash';
 import { Connection as PGConn } from 'pg';
 import { Connection as MySQLConn } from 'promise-mysql';
 import { ColumnDefinition, Comparable, DatabaseSchema } from 'relational-schema';
-import winston from 'winston';
 import { ClientEngine, OrderBy, Paginate, RecordAny } from '../../types';
-import { Loader, OrderQueryFilter, runMiddleWares, SoftDeleteQueryFilter } from '../index';
+import { Loader, Logger, OrderQueryFilter, runMiddleWares, SoftDeleteQueryFilter } from '../index';
 import { WhereResolver } from './where-resolver';
 
 type Connection = PGConn | MySQLConn;
@@ -25,7 +24,7 @@ export abstract class QueryClient<
     private readonly tableAlias: string;
     private readonly schema: DatabaseSchema;
     private readonly knex: Knex<any, unknown>;
-    private readonly logger: winston.Logger;
+    private readonly logger: Logger;
     private readonly engine: ClientEngine;
     protected readonly whereResolver: WhereResolver;
 
@@ -38,7 +37,7 @@ export abstract class QueryClient<
         tableName: string;
         schema: DatabaseSchema;
         knex: Knex<any, unknown>;
-        logger: winston.Logger;
+        logger: Logger;
         engine: ClientEngine;
     }) {
         const { tableName, schema, knex, logger, engine } = params;
@@ -327,11 +326,11 @@ export abstract class QueryClient<
     public async upsert(params: {
         connection?: Connection;
         values: RequiredTblRow | RequiredTblRow[];
-        reinstateSoftDeletedRows?: boolean;
+        reinstateSoftDeletes?: boolean;
         mergeColumns?: Partial<TblColumnMap>;
         update?: PartialTblRow;
     }): Promise<number> {
-        const { values, connection, reinstateSoftDeletedRows, mergeColumns, update } = params;
+        const { values, connection, reinstateSoftDeletes, mergeColumns, update } = params;
 
         if (update && mergeColumns) throw new Error('Upsert: Cannot specify both mergeColumns and update');
 
@@ -351,7 +350,7 @@ export abstract class QueryClient<
             for (const [column, update] of Object.entries(mergeColumns)) {
                 if (update) columnsToMerge.push(column);
             }
-            if (reinstateSoftDeletedRows && this.softDeleteColumn) {
+            if (reinstateSoftDeletes && this.softDeleteColumn) {
                 columnsToMerge.push(this.softDeleteColumn.columnName);
                 // add soft delete reset to all records
                 insertRows = insertRows.map((value) => {
@@ -370,7 +369,7 @@ export abstract class QueryClient<
         }
         if (update) {
             let updates: PartialTblRow = update!;
-            if (reinstateSoftDeletedRows) {
+            if (reinstateSoftDeletes) {
                 updates = {
                     ...update!,
                     ...this.softDeleteFilter(false),
