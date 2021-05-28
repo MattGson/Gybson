@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/MattGson/Gybson/compare/v1.2.2...v1.3.0) (2021-05-28)
+
+
+### Features
+
+* **client:** adds namespaced exports to client ([1cb9c94](https://github.com/MattGson/Gybson/commit/1cb9c94b82c26a488a1b3d3ed4ba4ff31c088e08))
+
 ## [1.2.2](https://github.com/MattGson/Gybson/compare/v1.2.1...v1.2.2) (2021-05-28)
 
 
