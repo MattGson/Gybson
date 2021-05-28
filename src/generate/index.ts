@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { LogLevel } from 'src/types';
-import { buildClient, buildTableClients } from './client-builder';
+import { buildClient, buildEntryPoint, buildTableClients } from './client-builder';
 import { logger } from './logger';
 import { writeFormattedFile } from './printer';
 
@@ -41,6 +41,7 @@ export async function generate(args: {
 
     const tableClients = await buildTableClients({ schema, gybsonLibPath: gybsonLibPath ?? 'gybson' });
     const client = await buildClient({ tableClients, gybsonLibPath: gybsonLibPath ?? 'gybson' });
+    const index = await buildEntryPoint({ tableClients });
 
     await Promise.all(
         tableClients.map((cl) => {
@@ -54,6 +55,11 @@ export async function generate(args: {
 
     await writeFormattedFile({
         content: client.code,
+        directory: GENERATED_DIR,
+        filename: 'gybson.client',
+    });
+    await writeFormattedFile({
+        content: index.code,
         directory: GENERATED_DIR,
         filename: 'index',
     });

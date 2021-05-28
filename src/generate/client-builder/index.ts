@@ -64,3 +64,27 @@ export function buildClient(params: { tableClients: TableClient[]; gybsonLibPath
 
     return { code: index };
 }
+
+/**
+ * Build the main client entrypoint
+ * @param builders
+ * @param outdir
+ * @param gybsonLibPath
+ */
+export function buildEntryPoint(params: { tableClients: TableClient[] }): { code: string } {
+    const { tableClients } = params;
+    let index = `
+    // namespaced exports can be useful to avoid naming collisions
+    export * as Gybson from './gybson.client';
+    export {
+        GybsonClient
+    `;
+    for (const { className } of tableClients) {
+        index += `, ${className}`;
+    }
+    index += `
+        } from './gybson.client';
+    `;
+
+    return { code: index };
+}
