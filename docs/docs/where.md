@@ -23,19 +23,20 @@ The supported conditions are:
 -   `gte` - The column is greater than or equal to the value
 
 String type columns only
+
 -   `contains` - The column is contains the substring
--   `startsWith` - The column is starts with the substring 
--   `endsWith` - The column ends with the substring 
+-   `startsWith` - The column is starts with the substring
+-   `endsWith` - The column ends with the substring
 
 **e.g.** All users named 'Steve' who are more than 20 years old
 
 ```typescript
-await gybson.Users.findMany({
+await gybson.user.findMany({
     where: {
         first_name: 'Steve',
         age: {
-            gt: 20
-        }       
+            gt: 20,
+        },
     },
 });
 ```
@@ -51,7 +52,7 @@ Clauses can be joined using AND, OR and NOT
 **e.g.** All users named 'Steve' who are 20 or 30 years old
 
 ```typescript
-await gybson.Users.findMany({
+await gybson.user.findMany({
     where: {
         first_name: 'Steve',
         OR: [
@@ -68,23 +69,39 @@ await gybson.Users.findMany({
 
 ### Relation filters
 
-Related tables can be filtered by
+Related tables can be filtered by different options depending on the relationship cardinality (1-N, N-1, N-N, 1-1)
 
--   `existsWhere` - there is a least one related row that matches the condition
--   `notExistsWhere` - there is a no related row that matches the condition
+The relation filters available are:
+
+-   `exists` - boolean - assert whether there is/is not at least one related row
+-   `where` - there is at least one related row that matches the condition
 -   `whereEvery` - every related row matches the condition
 
-**e.g.** All users who have a post with a rating above 4
+**e.g.**
+
+All users who have a post with a rating above 4
 
 ```typescript
-await gybson.Users.findMany({
+await gybson.user.findMany({
     where: {
         posts: {
-            existsWhere: {
+            where: {
                 rating: {
                     gt: 4,
                 },
             },
+        },
+    },
+});
+```
+
+All users who have not made any posts
+
+```typescript
+await gybson.user.findMany({
+    where: {
+        posts: {
+            exists: false,
         },
     },
 });
@@ -99,10 +116,10 @@ Find the first 3 users where:
 -   The age is less than 20
 -   The favourite Pet is either a 'dog' or a 'cat'
 -   Every pet they own is a dog
--   Every dog they own has a bone
+-   Every dog they own has toy
 
 ```typescript
-const users = await gybson.Users.findMany({
+const users = await gybson.user.findMany({
     where: {
         city: 'NY',
         NOT: [
@@ -127,9 +144,7 @@ const users = await gybson.Users.findMany({
             whereEvery: {
                 type: 'dog',
                 toys: {
-                    existsWhere: {
-                        name: 'bone',
-                    },
+                    exists: true,
                 },
             },
         },
@@ -174,13 +189,12 @@ CREATE TABLE posts (
 
 ### Types
 
-The following types are generated for the given schema
+Here are some examples of the types generated for the above schema:
 
 ```typescript
-export interface usersRelationFilter {
-    existsWhere?: usersWhere;
-    notExistsWhere?: usersWhere;
-    whereEvery?: usersWhere;
+export interface usersHasOneRelationFilter {
+    exists?: usersWhere;
+    where?: usersWhere;
 }
 
 export interface usersWhere {
@@ -195,13 +209,13 @@ export interface usersWhere {
     OR?: Enumerable<usersWhere>;
     NOT?: Enumerable<usersWhere>;
 
-    best_friend?: usersRelationFilter | null;
-    author_posts?: postsRelationFilter | null;
+    best_friend?: usersHasOneRelationFilter | null;
+    author_posts?: postsHasManyRelationFilter | null;
 }
 
-export interface postsRelationFilter {
-    existsWhere?: postsWhere;
-    notExistsWhere?: postsWhere;
+export interface postsHasManyRelationFilter {
+    exists?: boolen;
+    where?: postsWhere;
     whereEvery?: postsWhere;
 }
 
@@ -216,10 +230,9 @@ export interface postsWhere {
     OR?: Enumerable<postsWhere>;
     NOT?: Enumerable<postsWhere>;
 
-    author?: usersRelationFilter | null;
+    author?: usersHasOneRelationFilter | null;
 }
 ```
-
 
 ## Prior art
 

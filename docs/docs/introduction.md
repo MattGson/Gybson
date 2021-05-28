@@ -26,16 +26,23 @@ Gybson is a type-safe, auto-generated Node.js query client (light-weight ORM) fo
 Optimized for super fast lazy loading, using batching and caching, it's perfect for GraphQL apps.
 
 Gybson is built on top of trusted open-source projects:
- - [Knex](https://github.com/knex/knex)
- - [DataLoader](https://github.com/graphql/dataloader)
- 
+
+-   [Knex](https://github.com/knex/knex)
+-   [DataLoader](https://github.com/graphql/dataloader)
+
 Gybson works with MySQL and PostgreSQL databases.
 
 ## Why Gybson?
 
 Gybson was created to make working with relational databases in Typescript as productive as possible.
 
-Just run `gybson generate` and you have a fully type-safe database client created for your exact schema. 
+Just run `gybson generate` and you have a fully type-safe database client created for your exact schema.
+
+### Knex
+
+Gybson is built on top of the very popular SQL query builder [Knex](https://github.com/knex/knex).
+
+GybsonClient wraps a Knex client instance so it is very easy to integrate into apps already using Knex.
 
 ---
 
@@ -59,9 +66,7 @@ Unlike most ORMs you don't have to define complex types and relations in code. Y
 
 Gybson uses [dataloader](https://github.com/graphql/dataloader) under the hood to batch and cache (de-dupe) database requests to minimise round trips.
 
-### SQL developer friendly
-
-Gybson uses SQL terms where possible and offers a flexible query API including `filtering on relations`.
+---
 
 ## A simple example
 
@@ -69,7 +74,7 @@ If your schema is defined as
 
 ```sql
 CREATE TABLE users (
-    user_id INT AUTO_INCREMENT;
+    id INT AUTO_INCREMENT;
     username: VARCHAR NOT NULL;
     password: VARCHAR NOT NULL;
     last_logon: Date;
@@ -79,7 +84,7 @@ CREATE TABLE users (
 You can query:
 
 ```typescript
-const id = await gybson.users.insert({
+const id = await gybson.user.insert({
     values: {
         username: 'name',
         password: 'secret',
@@ -87,10 +92,10 @@ const id = await gybson.users.insert({
     },
 });
 
-const user = await gybson.users.loadOne({
+const user = await gybson.user.loadOne({
     where: {
-        user_id: id
-    }
+        id,
+    },
 });
 
 console.log(user);

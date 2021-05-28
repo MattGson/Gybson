@@ -1,13 +1,12 @@
-import { createLogger, format, transports } from 'winston';
-import * as winston from 'winston';
+import { createLogger, format, transports, Logger } from 'winston';
 import { LogLevel } from '../../types';
 const { combine, timestamp, colorize, json, printf, splat, errors, simple } = format;
 
 const state: {
-    logger?: winston.Logger;
+    logger?: Logger;
 } = {};
 
-export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
+export const buildLogger = (config: { logLevel: LogLevel }): Logger => {
     const console = {
         format: combine(
             colorize(),
@@ -35,7 +34,7 @@ export const buildLogger = (config: { logLevel: LogLevel }): winston.Logger => {
     return state.logger;
 };
 
-export const logger = (): winston.Logger => {
+export const logger = (): Logger => {
     if (!state.logger) throw new Error('Must initialise the logger');
     return state.logger;
 };
