@@ -1,5 +1,5 @@
 import { closeConnection, DB, itif, getKnex, seed, SeedIds, seedPost, seedUser, openConnection } from 'test/helpers';
-import { GybsonClient, UserRequiredRow } from 'test/tmp';
+import { GybsonClient, Gybson } from 'test/tmp';
 import * as faker from 'faker';
 
 describe('Loaders', () => {
@@ -150,7 +150,7 @@ describe('Loaders', () => {
             });
 
             // create many rows
-            const users: UserRequiredRow[] = [];
+            const users: Gybson.UserRequiredRow[] = [];
             for (let i = 1000; i < 5000; i++) {
                 users.push({
                     user_id: i,
@@ -330,7 +330,7 @@ describe('Loaders', () => {
             });
 
             // create many rows
-            const users: UserRequiredRow[] = [];
+            const users: Gybson.UserRequiredRow[] = [];
             for (let i = 6000; i < 10_000; i++) {
                 users.push({
                     user_id: i,
