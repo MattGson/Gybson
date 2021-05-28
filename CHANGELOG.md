@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/MattGson/Gybson/compare/v1.2.1...v1.2.2) (2021-05-28)
+
+
+### Bug Fixes
+
+* **cli:** fixes CLI arguments. Updates docs ([7f9315b](https://github.com/MattGson/Gybson/commit/7f9315b4a00cfc1901531b63771826688298125d))
+
 ## [1.2.1](https://github.com/MattGson/Gybson/compare/v1.2.0...v1.2.1) (2021-05-26)
 
 
