@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { ClientEngine, LogLevel } from 'src/types';
+import { ClientEngine, LogLevel } from '../../types';
 import { Connection, GybsonConfig, Logger } from '..';
 import { buildLogger, logger } from '../lib/logging';
 
