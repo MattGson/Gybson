@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { LogLevel } from 'src/types';
+import { LogLevel } from '../types';
 import { buildClient, buildEntryPoint, buildTableClients } from './client-builder';
 import { logger } from './logger';
 import { writeFormattedFile } from './printer';
