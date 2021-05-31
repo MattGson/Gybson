@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/MattGson/Gybson/compare/v1.3.0...v1.3.1) (2021-05-31)
+
+
+### Bug Fixes
+
+* **client:** fixes absolute imports for types ([eba4aeb](https://github.com/MattGson/Gybson/commit/eba4aebd14be0912db0805f11be23818ec0138b7))
+
 # [1.3.0](https://github.com/MattGson/Gybson/compare/v1.2.2...v1.3.0) (2021-05-28)
 
 
