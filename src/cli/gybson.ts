@@ -5,7 +5,7 @@
  */
 
 import yargs from 'yargs';
-import { generate } from '../generate/index';
+import { generate } from '../generate';
 import { logger } from '../generate/logger';
 const { hideBin } = require('yargs/helpers');
 

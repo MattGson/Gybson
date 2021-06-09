@@ -1,13 +1,19 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import _ from 'lodash';
-import { Connection as PGConn } from 'pg';
-import { Connection as MySQLConn } from 'promise-mysql';
 import { ColumnDefinition, Comparable, DatabaseSchema } from 'relational-schema';
-import { ClientEngine, OrderBy, Paginate, RecordAny } from '../../types';
-import { Loader, Logger, OrderQueryFilter, runMiddleWares, SoftDeleteQueryFilter } from '../index';
+import type {
+    ClientEngine,
+    OrderBy,
+    Paginate,
+    ProvideConnection,
+    RecordAny,
+    SoftDeleteQueryFilter,
+    OrderQueryFilter,
+    Logger,
+} from '../../types';
+import { Loader } from './loader';
+import { runMiddleWares } from './row-middleware';
 import { WhereResolver } from './where-resolver';
-
-type Connection = PGConn | MySQLConn;
 
 export abstract class QueryClient<
     TblRow extends RecordAny,
@@ -254,13 +260,14 @@ export abstract class QueryClient<
      * Supports filtering, ordering, pagination
      * @param params
      */
-    public async findMany(params: {
-        connection?: Connection;
-        where?: TblWhere;
-        paginate?: TblPaginate;
-        orderBy?: TblOrderBy;
-        includeDeleted?: boolean;
-    }): Promise<TblRow[]> {
+    public async findMany(
+        params: {
+            where?: TblWhere;
+            paginate?: TblPaginate;
+        } & ProvideConnection &
+            SoftDeleteQueryFilter &
+            OrderQueryFilter<TblOrderBy>,
+    ): Promise<TblRow[]> {
         const { orderBy, paginate, where, includeDeleted, connection } = params;
         const query = this.knex(this.aliasedTable).select(`${this.tableAlias}.*`);
 
@@ -323,13 +330,14 @@ export abstract class QueryClient<
      *  Update -> will update the specified values on conflicting rows
      * @param params
      */
-    public async upsert(params: {
-        connection?: Connection;
-        values: RequiredTblRow | RequiredTblRow[];
-        reinstateSoftDeletes?: boolean;
-        mergeColumns?: Partial<TblColumnMap>;
-        update?: PartialTblRow;
-    }): Promise<number> {
+    public async upsert(
+        params: {
+            values: RequiredTblRow | RequiredTblRow[];
+            reinstateSoftDeletes?: boolean;
+            mergeColumns?: Partial<TblColumnMap>;
+            update?: PartialTblRow;
+        } & ProvideConnection,
+    ): Promise<number> {
         const { values, connection, reinstateSoftDeletes, mergeColumns, update } = params;
 
         if (update && mergeColumns) throw new Error('Upsert: Cannot specify both mergeColumns and update');
@@ -398,11 +406,12 @@ export abstract class QueryClient<
      * Will replace undefined keys or values with DEFAULT which will use a default column value if available.
      * @param params
      */
-    public async insert(params: {
-        connection?: Connection;
-        values: RequiredTblRow | RequiredTblRow[];
-        ignoreDuplicates?: boolean;
-    }): Promise<number> {
+    public async insert(
+        params: {
+            values: RequiredTblRow | RequiredTblRow[];
+            ignoreDuplicates?: boolean;
+        } & ProvideConnection,
+    ): Promise<number> {
         const { values, connection, ignoreDuplicates } = params;
 
         let insertRows: RequiredTblRow[];
@@ -437,7 +446,7 @@ export abstract class QueryClient<
      * Note:- pg uses a weird update join syntax which isn't properly supported in knex.
      *        In pg, a sub-query is used to get around this. MySQL uses regular join syntax.
      */
-    public async update(params: { connection?: Connection; values: PartialTblRow; where: TblWhere }): Promise<any> {
+    public async update(params: { values: PartialTblRow; where: TblWhere } & ProvideConnection): Promise<unknown> {
         const { values, connection, where } = params;
         if (Object.keys(values).length < 1) throw new Error('Must update least one column');
         if (Object.keys(where).length < 1) this.logger.warn('Running update without a where clause!');
@@ -479,7 +488,7 @@ export abstract class QueryClient<
      *        In pg, a sub-query is used to get around this. MySQL uses regular join syntax.
      * @param params
      */
-    public async softDelete(params: { connection?: Connection; where: TblWhere }): Promise<any> {
+    public async softDelete(params: { where: TblWhere } & ProvideConnection): Promise<unknown> {
         const { where, connection } = params;
         if (!this.hasSoftDelete) throw new Error(`Cannot soft delete for table: ${this.tableName}`);
         if (Object.keys(where).length < 1) throw new Error('Must have at least one where condition');
@@ -527,7 +536,7 @@ export abstract class QueryClient<
      *        with joins, the query uses a nested sub-query to get the correct rows to delete
      * @param params
      */
-    public async delete(params: { connection?: Connection; where: TblWhere }): Promise<any> {
+    public async delete(params: { where: TblWhere } & ProvideConnection): Promise<unknown> {
         const { where, connection } = params;
         if (this.hasSoftDelete)
             this.logger.warn(`Running delete for table: "${this.tableName}" which has a soft delete column`);
@@ -562,7 +571,7 @@ export abstract class QueryClient<
      * Truncate a table
      * @param params
      */
-    public async truncate(params: { connection?: Connection }): Promise<any> {
+    public async truncate(params: ProvideConnection): Promise<unknown> {
         const { connection } = params;
 
         this.logger.warn(

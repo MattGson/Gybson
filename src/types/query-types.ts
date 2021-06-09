@@ -1,3 +1,5 @@
+import type { Connection } from './client-types';
+
 export declare type Enumerable<T> = Array<T>;
 
 export declare type RecordAny = Record<string, any>;
@@ -140,4 +142,8 @@ export type SoftDeleteQueryFilter = {
 
 export type OrderQueryFilter<Order = OrderBy> = {
     orderBy?: Order;
+};
+
+export type ProvideConnection = {
+    connection?: Connection;
 };

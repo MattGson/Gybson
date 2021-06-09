@@ -21,11 +21,13 @@ npm run docker:start
 # mysql
 npm run migrate:mysql
 npm run introspect:mysql
+npm run generate-client
 npm run test:myql
 
 # pg
 npm run migrate:pg
 npm run introspect:pg
+npm run generate-client
 npm run test:pg
 
 npm run docker:stop

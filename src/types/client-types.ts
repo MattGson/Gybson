@@ -1,6 +1,6 @@
 import { Connection as PGConnection } from 'pg';
 import { Connection as MYSQLConnection } from 'promise-mysql';
-import { RecordUnknown } from 'src/query-client';
+import type { RecordUnknown } from './query-types';
 
 export type Connection = PGConnection | MYSQLConnection;
 
