@@ -48,11 +48,20 @@ export function buildClient(params: { tableClients: TableClient[]; gybsonLibPath
     let clients = ``;
     for (const { entityName, className } of tableClients) {
         index += `import { ${className} } from './${entityName}';`;
-        clients += `public readonly ${lowerFirst(entityName)} = new ${className}(this.clientConfig);`;
+        clients += `public get ${lowerFirst(entityName)}(): ${className} { 
+                        // lazy instantiation
+                        let client = this.clients.get('${entityName}');
+                        if (client) return client;
+                        client = new ${className}(this.clientConfig);
+                        this.clients.set('${entityName}', client);
+                        return client;
+                     }
+                    `;
     }
     index += `
 
         export class GybsonClient extends GybsonBase {
+            private clients: Map<string, any> = new Map();
             ${clients}
         }
     `;

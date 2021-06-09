@@ -15,7 +15,7 @@ import { Loader } from './loader';
 import { runMiddleWares } from './row-middleware';
 import { WhereResolver } from './where-resolver';
 
-export abstract class QueryClient<
+export class QueryClient<
     TblRow extends RecordAny,
     TblColumnMap,
     TblWhere,
@@ -34,12 +34,12 @@ export abstract class QueryClient<
     private readonly engine: ClientEngine;
     protected readonly whereResolver: WhereResolver;
 
-    protected readonly loader = new Loader<TblRow, PartialTblRow, TblOrderBy>({
+    private readonly loader = new Loader<TblRow, PartialTblRow, TblOrderBy>({
         getMultis: (args) => this.stableGetMany(args),
         getOnes: (args) => this.stableGetSingles(args),
     });
 
-    protected constructor(params: {
+    public constructor(params: {
         tableName: string;
         schema: DatabaseSchema;
         knex: Knex<any, unknown>;
@@ -149,7 +149,7 @@ export abstract class QueryClient<
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    protected async stableGetMany(params: {
+    private async stableGetMany(params: {
         keys: readonly PartialTblRow[];
         orderBy?: TblOrderBy;
         includeDeleted?: boolean;
@@ -205,7 +205,7 @@ export abstract class QueryClient<
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    protected async stableGetSingles(params: {
+    private async stableGetSingles(params: {
         keys: readonly PartialTblRow[];
         includeDeleted?: boolean;
     }): Promise<(TblRow | null)[]> {

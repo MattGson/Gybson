@@ -1,8 +1,12 @@
 import { join } from 'path';
 import { LogLevel } from '../types';
-import {buildClient, buildEntryPoint, buildTableClients, buildTypesEntrypoint} from './client-builder';
+import { buildClient, buildEntryPoint, buildTableClients, buildTypesEntrypoint } from './client-builder';
 import { logger } from './logger';
 import { writeFormattedFile } from './printer';
+
+// Normal lib path - points to node_modules, configurable only for dev/testing purposes
+// Note: - we have deeper build/.. path to avoid circular reference errors with ts-node
+const DEFAULT_GYBSON_LIB = 'gybson/build/src/query-client';
 
 /**
  * Generate the client
@@ -37,9 +41,9 @@ export async function generate(args: {
 
     logger.info('Generating client in ', GENERATED_DIR);
 
-    const tableClients = await buildTableClients({ schema, gybsonLibPath: gybsonLibPath ?? 'gybson' });
+    const tableClients = await buildTableClients({ schema, gybsonLibPath: gybsonLibPath ?? DEFAULT_GYBSON_LIB });
     const types = await buildTypesEntrypoint({ tableClients });
-    const client = await buildClient({ tableClients, gybsonLibPath: gybsonLibPath ?? 'gybson' });
+    const client = await buildClient({ tableClients, gybsonLibPath: gybsonLibPath ?? DEFAULT_GYBSON_LIB });
     const index = await buildEntryPoint();
 
     await Promise.all(

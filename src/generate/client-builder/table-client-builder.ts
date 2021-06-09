@@ -53,15 +53,18 @@ export class TableClientBuilder {
             import { Knex } from 'knex';
 
             ${this.types}
-
-             export class ${this.className} extends QueryClient<${rowTypeName}, 
+            
+             export class ${this.className} {
+                    
+                   private queryClient: QueryClient<${rowTypeName}, 
                     ${columnMapTypeName}, 
                     ${whereTypeName}, 
                     ${loadOneWhereTypeName}, 
                     ${loadManyWhereTypeName}, 
                     ${orderByTypeName}, 
                     ${paginationTypeName}, 
-                    ${requiredRowTypeName}> {
+                    ${requiredRowTypeName}>;
+
                     
                     constructor(params: {
                         knex: Knex<any, unknown>;
@@ -69,8 +72,9 @@ export class TableClientBuilder {
                         engine: ClientEngine;
                     }) {
                         const { knex, logger, engine } = params;
-                        super({ 
-                            tableName: '${this.tableName}', 
+                 
+                        this.queryClient = new QueryClient({
+                            tableName: '${this.tableName}',
                             schema: schema as any,
                             knex,
                             logger,
@@ -81,11 +85,18 @@ export class TableClientBuilder {
                     // Overwrite method signatures to improve IDE type inference speed and helpfulness over generics
                     
                     /**
+                     * Clear cache
+                     */
+                    public async purge(): Promise<void> {
+                        await this.queryClient.purge();
+                    }
+                    
+                    /**
                      * Batch load a single-row
                      * @param params
                      */
                     public async loadOne(params: { where: ${loadOneWhereTypeName} } & SoftDeleteQueryFilter): Promise<${rowTypeName} | null> {
-                        return super.loadOne(params);
+                        return this.queryClient.loadOne(params);
                     }
 
                     /**
@@ -95,7 +106,7 @@ export class TableClientBuilder {
                     public async loadMany(
                         params: { where: ${loadManyWhereTypeName} } & SoftDeleteQueryFilter & OrderQueryFilter<${orderByTypeName}>,
                     ): Promise<${rowTypeName}[]> {
-                        return super.loadMany(params);
+                        return this.queryClient.loadMany(params);
                     }
                 
                     /**
@@ -108,7 +119,7 @@ export class TableClientBuilder {
                         paginate?: ${paginationTypeName};
                     } & ProvideConnection & SoftDeleteQueryFilter & OrderQueryFilter<${orderByTypeName}>
                     ): Promise<${rowTypeName}[]> {
-                        return super.findMany(params);
+                        return this.queryClient.findMany(params);
                     }
                     
                     /**
@@ -128,7 +139,7 @@ export class TableClientBuilder {
                         mergeColumns?: Partial<${columnMapTypeName}>;
                         update?: Partial<${rowTypeName}>;
                     } & ProvideConnection): Promise<number> {
-                        return super.upsert(params);
+                        return this.queryClient.upsert(params);
                     }
                     
                      /**
@@ -142,7 +153,7 @@ export class TableClientBuilder {
                         values: ${requiredRowTypeName} | ${requiredRowTypeName}[];
                         ignoreDuplicates?: boolean;
                     } & ProvideConnection): Promise<number> {
-                        return super.insert(params);
+                        return this.queryClient.insert(params);
                     }
                     
                      /**
@@ -152,7 +163,7 @@ export class TableClientBuilder {
                      *        In pg, a sub-query is used to get around this. MySQL uses regular join syntax.
                      */
                     public async update(params: { values: Partial<${rowTypeName}>; where: ${whereTypeName} } & ProvideConnection): Promise<unknown> {
-                        return super.update(params);
+                        return this.queryClient.update(params);
                     }
                     
                      /**
@@ -163,7 +174,7 @@ export class TableClientBuilder {
                      * @param params
                      */
                     public async softDelete(params: { where: ${whereTypeName} } & ProvideConnection): Promise<unknown> {
-                       return super.softDelete(params);
+                       return this.queryClient.softDelete(params);
                     }
                     
                      /**
@@ -174,7 +185,7 @@ export class TableClientBuilder {
                      * @param params
                      */
                     public async delete(params: {  where: ${whereTypeName} } & ProvideConnection): Promise<unknown> {
-                       return super.delete(params);
+                       return this.queryClient.delete(params);
                     }
                     
                      /**
@@ -182,7 +193,7 @@ export class TableClientBuilder {
                      * @param params
                      */
                     public async truncate(params: ProvideConnection): Promise<unknown> {
-                        return super.truncate(params);
+                        return this.queryClient.truncate(params);
                     }
             }
             `;

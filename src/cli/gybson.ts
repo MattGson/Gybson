@@ -44,7 +44,7 @@ async function generateClient(args: any) {
     try {
         const { schemaFile, outdir, prettierConfig } = args;
 
-        await generate({ outdir, gybsonLibPath: 'gybson', schemaFile, prettierConfig });
+        await generate({ outdir, schemaFile, prettierConfig });
     } catch (e) {
         logger.error(e.message);
         logger.info('Use: "gybson -h" to see help');

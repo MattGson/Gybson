@@ -49,7 +49,9 @@ describe('TableTypeBuilder', () => {
     BooleanWhereNullable,
     DateWhere,
     DateWhereNullable,
-    Loader,
+    ProvideConnection,
+    SoftDeleteQueryFilter,
+    OrderQueryFilter,
 } from 'gybson';
 
 import { PostHasOneRelationFilter, PostHasManyRelationFilter, PostHasOneRequiredRelationFilter } from './Post';
