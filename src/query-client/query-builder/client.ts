@@ -1,6 +1,6 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import type { Connection, GybsonConfig, Logger } from '../';
 import { ClientEngine, LogLevel } from '../../types';
-import { Connection, GybsonConfig, Logger } from '..';
 import { buildLogger, logger } from '../lib/logging';
 
 export class GybsonBase {

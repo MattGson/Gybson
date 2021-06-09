@@ -81,7 +81,9 @@ export class TableTypeBuilder {
                 BooleanWhereNullable, 
                 DateWhere, 
                 DateWhereNullable,
-                Loader
+                ProvideConnection,
+                SoftDeleteQueryFilter,
+                OrderQueryFilter,
             } from '${gybsonLibPath}';
             
             ${_.uniqBy(relations, (r) => r.toTable)

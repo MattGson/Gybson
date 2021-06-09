@@ -40,9 +40,7 @@ export const buildTableClients = async (params: {
 
 /**
  * Build the main client entrypoint
- * @param builders
- * @param outdir
- * @param gybsonLibPath
+ * @param params
  */
 export function buildClient(params: { tableClients: TableClient[]; gybsonLibPath: string }): { code: string } {
     const { tableClients, gybsonLibPath } = params;
@@ -50,14 +48,20 @@ export function buildClient(params: { tableClients: TableClient[]; gybsonLibPath
     let clients = ``;
     for (const { entityName, className } of tableClients) {
         index += `import { ${className} } from './${entityName}';`;
-        clients += `public readonly ${lowerFirst(entityName)} = new ${className}(this.clientConfig);`;
-    }
-    for (const { entityName } of tableClients) {
-        index += `export * from './${entityName}';`;
+        clients += `public get ${lowerFirst(entityName)}(): ${className} { 
+                        // lazy instantiation
+                        let client = this.clients.get('${entityName}');
+                        if (client) return client;
+                        client = new ${className}(this.clientConfig);
+                        this.clients.set('${entityName}', client);
+                        return client;
+                     }
+                    `;
     }
     index += `
 
         export class GybsonClient extends GybsonBase {
+            private clients: Map<string, any> = new Map();
             ${clients}
         }
     `;
@@ -67,24 +71,28 @@ export function buildClient(params: { tableClients: TableClient[]; gybsonLibPath
 
 /**
  * Build the main client entrypoint
- * @param builders
- * @param outdir
- * @param gybsonLibPath
+ * @param params
  */
-export function buildEntryPoint(params: { tableClients: TableClient[] }): { code: string } {
+export function buildTypesEntrypoint(params: { tableClients: TableClient[] }): { code: string } {
     const { tableClients } = params;
-    let index = `
-    // namespaced exports can be useful to avoid naming collisions
-    export * as Gybson from './gybson.client';
-    export {
-        GybsonClient
-    `;
-    for (const { className } of tableClients) {
-        index += `, ${className}`;
+    let index = ``;
+    for (const { entityName } of tableClients) {
+        index += `export * from './${entityName}';`;
     }
-    index += `
-        } from './gybson.client';
-    `;
-
     return { code: index };
+}
+
+/**
+ * Build the main client entrypoint
+ */
+export function buildEntryPoint() {
+    return {
+        code: `
+        // namespaced exports can be useful to avoid naming collisions
+        export * as Gybson from './gybson.types';
+        export {
+            GybsonClient,
+        } from './gybson.client';
+    `,
+    };
 }

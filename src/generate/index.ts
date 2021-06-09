@@ -1,14 +1,16 @@
 import { join } from 'path';
 import { LogLevel } from '../types';
-import { buildClient, buildEntryPoint, buildTableClients } from './client-builder';
+import { buildClient, buildEntryPoint, buildTableClients, buildTypesEntrypoint } from './client-builder';
 import { logger } from './logger';
 import { writeFormattedFile } from './printer';
 
+// Normal lib path - points to node_modules, configurable only for dev/testing purposes
+// Note: - we have deeper build/.. path to avoid circular reference errors with ts-node
+const DEFAULT_GYBSON_LIB = 'gybson/build/src/query-client';
+
 /**
  * Generate the client
- * @param conn
- * @param outdir - write files to this dir
- * @param gybsonLibPath - path to the gybson lib. Only configurable to improve testability
+ * @param args
  */
 export async function generate(args: {
     outdir: string;
@@ -39,9 +41,10 @@ export async function generate(args: {
 
     logger.info('Generating client in ', GENERATED_DIR);
 
-    const tableClients = await buildTableClients({ schema, gybsonLibPath: gybsonLibPath ?? 'gybson' });
-    const client = await buildClient({ tableClients, gybsonLibPath: gybsonLibPath ?? 'gybson' });
-    const index = await buildEntryPoint({ tableClients });
+    const tableClients = await buildTableClients({ schema, gybsonLibPath: gybsonLibPath ?? DEFAULT_GYBSON_LIB });
+    const types = await buildTypesEntrypoint({ tableClients });
+    const client = await buildClient({ tableClients, gybsonLibPath: gybsonLibPath ?? DEFAULT_GYBSON_LIB });
+    const index = await buildEntryPoint();
 
     await Promise.all(
         tableClients.map((cl) => {
@@ -53,6 +56,11 @@ export async function generate(args: {
         }),
     );
 
+    await writeFormattedFile({
+        content: types.code,
+        directory: GENERATED_DIR,
+        filename: 'gybson.types',
+    });
     await writeFormattedFile({
         content: client.code,
         directory: GENERATED_DIR,

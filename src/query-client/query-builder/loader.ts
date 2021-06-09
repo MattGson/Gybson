@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import { OrderBy, OrderQueryFilter, RecordAny, SoftDeleteQueryFilter } from '../../types';
+import type { OrderBy, OrderQueryFilter, RecordAny, SoftDeleteQueryFilter } from '../../types';
 import { logger } from '../lib/logging';
 
 interface LoaderDataSource<RowType, KeyType = Partial<RowType>, Order = OrderBy> {
