@@ -86,7 +86,6 @@ export class TableTypeBuilder {
                 OrderQueryFilter,
             } from '${gybsonLibPath}';
             
-            
             ${_.uniqBy(relations, (r) => r.toTable)
                 .map((tbl) => {
                     if (tbl.toTable === tableName) return ''; // don't import own types
