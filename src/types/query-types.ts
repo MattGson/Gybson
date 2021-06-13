@@ -12,10 +12,10 @@ export type RecordUnknown = Record<string, unknown>;
 // These are just for helping write the query builder
 export type OrderBy = { [column: string]: Order | undefined };
 
-export type Paginate = {
+export type Paginate<T = any> = {
     limit?: number;
-    afterCursor?: { [column: string]: any };
-    beforeCursor?: { [column: string]: any };
+    afterCursor?: T;
+    beforeCursor?: T;
     offset?: number;
 };
 

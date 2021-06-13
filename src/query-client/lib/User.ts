@@ -2,182 +2,156 @@
 
 /* eslint-disable */
 
-import { ClientEngine, Paginate, RecordAny } from '../../types';
+import { flatten, orderBy } from 'lodash';
+import { DatabaseSchema, RelationDefinition, TransitiveRelationDefinition } from 'relational-schema';
+import { Paginate, RecordAny } from '../../types';
+import schema from '../../../test/tmp/relational-schema';
+// export type users_permissions = 'ADMIN' | 'USER';
+// export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
 
-import schema from './relational-schema';
-import { Knex } from 'knex';
-import winston from 'winston';
+// export interface User {
+//     user_id: number;
+//     best_friend_id: number | null;
+//     email: string;
+//     first_name: string | null;
+//     last_name: string | null;
+//     password: string;
+//     token: string | null;
+//     permissions: users_permissions | null;
+//     subscription_level: users_subscription_level | null;
+//     deleted_at: Date | null;
+// }
 
-import {
-    QueryClient,
-    Order,
-    Enumerable,
-    NumberWhere,
-    NumberWhereNullable,
-    StringWhere,
-    StringWhereNullable,
-    BooleanWhere,
-    BooleanWhereNullable,
-    DateWhere,
-    DateWhereNullable,
-    Loader,
-} from '../../query-client';
+// export interface UserRequiredRow {
+//     user_id?: number;
+//     best_friend_id?: number | null;
+//     email: string;
+//     first_name?: string | null;
+//     last_name?: string | null;
+//     password: string;
+//     token?: string | null;
+//     permissions?: users_permissions | null;
+//     subscription_level?: users_subscription_level | null;
+//     deleted_at?: Date | null;
+// }
 
-import { PostHasOneRelationFilter, PostHasManyRelationFilter, PostHasOneRequiredRelationFilter } from './Post';
-import {
-    TeamMemberHasOneRelationFilter,
-    TeamMemberHasManyRelationFilter,
-    TeamMemberHasOneRequiredRelationFilter,
-} from './TeamMember';
-import { GybsonClient } from '.';
-import { DatabaseSchema } from 'relational-schema';
+// export interface UserColumnMap {
+//     user_id: boolean;
+//     best_friend_id: boolean;
+//     email: boolean;
+//     first_name: boolean;
+//     last_name: boolean;
+//     password: boolean;
+//     token: boolean;
+//     permissions: boolean;
+//     subscription_level: boolean;
+//     deleted_at: boolean;
+// }
 
-export type users_permissions = 'ADMIN' | 'USER';
-export type users_subscription_level = 'BRONZE' | 'GOLD' | 'SILVER';
+// export interface UserHasManyRelationFilter {
+//     exists?: boolean;
+//     where?: UserWhere;
+//     whereEvery?: UserWhere;
+// }
 
-export interface User {
-    user_id: number;
-    best_friend_id: number | null;
-    email: string;
-    first_name: string | null;
-    last_name: string | null;
-    password: string;
-    token: string | null;
-    permissions: users_permissions | null;
-    subscription_level: users_subscription_level | null;
-    deleted_at: Date | null;
-}
+// export interface UserHasOneRelationFilter {
+//     exists?: boolean;
+//     where?: UserWhere;
+// }
 
-export interface UserRequiredRow {
-    user_id?: number;
-    best_friend_id?: number | null;
-    email: string;
-    first_name?: string | null;
-    last_name?: string | null;
-    password: string;
-    token?: string | null;
-    permissions?: users_permissions | null;
-    subscription_level?: users_subscription_level | null;
-    deleted_at?: Date | null;
-}
+// export interface UserHasOneRequiredRelationFilter {
+//     where?: UserWhere;
+// }
 
-export interface UserColumnMap {
-    user_id: boolean;
-    best_friend_id: boolean;
-    email: boolean;
-    first_name: boolean;
-    last_name: boolean;
-    password: boolean;
-    token: boolean;
-    permissions: boolean;
-    subscription_level: boolean;
-    deleted_at: boolean;
-}
+// export interface UserWhere {
+//     user_id?: number | NumberWhere;
+//     best_friend_id?: number | NumberWhereNullable | null;
+//     email?: string | StringWhere;
+//     first_name?: string | StringWhereNullable | null;
+//     last_name?: string | StringWhereNullable | null;
+//     password?: string | StringWhere;
+//     token?: string | StringWhereNullable | null;
+//     permissions?: users_permissions | null;
+//     subscription_level?: users_subscription_level | null;
+//     deleted_at?: Date | DateWhereNullable | null;
 
-export interface UserHasManyRelationFilter {
-    exists?: boolean;
-    where?: UserWhere;
-    whereEvery?: UserWhere;
-}
+//     AND?: Enumerable<UserWhere>;
+//     OR?: Enumerable<UserWhere>;
+//     NOT?: Enumerable<UserWhere>;
 
-export interface UserHasOneRelationFilter {
-    exists?: boolean;
-    where?: UserWhere;
-}
+//     best_friend?: UserHasOneRelationFilter | null;
+//     author_posts?: PostHasManyRelationFilter | null;
+//     users?: UserHasManyRelationFilter | null;
+//     co_author_posts?: PostHasManyRelationFilter | null;
+//     team_members?: TeamMemberHasManyRelationFilter | null;
+// }
 
-export interface UserHasOneRequiredRelationFilter {
-    where?: UserWhere;
-}
+// export interface UserLoadOneWhere {
+//     email?: string;
+//     token?: string;
+//     user_id?: number;
+// }
 
-export interface UserWhere {
-    user_id?: number | NumberWhere;
-    best_friend_id?: number | NumberWhereNullable | null;
-    email?: string | StringWhere;
-    first_name?: string | StringWhereNullable | null;
-    last_name?: string | StringWhereNullable | null;
-    password?: string | StringWhere;
-    token?: string | StringWhereNullable | null;
-    permissions?: users_permissions | null;
-    subscription_level?: users_subscription_level | null;
-    deleted_at?: Date | DateWhereNullable | null;
+// export interface UserLoadManyWhere {
+//     best_friend_id?: number | null;
+//     first_name?: string | null;
+//     last_name?: string | null;
+//     password?: string;
+//     permissions?: users_permissions | null;
+//     subscription_level?: users_subscription_level | null;
+//     deleted_at?: Date | null;
+// }
 
-    AND?: Enumerable<UserWhere>;
-    OR?: Enumerable<UserWhere>;
-    NOT?: Enumerable<UserWhere>;
+// export type UserOrderBy = {
+//     user_id?: Order;
+//     best_friend_id?: Order;
+//     email?: Order;
+//     first_name?: Order;
+//     last_name?: Order;
+//     password?: Order;
+//     token?: Order;
+//     permissions?: Order;
+//     subscription_level?: Order;
+//     deleted_at?: Order;
+// };
 
-    best_friend?: UserHasOneRelationFilter | null;
-    author_posts?: PostHasManyRelationFilter | null;
-    users?: UserHasManyRelationFilter | null;
-    co_author_posts?: PostHasManyRelationFilter | null;
-    team_members?: TeamMemberHasManyRelationFilter | null;
-}
+// export interface UserPaginate {
+//     limit?: number;
+//     afterCursor?: Partial<User>;
+//     beforeCursor?: Partial<User>;
+//     offset?: number;
+// }
 
-export interface UserLoadOneWhere {
-    email?: string;
-    token?: string;
-    user_id?: number;
-}
+// export class UserClient extends QueryClient<
+//     User,
+//     UserColumnMap,
+//     UserWhere,
+//     UserLoadOneWhere,
+//     UserLoadManyWhere,
+//     UserOrderBy,
+//     UserPaginate,
+//     UserRequiredRow
+// > {
+//     constructor(params: { knex: Knex<any, unknown>; logger: winston.Logger; engine: ClientEngine }) {
+//         const { knex, logger, engine } = params;
+//         super({
+//             tableName: 'users',
+//             schema: schema as any,
+//             knex,
+//             logger,
+//             engine,
+//         });
+//     }
+// }
 
-export interface UserLoadManyWhere {
-    best_friend_id?: number | null;
-    first_name?: string | null;
-    last_name?: string | null;
-    password?: string;
-    permissions?: users_permissions | null;
-    subscription_level?: users_subscription_level | null;
-    deleted_at?: Date | null;
-}
+// interface FluentPost {
+//     first: () => Promise<string>;
+//     comments: () => Promise<FluentComment>;
+// }
 
-export type UserOrderBy = {
-    user_id?: Order;
-    best_friend_id?: Order;
-    email?: Order;
-    first_name?: Order;
-    last_name?: Order;
-    password?: Order;
-    token?: Order;
-    permissions?: Order;
-    subscription_level?: Order;
-    deleted_at?: Order;
-};
-
-export interface UserPaginate {
-    limit?: number;
-    afterCursor?: Partial<User>;
-    beforeCursor?: Partial<User>;
-    offset?: number;
-}
-
-export class UserClient extends QueryClient<
-    User,
-    UserColumnMap,
-    UserWhere,
-    UserLoadOneWhere,
-    UserLoadManyWhere,
-    UserOrderBy,
-    UserPaginate,
-    UserRequiredRow
-> {
-    constructor(params: { knex: Knex<any, unknown>; logger: winston.Logger; engine: ClientEngine }) {
-        const { knex, logger, engine } = params;
-        super({
-            tableName: 'users',
-            schema: schema as any,
-            knex,
-            logger,
-            engine,
-        });
-    }
-}
-
-interface FluentPost {
-    first: () => Promise<string>;
-    comments: () => Promise<FluentComment>;
-}
-
-interface FluentComment {
-    first: () => Promise<string>;
-}
+// interface FluentComment {
+//     first: () => Promise<string>;
+// }
 
 // interface FluentUser {
 //     doc: string[];
@@ -186,64 +160,86 @@ interface FluentComment {
 //     all: (imit?: number) => Promise<string[]>;
 // }
 
-export class PostFluent {
-    constructor(private traversal: Trav) {}
-
-    private doc = [];
-
-    comments() {
-        return {
-            first() {
-                return Promise.resolve('comment');
-            },
-        };
-    }
-
-    async first() {
-        return this.doc[0];
-    }
-    async all(limit?: number) {
-        return this.doc.slice(0, limit ?? 10);
-    }
-}
-
-export class UserFluent {
-    constructor(private traversal: Trav) {}
-
-    private doc = [];
-
-    posts(params?: { where?: { age: number } }): PostFluent {
-        this.doc = [];
-        return new PostFluent(this.traversal);
-    }
-    async first() {
-        return this.doc[0];
-    }
-    async all(limit?: number) {
-        return this.doc.slice(0, limit ?? 10);
-    }
-}
+// FIxed
 
 interface Link {
-    rootLoad?: 'one' | 'many';
-    type: 'User' | 'Post' | 'Comment';
+    rootLoad?: 'uniq' | 'many';
+    table: string;
+    relation?: RelationDefinition | TransitiveRelationDefinition; // identifier for the relation that links to the parent
     options: {
-        where: RecordAny;
+        where?: RecordAny;
         orderBy?: RecordAny;
         includeDeleted?: boolean;
     };
-    with?: RecordAny;
+    // nested relations to include
+    with?: Link[];
     paginate?: Paginate;
 }
 
 class Trav {
-    constructor(private schema: DatabaseSchema) {}
+    constructor() {}
 
     private taversalChain: Link[] = [];
+    // maintain a pointer to current link for ease of use
+    private currentLink: Link | undefined;
 
-    private getClient(type: string): QueryClient<any, any, any, any, any, any, any, any> {
+    // private getClient(type: string): QueryClient<any, any, any, any, any, any, any, any> {
+    private getClient(type: string) {
         // return new UserClient({});
+        return {
+            // can probably generalise loadOne, loadMany, findMany into a generic batch loader which performs all optimisations possible
+            batchFind(args: { where?: any; orderBy?: any; includeDeleted?: boolean }) {
+                switch (type) {
+                    case 'users':
+                        console.log('BATCH FIND users with: ', args);
+                        return [
+                            {
+                                user_id: 12,
+                                name: 'john',
+                            },
+                            {
+                                user_id: 21,
+                                name: 'john',
+                            },
+                        ];
+                    case 'posts':
+                        console.log('BATCH FIND posts with: ', args);
+                        return [
+                            {
+                                post_id: 4,
+                                user_id: 10,
+                            },
+                        ];
+                    case 'comments':
+                        console.log('BATCH FIND comments with: ', args);
+                        return [
+                            {
+                                id: 4,
+                            },
+                        ];
+                }
+                return [{}];
+            },
+            findMany(_args: { whereIn: any[]; where: any }) {
+                return [];
+            },
+        };
     }
+
+    public pushLink(link: Link) {
+        this.taversalChain.push(link);
+        this.currentLink = link;
+    }
+
+    public addWith(withClause: Link) {
+        if (!this.currentLink) throw new Error('No links in traversal yet, cannot add nested relation');
+        this.currentLink.with ? this.currentLink.with.push(withClause) : (this.currentLink.with = [withClause]);
+    }
+
+    // public addWith(with: RecordAny) {
+    // const with = this.traversalChain?.[this.traversalChain.length -1].with
+    //     this.traversalChain?.[this.traversalChain.length -1].with
+    // }
 
     /**
      * Resolve the fluent traversal chain
@@ -252,7 +248,7 @@ class Trav {
      * This complexity extends to parallel executions of the same edges/nodes by a different Traveral instance
      *  i.e. parallel resolve trees in a GraphQL API
      */
-    public async resolve<T>(): Promise<T> {
+    public async resolve<T>(): Promise<T[]> {
         // load the chain layer by layer
 
         // result from last edge traversal
@@ -262,28 +258,36 @@ class Trav {
         let parentLink: Link | null = null;
 
         for (const link of this.taversalChain) {
+            console.log('Load link ', link);
+
             let result: RecordAny[] = [];
-            const client = this.getClient(link.type);
+            const client = this.getClient(link.table);
 
             if (parentLink == null) {
                 // loading the root of the tree
 
                 if (!link.rootLoad) throw new Error('Please read the instructions!');
-                if (link.rootLoad === 'one') {
-                    result = [
-                        await client.loadOne({
-                            where: {
-                                ...(link.options.where ?? {}),
-                            },
-                            includeDeleted: link.options?.includeDeleted ?? undefined,
-                        }),
-                    ];
-                }
-                if (link.rootLoad === 'many') {
-                    result = await client.loadMany({
-                        ...link.options,
-                    });
-                }
+
+                result = await client.batchFind({
+                    where: link.options?.where,
+                    includeDeleted: link.options?.includeDeleted ?? undefined,
+                });
+
+                // if (link.rootLoad === 'uniq') {
+                //     result = [
+                //         await client.loadOne({
+                //             where: {
+                //                 ...(link.options.where ?? {}),
+                //             },
+                //             includeDeleted: link.options?.includeDeleted ?? undefined,
+                //         }),
+                //     ];
+                // }
+                // if (link.rootLoad === 'many') {
+                //     result = await client.loadMany({
+                //         ...link.options,
+                //     });
+                // }
             } else {
                 // traversing an edge
 
@@ -291,11 +295,10 @@ class Trav {
 
                 let loads: any = [];
 
-                // get relationship info
-                const relationship = this.schema.tables[link.type].relations.find(
-                    (r) => r.toTable === parentLink!.type,
-                );
-                if (!relationship) throw new Error(`Relationship not found between ${link.type} && ${parentLink.type}`);
+                // get relationship info - note this is the relationship from parent table
+                const relationship = link.relation;
+                if (!relationship)
+                    throw new Error(`Relationship not found between ${link.table} && ${parentLink.table}`);
 
                 // transitive edges must be loaded in 2 steps
                 if (relationship?.type === 'manyToMany') {
@@ -317,51 +320,334 @@ class Trav {
                     relationship.type === 'hasMany' ||
                     relationship.type === 'hasOne'
                 ) {
-                    // maybe should batch these internally?
+                    // alternative 1 - global batching
+                    // TODO:- note the problem here,  would require in mem sort to guarantee global order...
+
+                    // load relations for each previous node (fan out graph traversal)
                     loads = await Promise.all(
                         prevResult.map(async (ent) => {
                             let filters = link.options.where ?? {};
 
+                            // build the join key filters
+
                             relationship.joins.map((j) => {
-                                filters[j.fromColumn] = j.toColumn;
+                                filters[j.toColumn] = ent[j.fromColumn];
                             });
-                            // treat all as many loads as there is pretty much no performance impact
-                            const related = await client.loadMany({
-                                where: {},
+
+                            return client.batchFind({
+                                // how to handle filters that are not batchable?
+                                where: filters,
+                                includeDeleted: link.options.includeDeleted,
+                                // how to handle global ordering?
+                                // maybe should batch these loads internally?
+
+                                orderBy: link.options.orderBy,
                             });
                         }),
                     );
+                    result = flatten(await Promise.all(loads));
 
-                    // for (const resolve of prevResult) {
-                    //     let filter = node.filter?.where ?? {};
-                    //     for (const join of relationship?.joins) {
-                    //     }
-                    //     transitiveResolves.push(
-                    //         cl.loadMany({
-                    //             where: {
-                    //                 ...(node.filter?.where ?? {}),
-                    //             },
-                    //         }),
-                    //     );
-                    // }
+                    // alternative 2 - within chain batching
+                    // can be applied to more complex filters like gt, like etc
+                    // works because we can guarantee all filters other than joins are the same constants within all nodes in chain
+
+                    const sharedFilters = link.options.where ?? {};
+
+                    // build the join key filters
+
+                    const inFilters = prevResult.map((ent) => {
+                        let filters: any = {};
+                        relationship.joins.map((j) => {
+                            filters[j.toColumn] = ent[j.fromColumn];
+                        });
+                        return filters;
+                    });
+
+                    // need the stable multi-column where-in logic here
+                    result = await client.findMany({ whereIn: inFilters, where: sharedFilters });
                 }
-                result = await Promise.all(loads);
             }
             parentLink = link;
             prevResult = result;
+            console.log('LINK RESULT ', result);
         }
+        // last link will be the correct result
+        return prevResult as T[];
     }
 }
-const user = () => new UserFluent({ taversal: [] });
 
-const be = user()
-    .posts({ where: { age: 1 } })
-    .comments()
-    .first();
+// Generate
+interface Post {
+    post_id: number;
+}
 
-const t = proxy(UserFluent);
+interface Comment {
+    id: number;
+}
 
-const z = t.posts('bbd', 88).first();
+interface User {
+    user_id: number;
+}
+
+interface PostWhere {
+    post_id: number;
+}
+
+interface CommentWhere {
+    id: number;
+}
+
+interface UserWhere {
+    user_id: number;
+}
+
+// TODO:- useable types
+interface PostRelationMap {
+    comments?: boolean;
+    author?: boolean;
+}
+
+type PostWith = {
+    comments: Comment[];
+    author: User;
+};
+
+// interface paginate<T> {
+//     (args: Paginate<T>): void;
+// }
+
+export function paginate<T>(args: Paginate<T>) {
+    return args;
+}
+
+export abstract class FluentInterface<T> {
+    protected relationMap = new Map<string, RelationDefinition | TransitiveRelationDefinition>();
+    constructor(protected traversal: Trav, protected schema: DatabaseSchema, protected tableName: string) {
+        schema.tables[tableName].relations.forEach((r) => {
+            this.relationMap.set(r.alias, r);
+        });
+    }
+
+    async first(): Promise<T | null> {
+        const result = await this.traversal.resolve<T>();
+        return result?.[0] ?? null;
+    }
+    async get(_args: { first?: number; after?: string }): Promise<T[]> {
+        return await this.traversal.resolve<T>();
+    }
+}
+
+export class PostFluent<T = Post> extends FluentInterface<T> {
+    comments(args?: { where?: CommentWhere }) {
+        this.traversal.pushLink({
+            table: 'comments',
+            relation: this.relationMap.get('comments'),
+            options: {
+                where: args?.where,
+            },
+        });
+        return new CommentFluent(this.traversal, this.schema);
+    }
+    topComment(args?: { where?: CommentWhere }) {
+        this.traversal.pushLink({
+            table: 'comments',
+            // need to use the correct relation in case there are multiple relations to the same table
+            // TODO:- should do this for where filters as well?
+            relation: this.relationMap.get('top_comment'),
+            options: {
+                where: args?.where,
+            },
+        });
+        return new CommentFluent(this.traversal, this.schema);
+    }
+    author(args?: { where?: UserWhere }): UserFluent {
+        this.traversal.pushLink({
+            table: 'users',
+            relation: this.relationMap.get('author'),
+            options: {
+                where: args?.where,
+            },
+        });
+        return new UserFluent(this.traversal, this.schema);
+    }
+
+    withComments(
+        args?: { where?: { authorName?: string }; orderBy?: { id?: 'desc' } },
+        paginate?: Paginate<Comment>,
+    ): PostFluent<T & { comments: Comment[] }> {
+        this.traversal.addWith({
+            table: 'comments',
+            // need to use the correct relation in case there are multiple relations to the same table
+            // TODO:- should do this for where filters as well?
+            relation: this.relationMap.get('comments'),
+            options: {
+                where: args?.where,
+            },
+            paginate,
+        });
+        // no point recreating it
+        return this as unknown as PostFluent<T & { comments: Comment[] }>;
+    }
+
+    withAuthor(args?: { where?: { name?: string } }): PostFluent<T & { author: User }> {
+        this.traversal.addWith({
+            table: 'users',
+            // need to use the correct relation in case there are multiple relations to the same table
+            // TODO:- should do this for where filters as well?
+            relation: this.relationMap.get('author'),
+            options: {
+                where: args?.where,
+            },
+        });
+        // no point recreating it
+        return this as unknown as PostFluent<T & { author: User }>;
+    }
+
+    constructor(traversal: Trav, schema: DatabaseSchema) {
+        super(traversal, schema, 'posts');
+    }
+}
+
+export class CommentFluent extends FluentInterface<Comment> {
+    post(args?: { where?: PostWhere }): PostFluent {
+        this.traversal.pushLink({
+            table: 'posts',
+            relation: this.relationMap.get('post'),
+            options: {
+                where: args?.where,
+            },
+        });
+        return new PostFluent(this.traversal, this.schema);
+    }
+    author(args?: { where?: UserWhere }): UserFluent {
+        this.traversal.pushLink({
+            table: 'users',
+            relation: this.relationMap.get('author'),
+            options: {
+                where: args?.where,
+            },
+        });
+        return new UserFluent(this.traversal, this.schema);
+    }
+
+    constructor(traversal: Trav, schema: DatabaseSchema) {
+        super(traversal, schema, 'users');
+    }
+}
+
+export class UserFluent extends FluentInterface<User> {
+    authorPosts(args?: { where?: PostWhere }): PostFluent {
+        this.traversal.pushLink({
+            table: 'posts',
+            relation: this.relationMap.get('author_posts'),
+            options: {
+                where: args?.where,
+            },
+        });
+        return new PostFluent(this.traversal, this.schema);
+    }
+
+    withFriends(_args?: { where?: { name?: string } }): UserFluent {
+        return this;
+    }
+
+    withBadges(_args?: { where?: { level?: { gt?: number; equals?: number } } }): UserFluent {
+        return this;
+    }
+
+    constructor(traversal: Trav, schema: DatabaseSchema) {
+        super(traversal, schema, 'users');
+    }
+}
+
+// Placeholder for UserClient class
+// unique and find replace findMany and loadOne
+
+class UserClientD {
+    unique(args: {
+        where: {
+            user_id?: number;
+        };
+    }): UserFluent {
+        const { where } = args;
+        const traversal = new Trav();
+        traversal.pushLink({
+            rootLoad: 'uniq', // TODO:- does not matter?
+            table: 'users',
+            options: {
+                where,
+            },
+        });
+        return new UserFluent(traversal, schema as unknown as DatabaseSchema);
+    }
+
+    find(args: {
+        where: {
+            user_id?: number;
+            name?: string;
+        };
+    }): UserFluent {
+        const { where } = args;
+        const traversal = new Trav();
+        traversal.pushLink({
+            rootLoad: 'many',
+            table: 'users',
+            options: {
+                where,
+            },
+        });
+        return new UserFluent(traversal, schema as unknown as DatabaseSchema);
+    }
+}
+
+const user = new UserClientD();
+
+// const de = user
+//     .find({ where: { user_id: 1 } })
+//     .first()
+//     .then((u) => console.log(u));
+
+const dev1 = user
+    .find({ where: { name: 'john' } })
+    .authorPosts({ where: { post_id: 3 } })
+    .withComments({ orderBy: { id: 'desc' } }, paginate({ limit: 10, afterCursor: { id: 1 } }))
+    .withAuthor()
+    .first()
+    .then((r) => console.log(r));
+
+const dev = user
+    .find({ where: { name: 'john' } })
+    .authorPosts({ where: { post_id: 3 } })
+    // this pattern doesn't really make sense, no difference between function and raw object,
+    // would only make sense if could be given in any order?
+    .withComments({ orderBy: { id: 'desc' } }, paginate({ limit: 10, afterCursor: { id: 1 } }))
+    .author()
+    // clean but nested with?
+    .withFriends({ where: { name: 'steve' } })
+    // TODO:- how to batch this kind of filter? Within query should work, just need rules to distinguish this
+    .withBadges({ where: { level: { gt: 10 } } });
+
+dev.get({ first: 10 }).then((u) => console.log(u));
+
+// const be = user
+//     .unique({ where: { user_id: 1 } })
+//     .posts({ where: { post_id: 3 } })
+//     .comments()
+//     .get({ first: 10, after: '3' })
+//     .then((u) => console.log(u));
+
+// const be2 = user
+//     .find({ where: { name: 'john' } })
+//     .posts()
+//     .comments()
+//     .first()
+//     .then((u) => console.log(u));
+
+// const contUser = gybson.comment.from(be2).author(...);
+
+// // const t = proxy(UserFluent);
+
+// // const z = t.posts('bbd', 88).first();
 
 // .first()
 // .then((p) => console.log(p));
