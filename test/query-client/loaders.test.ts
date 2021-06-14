@@ -66,7 +66,9 @@ describe('Loaders', () => {
                     user_id: ids.user1Id,
                 },
             });
-            const loadOne = await gybson.user.loadOne({ where: { user_id: ids.user1Id } });
+            const loadOne = await gybson.user.loadOne({
+                where: { user_id: ids.user1Id },
+            });
             expect(loadOne).toEqual(null);
         });
         it('Returns deleted rows when requested', async () => {
@@ -75,7 +77,10 @@ describe('Loaders', () => {
                     user_id: ids.user1Id,
                 },
             });
-            const loadOne = await gybson.user.loadOne({ where: { user_id: ids.user1Id }, includeDeleted: true });
+            const loadOne = await gybson.user.loadOne({
+                where: { user_id: ids.user1Id },
+                includeDeleted: true,
+            });
             expect(loadOne).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -95,7 +100,9 @@ describe('Loaders', () => {
             });
 
             // check name has not changed
-            const loadOne = await gybson.user.loadOne({ where: { user_id: ids.user1Id } });
+            const loadOne = await gybson.user.loadOne({
+                where: { user_id: ids.user1Id },
+            });
             expect(loadOne).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -105,7 +112,9 @@ describe('Loaders', () => {
             // clear cache
             await gybson.user.purge();
             // should be up to date
-            const loadOne2 = await gybson.user.loadOne({ where: { user_id: ids.user1Id } });
+            const loadOne2 = await gybson.user.loadOne({
+                where: { user_id: ids.user1Id },
+            });
             expect(loadOne2).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -248,7 +257,9 @@ describe('Loaders', () => {
                     post_id: ids.post1Id,
                 },
             });
-            const loadMany = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
+            const loadMany = await gybson.post.loadMany({
+                where: { author_id: ids.user1Id },
+            });
             expect(loadMany).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
         it('Returns deleted rows when requested', async () => {
@@ -273,7 +284,9 @@ describe('Loaders', () => {
             });
 
             // check result has changed
-            const loadMany = await gybson.post.loadMany({ where: { author_id: ids.user1Id } });
+            const loadMany = await gybson.post.loadMany({
+                where: { author_id: ids.user1Id },
+            });
             expect(loadMany).not.toContainEqual(expect.objectContaining({ post_id: ids.post1Id }));
         });
         it('Can load same rows from multiple places', async () => {
@@ -305,9 +318,57 @@ describe('Loaders', () => {
                 .with({
                     author: true,
                     tags: {
-                        category: true,
+                        with: {
+                            category: true,
+                        },
+                        paginate: { limit: 10, after: { id: 1 } },
+                    },
+                    likes: {
+                        where: {
+                            author_id: 3,
+                        },
+                        orderBy: { id: 'desc' },
+                        with: {
+                            author: true,
+                        },
                     },
                 })
+                .first();
+
+            const c = q
+                .comments({ where: { title: 'test' } })
+                .withAuthor()
+                .withTags({
+                    with: {
+                        category: true,
+                    },
+                    first: 10,
+                    after: { id: 1 },
+                })
+                .withLikes({
+                    where: {
+                        author_id: 3,
+                    },
+                    orderBy: { id: 'desc' },
+                    withAuthor: {
+                        where: {
+                            name: 'steve',
+                        },
+                    },
+                })
+                .first();
+
+            const c = q
+                .comments({ where: { title: 'test' } })
+                .withAuthor()
+                .withLikes((t) =>
+                    t
+                        .paginate({
+                            first: 10,
+                            after: { id: 1 },
+                        })
+                        .withAuthor(),
+                )
                 .first();
 
             const d = q.comments().only({ first: 12, after: { id: '232-434-1232' } });
@@ -385,9 +446,7 @@ describe('Loaders', () => {
             });
 
             // load all at once
-            const results = await Promise.all(
-                users.map((u) => gybson.user.loadMany({ where: { first_name: u.first_name } })),
-            );
+            const results = await Promise.all(users.map((u) => gybson.user.loadMany({ where: { first_name: u.first_name } })));
             expect(results).toHaveLength(4000);
             const [first, second] = results;
             expect(first[0].first_name).toEqual(users[0].first_name);
@@ -404,7 +463,9 @@ describe('Loaders', () => {
                     user_id: ids.user1Id,
                 },
             });
-            const user = await gybson.user.loadOne({ where: { email: 'cased@gmail.com' } });
+            const user = await gybson.user.loadOne({
+                where: { email: 'cased@gmail.com' },
+            });
             expect(user).toEqual(
                 expect.objectContaining({
                     user_id: ids.user1Id,
@@ -421,7 +482,9 @@ describe('Loaders', () => {
                     position: 'A position',
                 },
             });
-            const members = await gybson.teamMembersPosition.loadMany({ where: { manager: 'casedManager' } });
+            const members = await gybson.teamMembersPosition.loadMany({
+                where: { manager: 'casedManager' },
+            });
             expect(members).toContainEqual(
                 expect.objectContaining({
                     manager: 'CasedManager',

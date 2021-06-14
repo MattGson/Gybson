@@ -297,8 +297,7 @@ class Trav {
 
                 // get relationship info - note this is the relationship from parent table
                 const relationship = link.relation;
-                if (!relationship)
-                    throw new Error(`Relationship not found between ${link.table} && ${parentLink.table}`);
+                if (!relationship) throw new Error(`Relationship not found between ${link.table} && ${parentLink.table}`);
 
                 // transitive edges must be loaded in 2 steps
                 if (relationship?.type === 'manyToMany') {
@@ -315,11 +314,7 @@ class Trav {
                     //     );
                     // }
                 }
-                if (
-                    relationship?.type === 'belongsTo' ||
-                    relationship.type === 'hasMany' ||
-                    relationship.type === 'hasOne'
-                ) {
+                if (relationship?.type === 'belongsTo' || relationship.type === 'hasMany' || relationship.type === 'hasOne') {
                     // alternative 1 - global batching
                     // TODO:- note the problem here,  would require in mem sort to guarantee global order...
 
@@ -437,7 +432,57 @@ export abstract class FluentInterface<T> {
     }
 }
 
+type FluentExecutors = 'first' | 'get';
+type PostChainables = 'comments' | 'topComment' | 'author';
+type CommentChainables = 'author';
+
 export class PostFluent<T = Post> extends FluentInterface<T> {
+    where(_args?: PostWhere): PostFluent<T> {
+        // additive where like knex
+        // this.traversal.
+        return this;
+    }
+
+    // TODO:- completest example
+    // long return ype but basically just helping the user out.
+    // - It makes not sense to add a withX clause other than at the end of chain
+    // - makes no sense to use same with twice
+    // so we remove all chainables and this method
+    // TODO:- should we remove nested chainables? Or is that a feature? Enrich with arbritrary data?
+    // TODO:- how to chain the Omit?
+    withComments(
+        chain?: (c: Omit<CommentFluent, FluentExecutors | CommentChainables>) => FluentInterface<any>,
+    ): Omit<PostFluent<T & { comments: Comment[] }>, 'withComments' | PostChainables> {
+        this.traversal.addWith({
+            table: 'comments',
+            // need to use the correct relation in case there are multiple relations to the same table
+            // TODO:- should do this for where filters as well?
+            relation: this.relationMap.get('comments'),
+            options: {
+                where: args?.where,
+            },
+            mixin: chain,
+            paginate,
+        });
+        // no point recreating it
+        return this as unknown as PostFluent<T & { comments: Comment[] }>;
+    }
+
+    // Note:- small interface improvement - remove methods that can't sensibly be used more than once
+    withAuthor(args?: { where?: { name?: string } }): Omit<PostFluent<T & { author: User }>, 'withAuthor'> {
+        this.traversal.addWith({
+            table: 'users',
+            // need to use the correct relation in case there are multiple relations to the same table
+            // TODO:- should do this for where filters as well?
+            relation: this.relationMap.get('author'),
+            options: {
+                where: args?.where,
+            },
+        });
+        // no point recreating it
+        return this as unknown as PostFluent<T & { author: User }>;
+    }
+
     comments(args?: { where?: CommentWhere }) {
         this.traversal.pushLink({
             table: 'comments',
@@ -471,25 +516,21 @@ export class PostFluent<T = Post> extends FluentInterface<T> {
         return new UserFluent(this.traversal, this.schema);
     }
 
-    withComments(
-        args?: { where?: { authorName?: string }; orderBy?: { id?: 'desc' } },
-        paginate?: Paginate<Comment>,
-    ): PostFluent<T & { comments: Comment[] }> {
-        this.traversal.addWith({
-            table: 'comments',
-            // need to use the correct relation in case there are multiple relations to the same table
-            // TODO:- should do this for where filters as well?
-            relation: this.relationMap.get('comments'),
-            options: {
-                where: args?.where,
-            },
-            paginate,
-        });
-        // no point recreating it
-        return this as unknown as PostFluent<T & { comments: Comment[] }>;
+    constructor(traversal: Trav, schema: DatabaseSchema) {
+        super(traversal, schema, 'posts');
     }
+}
 
-    withAuthor(args?: { where?: { name?: string } }): PostFluent<T & { author: User }> {
+export class CommentFluent<T = Comment> extends FluentInterface<Comment> {
+    where(_args?: CommentWhere): CommentFluent<T> {
+        // this.traversal.
+        return this;
+    }
+    orderBy(_args: { id: 'desc' }): CommentFluent<T> {
+        // this.traversal.
+        return this;
+    }
+    withAuthor(): CommentFluent<T & { author: User }> {
         this.traversal.addWith({
             table: 'users',
             // need to use the correct relation in case there are multiple relations to the same table
@@ -500,15 +541,8 @@ export class PostFluent<T = Post> extends FluentInterface<T> {
             },
         });
         // no point recreating it
-        return this as unknown as PostFluent<T & { author: User }>;
+        return this as unknown as CommentFluent<T & { author: User }>;
     }
-
-    constructor(traversal: Trav, schema: DatabaseSchema) {
-        super(traversal, schema, 'posts');
-    }
-}
-
-export class CommentFluent extends FluentInterface<Comment> {
     post(args?: { where?: PostWhere }): PostFluent {
         this.traversal.pushLink({
             table: 'posts',
@@ -535,7 +569,24 @@ export class CommentFluent extends FluentInterface<Comment> {
     }
 }
 
-export class UserFluent extends FluentInterface<User> {
+export class UserFluent<T = User> extends FluentInterface<User> {
+    where(_args?: UserWhere): UserFluent<T> {
+        // this.traversal.
+        return this;
+    }
+    whereUnique(_args?: UserWhere): UserFluent<T> {
+        // this.traversal.
+        return this;
+    }
+
+    withFriends(_args?: { where?: { name?: string } }): Omit<UserFluent<T & { friends: User[] }>, 'withBadges'> {
+        return this as unknown as UserFluent<T & { friends: User[] }>;
+    }
+
+    withBadges(_args?: { where?: { level?: { gt?: number; equals?: number } } }): Omit<UserFluent<T & { badges: User[] }>, 'withBadges'> {
+        return this as unknown as UserFluent<T & { badges: User[] }>;
+    }
+
     authorPosts(args?: { where?: PostWhere }): PostFluent {
         this.traversal.pushLink({
             table: 'posts',
@@ -547,14 +598,6 @@ export class UserFluent extends FluentInterface<User> {
         return new PostFluent(this.traversal, this.schema);
     }
 
-    withFriends(_args?: { where?: { name?: string } }): UserFluent {
-        return this;
-    }
-
-    withBadges(_args?: { where?: { level?: { gt?: number; equals?: number } } }): UserFluent {
-        return this;
-    }
-
     constructor(traversal: Trav, schema: DatabaseSchema) {
         super(traversal, schema, 'users');
     }
@@ -564,70 +607,115 @@ export class UserFluent extends FluentInterface<User> {
 // unique and find replace findMany and loadOne
 
 class UserClientD {
-    unique(args: {
-        where: {
-            user_id?: number;
-        };
-    }): UserFluent {
-        const { where } = args;
-        const traversal = new Trav();
-        traversal.pushLink({
-            rootLoad: 'uniq', // TODO:- does not matter?
-            table: 'users',
-            options: {
-                where,
-            },
-        });
-        return new UserFluent(traversal, schema as unknown as DatabaseSchema);
-    }
+    // unique(args: {
+    //     where: {
+    //         user_id?: number;
+    //     };
+    // }): UserFluent {
+    //     const { where } = args;
+    //     const traversal = new Trav();
+    //     traversal.pushLink({
+    //         rootLoad: 'uniq', // TODO:- does not matter?
+    //         table: 'users',
+    //         options: {
+    //             where,
+    //         },
+    //     });
+    //     return new UserFluent(traversal, schema as unknown as DatabaseSchema);
+    // }
 
-    find(args: {
-        where: {
-            user_id?: number;
-            name?: string;
-        };
-    }): UserFluent {
-        const { where } = args;
+    find(args?: { includeDeleted?: boolean; skipCache?: boolean }): UserFluent {
         const traversal = new Trav();
         traversal.pushLink({
             rootLoad: 'many',
             table: 'users',
             options: {
-                where,
+                includeDeleted: args?.includeDeleted,
             },
+        });
+        return new UserFluent(traversal, schema as unknown as DatabaseSchema);
+    }
+
+    from(data: User | null): UserFluent {
+        const traversal = new Trav();
+        traversal.pushLink({
+            // rootLoad: 'many',
+            rootData: data, // avoid re-loading same data?
+            table: 'users',
+            options: {},
         });
         return new UserFluent(traversal, schema as unknown as DatabaseSchema);
     }
 }
 
-const user = new UserClientD();
+const client = { user: new UserClientD() };
 
 // const de = user
 //     .find({ where: { user_id: 1 } })
 //     .first()
 //     .then((u) => console.log(u));
 
-const dev1 = user
-    .find({ where: { name: 'john' } })
-    .authorPosts({ where: { post_id: 3 } })
-    .withComments({ orderBy: { id: 'desc' } }, paginate({ limit: 10, afterCursor: { id: 1 } }))
-    .withAuthor()
-    .first()
-    .then((r) => console.log(r));
+// const dev1 = user
+//     .find({ where: { name: 'john' } })
+//     .authorPosts({ where: { post_id: 3 } })
+//     .withComments({ orderBy: { id: 'desc' } }, paginate({ limit: 10, afterCursor: { id: 1 } }))
+//     .withAuthor()
+//     .first()
+//     .then((r) => console.log(r));
 
-const dev = user
-    .find({ where: { name: 'john' } })
-    .authorPosts({ where: { post_id: 3 } })
-    // this pattern doesn't really make sense, no difference between function and raw object,
-    // would only make sense if could be given in any order?
-    .withComments({ orderBy: { id: 'desc' } }, paginate({ limit: 10, afterCursor: { id: 1 } }))
-    .author()
-    // clean but nested with?
-    .withFriends({ where: { name: 'steve' } })
-    // TODO:- how to batch this kind of filter? Within query should work, just need rules to distinguish this
-    .withBadges({ where: { level: { gt: 10 } } });
+// const dev = user
+//     .find({ where: { name: 'john' } })
+//     .authorPosts({ where: { post_id: 3 } })
+//     // this pattern doesn't really make sense, no difference between function and raw object,
+//     // would only make sense if could be given in any order?
+//     .withComments({ orderBy: { id: 'desc' } }, paginate({ limit: 10, afterCursor: { id: 1 } }))
+//     .author()
+//     // clean but nested with?
+//     .withFriends({ where: { name: 'steve' } })
+//     // TODO:- how to batch this kind of filter? Within query should work, just need rules to distinguish this
+//     .withBadges({ where: { level: { gt: 10 } } });
 
-dev.get({ first: 10 }).then((u) => console.log(u));
+// dev.get({ first: 10 }).then((u) => console.log(u));
+
+// const b = client.user
+//     .find()
+//     .authorPosts()
+//     .where({
+//         post_id: 3,
+//     })
+//     .withAuthor()
+//     .get({ first: 10 });
+
+// // fully fluent
+// const c = q
+//     .comments()
+//     .where({ title: 'test' })
+//     .withAuthor()
+//     .withLikes((t) =>
+//         t
+//             .where({ count: 4 })
+//             .paginate({
+//                 first: 10,
+//                 after: { id: 1 },
+//             })
+//             .withAuthor((a) => a.where({ id: 1 }).paginate({ first: 3 })),
+//     )
+//     .first();
+
+async function test() {
+    const author = await client.user.find({ skipCache: true, includeDeleted: true }).whereUnique({ user_id: 1 }).first();
+
+    const posts = client.user
+        .from(author)
+        .authorPosts()
+        .where({ post_id: 1 })
+        .withComments((c) => c.where().orderBy({ id: 'desc' }));
+
+    if (1 == 1) {
+        posts.where({ post_id: 4 });
+    }
+    posts.withAuthor();
+}
 
 // const be = user
 //     .unique({ where: { user_id: 1 } })
@@ -643,6 +731,7 @@ dev.get({ first: 10 }).then((u) => console.log(u));
 //     .first()
 //     .then((u) => console.log(u));
 
+// TODO:- don't ever need to load first item in chain if no filters?
 // const contUser = gybson.comment.from(be2).author(...);
 
 // // const t = proxy(UserFluent);
@@ -651,3 +740,23 @@ dev.get({ first: 10 }).then((u) => console.log(u));
 
 // .first()
 // .then((p) => console.log(p));
+
+const query = client.user.find().where({ user_id: 1 });
+
+// query building support - will require a deep merge https://lodash.com/docs/4.17.15#merge
+if (1 == 1) {
+    query.where({
+        user_id: 3,
+    });
+}
+
+const data = client.user
+    .find()
+    .where({ user_id: 1 })
+    .first()
+    .then((u) => {
+        return client.user.from(data).authorPosts().get({});
+    })
+    .then((p) => console.log(p));
+
+const posts = client.user.from(data);
