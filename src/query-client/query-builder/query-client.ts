@@ -22,7 +22,7 @@ export class QueryClient<
     TblUniqueWhere,
     TblNonUniqueWhere,
     TblOrderBy extends OrderBy,
-    TblPaginate extends Paginate,
+    TblPaginate extends Paginate<TblRow>,
     RequiredTblRow,
     PartialTblRow = Partial<TblRow>,
 > {
@@ -289,24 +289,24 @@ export class QueryClient<
         }
 
         if (paginate) {
-            const { limit, afterCursor, beforeCursor, offset } = paginate;
+            const { limit, after, before, offset } = paginate;
 
             if (limit) query.limit(limit);
             if (offset) query.offset(offset);
-            if (afterCursor) {
-                Object.entries(afterCursor).forEach(([column, value]) => {
+            if (after) {
+                Object.entries(after).forEach(([column, value]) => {
                     query.where(this.aliasedColumn(column), '>', value);
                 });
             }
-            if (beforeCursor) {
-                Object.entries(beforeCursor).forEach(([column, value]) => {
+            if (before) {
+                Object.entries(before).forEach(([column, value]) => {
                     query.where(this.aliasedColumn(column), '<', value);
                 });
             }
         }
 
-        if (paginate && paginate.afterCursor && orderBy) {
-            for (const key of Object.keys(paginate.afterCursor)) {
+        if (paginate && paginate.after && orderBy) {
+            for (const key of Object.keys(paginate.after)) {
                 if (!orderBy[key])
                     this.logger.warn(
                         'You are ordering by different keys to your cursor. This may lead to unexpected results',

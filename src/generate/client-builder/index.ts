@@ -12,10 +12,7 @@ export interface TableClient {
  * Build client from database schema for each table
  * @param params
  */
-export const buildTableClients = async (params: {
-    schema: DatabaseSchema;
-    gybsonLibPath: string;
-}): Promise<TableClient[]> => {
+export const buildTableClients = async (params: { schema: DatabaseSchema; gybsonLibPath: string }): Promise<TableClient[]> => {
     const { schema, gybsonLibPath } = params;
 
     const clients: TableClient[] = [];
@@ -49,19 +46,13 @@ export function buildClient(params: { tableClients: TableClient[]; gybsonLibPath
     for (const { entityName, className } of tableClients) {
         index += `import { ${className} } from './${entityName}';`;
         clients += `public get ${lowerFirst(entityName)}(): ${className} { 
-                        // lazy instantiation
-                        let client = this.clients.get('${entityName}');
-                        if (client) return client;
-                        client = new ${className}(this.clientConfig);
-                        this.clients.set('${entityName}', client);
-                        return client;
-                     }
+                        return this.lazyClient('${entityName}', ${className});
+                    }
                     `;
     }
     index += `
 
         export class GybsonClient extends GybsonBase {
-            private clients: Map<string, any> = new Map();
             ${clients}
         }
     `;

@@ -9,15 +9,33 @@ export type Enumerable<T> = Array<T>;
 export type RecordAny = Record<string, any>;
 export type RecordUnknown = Record<string, unknown>;
 
-// These are just for helping write the query builder
 export type OrderBy = { [column: string]: Order | undefined };
 
 export type Paginate<T = any> = {
-    limit?: number;
-    afterCursor?: T;
-    beforeCursor?: T;
+    first?: number;
+    after?: T;
+    before?: T;
     offset?: number;
 };
+
+export type SoftDeleteQueryFilter = {
+    includeDeleted?: boolean;
+};
+
+export type OrderQueryFilter<Order = OrderBy> = {
+    orderBy?: Order;
+};
+
+export type LoadOptions = {
+    includeDeleted?: boolean;
+    skipCache?: boolean;
+};
+
+export type ProvideConnection = {
+    connection?: Connection;
+};
+
+export type SoftDeletable = { deleted?: boolean | null; deleted_at?: Date | null; deletedAt?: Date | null };
 
 export type Order = 'asc' | 'desc';
 
@@ -136,18 +154,4 @@ export type DateWhere = {
     lte?: Date | string | null;
     gt?: Date | string | null;
     gte?: Date | string | null;
-};
-
-export type SoftDeletable = { deleted?: boolean | null; deleted_at?: Date | null; deletedAt?: Date | null };
-
-export type SoftDeleteQueryFilter = {
-    includeDeleted?: boolean;
-};
-
-export type OrderQueryFilter<Order = OrderBy> = {
-    orderBy?: Order;
-};
-
-export type ProvideConnection = {
-    connection?: Connection;
 };

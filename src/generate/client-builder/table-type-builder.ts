@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import _, { camelCase } from 'lodash';
 import {
     ColumnDefinition,
     Comparable,
@@ -21,6 +21,7 @@ export type TableTypeNames = {
     hasOneRelationFilterTypeName: string;
     hasManyRelationFilterTypeName: string;
     hasOneRequiredRelationFilterTypeName: string;
+    chainableRelationsTypeName: string;
 };
 
 export class TableTypeBuilder {
@@ -54,6 +55,7 @@ export class TableTypeBuilder {
             hasOneRelationFilterTypeName: `${tableName}HasOneRelationFilter`,
             hasManyRelationFilterTypeName: `${tableName}HasManyRelationFilter`,
             hasOneRequiredRelationFilterTypeName: `${tableName}HasOneRequiredRelationFilter`,
+            chainableRelationsTypeName: `${tableName}Chainables`,
         };
     }
 
@@ -71,7 +73,9 @@ export class TableTypeBuilder {
         return `
              import { 
                 QueryClient,
-                Order, 
+                LoadOptions,
+                Order,
+                Paginate,
                 Enumerable, 
                 NumberWhere, 
                 NumberWhereNullable, 
@@ -84,6 +88,14 @@ export class TableTypeBuilder {
                 ProvideConnection,
                 SoftDeleteQueryFilter,
                 OrderQueryFilter,
+                FluentInterface,
+                FluentTraversal,
+                FluentWithoutFilters,
+                FluentWithoutExecutors,
+                FluentWithoutListOperators,
+                FluentWithoutOrderBy,
+                FluentWithoutPaginate,
+                FluentMethods
             } from '${gybsonLibPath}';
             
             ${_.uniqBy(relations, (r) => r.toTable)
@@ -95,7 +107,8 @@ export class TableTypeBuilder {
                     return `import { 
                                 ${names.hasOneRelationFilterTypeName}, 
                                 ${names.hasManyRelationFilterTypeName}, 
-                                ${names.hasOneRequiredRelationFilterTypeName}
+                                ${names.hasOneRequiredRelationFilterTypeName},
+                                ${this.tableNameAlias(tbl.toTable)}Fluent
                             } from "./${names.rowTypeName}"`;
                 })
                 .join(';')}
@@ -206,6 +219,21 @@ export class TableTypeBuilder {
             export interface ${hasOneRequiredRelationFilterTypeName} {
                 where?: ${whereTypeName};
             }`;
+    }
+
+    /**
+     * Type to enumerate the chainable
+     * @param params
+     * @returns
+     */
+    public static buildChainableRelations(params: {
+        chainableRelationsTypeName: string;
+        relations: RelationDefinition[];
+    }): string {
+        const { chainableRelationsTypeName, relations } = params;
+        return `
+        export type ${chainableRelationsTypeName} = ${relations.map((r) => `'${camelCase(r.alias)}'`).join(' | ')};
+        `;
     }
 
     /**
