@@ -3,7 +3,7 @@ import type { Connection, GybsonConfig, Logger } from '..';
 import { ClientEngine, LogLevel } from '../../types';
 import { buildLogger, logger } from '../lib/logging';
 
-export class GybsonBase {
+export abstract class GybsonBase {
     protected readonly logger: Logger;
     protected readonly engine: ClientEngine;
     protected clients: Map<string, any> = new Map();
@@ -12,11 +12,24 @@ export class GybsonBase {
         this.logger = config?.logger ? config.logger : buildLogger({ logLevel: config?.logLevel ?? LogLevel.debug });
         this.engine = knex.client.config.client;
         if (this.engine !== 'pg' && this.engine !== 'mysql') {
-            this.logger.error(`Client option not recognised. Please configure knex with either 'pg' or 'mysql' for the client.`);
+            this.logger.error(
+                `Client option not recognised. Please configure knex with either 'pg' or 'mysql' for the client.`,
+            );
             throw new Error('Failed to initialise');
         }
         this.logger.info('Initialising Gybson...');
     }
+
+    // /**
+    //  * A helper to get a client
+    //  * @param type
+    //  * @returns
+    //  */
+    // public clientFactory(type: string): QueryClient<any, any, any, any, any, any> | null {
+    //     const client: any = this[type as keyof GybsonBase];
+    //     if (client) return client();
+    //     return null;
+    // }
 
     protected lazyClient<T>(name: string, ClientClass: any): T {
         let client = this.clients.get(name);

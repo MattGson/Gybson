@@ -2,7 +2,7 @@ import { generate } from 'src/generate';
 
 const outdir = 'test/tmp';
 // fake lib path for tests
-const gybsonLibPath = '../../src/query-client';
+const gybsonLibPath = '../../src/client';
 
 const schemaFile = 'test/tmp/relational-schema.js';
 

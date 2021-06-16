@@ -1,10 +1,13 @@
 import { flatten } from 'lodash';
 import { DatabaseSchema, RelationDefinition, TransitiveRelationDefinition } from 'relational-schema';
 import { LoadOptions, Paginate, RecordAny } from '../../types';
+import { QueryClient } from './query-client';
 
-export interface TraveralLink {
+export interface TraveralLink<T = any> {
     rootLoad?: 'uniq' | 'many';
     table: string;
+    // intialise a link already resolved
+    resolveData?: T;
     relation?: RelationDefinition | TransitiveRelationDefinition; // identifier for the relation that links to the parent
     options: {
         where?: RecordAny;
@@ -36,6 +39,20 @@ export abstract class FluentInterface<T> {
         });
     }
 
+    /**
+     * un-nest filters i.e. team_id__user_id: { ... } -> team_id: ..., user_id: ...,
+     * helpful for whereUnique
+     * @param where
+     */
+    protected unNestFilters(where: RecordAny): RecordAny {
+        const filter: any = {};
+        Object.entries(where).map(([k, v]) => {
+            if (v instanceof Object) Object.assign(filter, v);
+            else filter[k] = v;
+        });
+        return filter;
+    }
+
     async first(): Promise<T | null> {
         const result = await this.traversal.resolve<T>();
         return result?.[0] ?? null;
@@ -46,23 +63,34 @@ export abstract class FluentInterface<T> {
 }
 
 export class FluentTraversal {
+    constructor(private clientFactory: (type: string) => QueryClient<any, any, any, any, any, any> | null) {}
+
     private taversalChain: TraveralLink[] = [];
     // maintain a pointer to current link for ease of use
     private currentLink: TraveralLink | undefined;
 
-    // private getClient(type: string): QueryClient<any, any, any, any, any, any, any, any> {
-    private getClient(type: string) {
-        // return new UserClient({});
-        return {
-            // can probably generalise loadOne, loadMany, findMany into a generic batch loader which performs all optimisations possible
-            batchFind(args: { where?: any; orderBy?: any; loadOptions?: LoadOptions }): Promise<any> {
-                //...
-            },
-            findMany(_args: { whereIn: any[]; where: any }) {
-                return [];
-            },
-        };
+    /**
+     * Get a tableClient
+     * @param type
+     */
+    private getTableClient(type: string): QueryClient<any, any, any, any, any, any> {
+        const tblClient = this.clientFactory(type);
+        if (!tblClient) throw new Error('[Gybson] unexpected error. No client found for ' + type);
+        return tblClient;
     }
+    // private getClient(type: string) {
+    //     // return new UserClient({});
+    //     return {
+    //         // can probably generalise loadOne, loadMany, findMany into a generic batch loader which performs all optimisations possible
+    //         // for now maybe exlude findMany
+    //         batchFind(args: { where?: any; orderBy?: any; loadOptions?: LoadOptions }): Promise<any> {
+    //             //...
+    //         },
+    //         findMany(_args: { whereIn: any[]; where: any }) {
+    //             return [];
+    //         },
+    //     };
+    // }
 
     public pushLink(link: TraveralLink): void {
         this.taversalChain.push(link);
@@ -99,12 +127,10 @@ export class FluentTraversal {
             console.log('Load link ', link);
 
             let result: RecordAny[] = [];
-            const client = this.getClient(link.table);
+            const client = this.getTableClient(link.table);
 
             if (parentLink == null) {
                 // loading the root of the tree
-
-                if (!link.rootLoad) throw new Error('Please read the instructions!');
 
                 result = await client.batchFind({
                     where: link.options?.where,

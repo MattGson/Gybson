@@ -3,7 +3,7 @@ import type { OrderBy, OrderQueryFilter, RecordAny, SoftDeleteQueryFilter } from
 import { logger } from '../lib/logging';
 
 interface LoaderDataSource<RowType, KeyType = Partial<RowType>, Order = OrderBy> {
-    getOnes: (params: { keys: readonly KeyType[]; includeDeleted?: boolean }) => Promise<(RowType | null)[]>;
+    // getOnes: (params: { keys: readonly KeyType[]; includeDeleted?: boolean }) => Promise<(RowType | null)[]>;
     getMultis: (params: {
         keys: readonly KeyType[];
         orderBy?: Order;
@@ -62,15 +62,15 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
         return filterKey;
     }
 
-    /**
-     * Build data loader options
-     * cacheKeyFn -> an object safe cache key function, utilises the fact that object.values order is stable in js
-     *            -> makes sure objects with same value are compared equally in the cache
-     * @returns
-     */
-    private getDataLoaderOptions() {
-        return { cacheKeyFn: (k: RecordAny) => Object.values(k).join(':') };
-    }
+    // /**
+    //  * Build data loader options
+    //  * cacheKeyFn -> an object safe cache key function, utilises the fact that object.values order is stable in js
+    //  *            -> makes sure objects with same value are compared equally in the cache
+    //  * @returns
+    //  */
+    // private getDataLoaderOptions() {
+    //     return { cacheKeyFn: (k: RecordAny) => Object.values(k).join(':') };
+    // }
 
     /**
      * Clear the load cache
@@ -110,25 +110,27 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
         return loader.load(filter);
     }
 
-    /**
-     * Batch Loads a single row for the input filter.
-     * @param params
-     */
-    public async loadOne(params: { filter: Filter } & SoftDeleteQueryFilter): Promise<RowType | null> {
-        const { filter, includeDeleted } = params;
+    // /**
+    //  * Batch Loads a single row for the input filter.
+    //  * // TODO:- can use relationship cardinality to work out when to use this load method?
+    //  * @param params
+    //  */
+    // public async loadOne(params: { filter: Filter } & SoftDeleteQueryFilter): Promise<RowType | null> {
+    //     const { filter, includeDeleted } = params;
 
-        // different loader for each param combination
-        const loadAngle = this.filterHashKey({ filter }, { includeDeleted });
-        let loader = this.loaders.oneLoaders[loadAngle];
+    //     // different loader for each param combination
+    //     const loadAngle = this.filterHashKey({ filter }, { includeDeleted });
+    //     let loader = this.loaders.oneLoaders[loadAngle];
 
-        if (!loader) {
-            logger().debug(`No single-loader for key ${loadAngle}. Creating loader.`);
-            loader = this.loaders.oneLoaders[loadAngle] = new DataLoader<Filter, RowType | null, string>(
-                // TODO:- check if this scope capture has memory implications?
-                (keys) => this.dataSource.getOnes({ keys, includeDeleted }),
-                this.getDataLoaderOptions(),
-            );
-        }
-        return loader.load(filter);
-    }
+    //     if (!loader) {
+    //         logger().debug(`No single-loader for key ${loadAngle}. Creating loader.`);
+    //         loader = this.loaders.oneLoaders[loadAngle] = new DataLoader<Filter, RowType | null, string>(
+    //             // TODO:- check if this scope capture has memory implications?
+    //             // TODO:- can just use dataSource.getMultis here as well?
+    //             (keys) => this.dataSource.getOnes({ keys, includeDeleted }),
+    //             this.getDataLoaderOptions(),
+    //         );
+    //     }
+    //     return loader.load(filter);
+    // }
 }

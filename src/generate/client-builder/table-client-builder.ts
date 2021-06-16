@@ -88,16 +88,12 @@ export class TableClientBuilder {
 
             ${this.types}
             
-             export class ${this.className} {
-                    
-                private queryClient: QueryClient<${rowTypeName}, 
+             export class ${this.className} extends QueryClient<${rowTypeName}, 
                 ${columnMapTypeName}, 
                 ${whereTypeName}, 
-                ${loadOneWhereTypeName}, 
-                ${loadManyWhereTypeName}, 
                 ${orderByTypeName}, 
                 ${paginationTypeName}, 
-                ${requiredRowTypeName}>;
+                ${requiredRowTypeName}> {
 
                 
                 constructor(params: {
@@ -106,14 +102,23 @@ export class TableClientBuilder {
                     engine: ClientEngine;
                 }) {
                     const { knex, logger, engine } = params;
+                    super(
+                        {
+                            tableName: '${this.tableName}',
+                            schema: schema as any,
+                            knex,
+                            logger,
+                            engine,
+                        }
+                    )
                 
-                    this.queryClient = new QueryClient({
-                        tableName: '${this.tableName}',
-                        schema: schema as any,
-                        knex,
-                        logger,
-                        engine,
-                    });
+                    // this.queryClient = new QueryClient({
+                    //     tableName: '${this.tableName}',
+                    //     schema: schema as any,
+                    //     knex,
+                    //     logger,
+                    //     engine,
+                    // });
                 }
                 
                 // Overwrite method signatures to improve IDE type inference speed and helpfulness over generics
@@ -138,12 +143,12 @@ export class TableClientBuilder {
                  * Continue a query chain from a ${this.entityName} object
                  * @param data - the object to start the chain
                  */
-                from(data: User | null):  FluentWithoutListOperators<FluentWithoutFilters<${this.fluentClassName}>> {
+                from(data: ${this.entityName} | null):  FluentWithoutListOperators<FluentWithoutFilters<${
+            this.fluentClassName
+        }>> {
                     const traversal = new FluentTraversal();
                     traversal.pushLink({
-                        // rootLoad: 'many',
-                        // TODO:
-                        rootData: data, // avoid re-loading same data?
+                        resolveData: data, // avoid re-loading same data?
                         table: 'users',
                         options: {},
                     });
@@ -151,30 +156,30 @@ export class TableClientBuilder {
                 }
 
                 
-                /**
-                 * Clear cache
-                 */
-                public async purge(): Promise<void> {
-                    await this.queryClient.purge();
-                }
+                // /**
+                //  * Clear cache
+                //  */
+                // public async purge(): Promise<void> {
+                //     await this.queryClient.purge();
+                // }
                 
-                /**
-                 * Batch load a single-row
-                 * @param params
-                 */
-                public async loadOne(params: { where: ${loadOneWhereTypeName} } & SoftDeleteQueryFilter): Promise<${rowTypeName} | null> {
-                    return this.queryClient.loadOne(params);
-                }
+                // /**
+                //  * Batch load a single-row
+                //  * @param params
+                //  */
+                // public async loadOne(params: { where: ${loadOneWhereTypeName} } & SoftDeleteQueryFilter): Promise<${rowTypeName} | null> {
+                //     return this.queryClient.loadOne(params);
+                // }
 
-                /**
-                 * Batch load many-rows
-                 * @param params
-                 */
-                public async loadMany(
-                    params: { where: ${loadManyWhereTypeName} } & SoftDeleteQueryFilter & OrderQueryFilter<${orderByTypeName}>,
-                ): Promise<${rowTypeName}[]> {
-                    return this.queryClient.loadMany(params);
-                }
+                // /**
+                //  * Batch load many-rows
+                //  * @param params
+                //  */
+                // public async loadMany(
+                //     params: { where: ${loadManyWhereTypeName} } & SoftDeleteQueryFilter & OrderQueryFilter<${orderByTypeName}>,
+                // ): Promise<${rowTypeName}[]> {
+                //     return this.queryClient.loadMany(params);
+                // }
             
                 /**
                  * Find rows from a table
@@ -186,7 +191,7 @@ export class TableClientBuilder {
                     paginate?: ${paginationTypeName};
                 } & ProvideConnection & SoftDeleteQueryFilter & OrderQueryFilter<${orderByTypeName}>
                 ): Promise<${rowTypeName}[]> {
-                    return this.queryClient.findMany(params);
+                    return super.findMany(params);
                 }
                 
                 /**
@@ -206,10 +211,10 @@ export class TableClientBuilder {
                     mergeColumns?: Partial<${columnMapTypeName}>;
                     update?: Partial<${rowTypeName}>;
                 } & ProvideConnection): Promise<number> {
-                    return this.queryClient.upsert(params);
+                    return super.upsert(params);
                 }
                 
-                    /**
+                /**
                  * Insert function
                  * Inserts all rows. Fails on duplicate key error
                  *     * use ignoreDuplicates if you wish to ignore duplicate rows
@@ -220,20 +225,20 @@ export class TableClientBuilder {
                     values: ${requiredRowTypeName} | ${requiredRowTypeName}[];
                     ignoreDuplicates?: boolean;
                 } & ProvideConnection): Promise<number> {
-                    return this.queryClient.insert(params);
+                    return super.insert(params);
                 }
                 
-                    /**
+                /**
                  * Update
                  * Updates all rows matching conditions
                  * Note:- pg uses a weird update join syntax which isn't properly supported in knex.
                  *        In pg, a sub-query is used to get around this. MySQL uses regular join syntax.
                  */
                 public async update(params: { values: Partial<${rowTypeName}>; where: ${whereTypeName} } & ProvideConnection): Promise<unknown> {
-                    return this.queryClient.update(params);
+                    return super.update(params);
                 }
                 
-                    /**
+                /**
                  * Soft delete
                  * Sets deleted flag for all rows matching conditions
                  * Note:- pg uses a weird update join syntax which isn't properly supported in knex.
@@ -241,10 +246,10 @@ export class TableClientBuilder {
                  * @param params
                  */
                 public async softDelete(params: { where: ${whereTypeName} } & ProvideConnection): Promise<unknown> {
-                    return this.queryClient.softDelete(params);
+                    return super.softDelete(params);
                 }
                 
-                    /**
+                /**
                  * Delete
                  * Deletes all rows matching conditions
                  * Note:- due to the inconsistency with how PG and MySQL handle updates and deletes
@@ -252,15 +257,15 @@ export class TableClientBuilder {
                  * @param params
                  */
                 public async delete(params: {  where: ${whereTypeName} } & ProvideConnection): Promise<unknown> {
-                    return this.queryClient.delete(params);
+                    return super.delete(params);
                 }
                 
-                    /**
+                /**
                  * Truncate a table
                  * @param params
                  */
                 public async truncate(params: ProvideConnection): Promise<unknown> {
-                    return this.queryClient.truncate(params);
+                    return super.truncate(params);
                 }
             }
 
@@ -290,9 +295,10 @@ export class TableClientBuilder {
                  * Filter which ${this.humanDocName} are returned
                  * @param args - the where filter
                  */
-                where(args?: ${whereTypeName}): ${this.fluentClassName} {
+                where(args: ${loadManyWhereTypeName}): ${this.fluentClassName} {
                     // additive where like knex
                     // this.traversal.
+
                     return this;
                 }
 
@@ -302,9 +308,11 @@ export class TableClientBuilder {
                  * This is just a convenience method to provide typings for unique filters
                  * @param args - the where filter
                  */
-                whereUnique(args?: ${loadOneWhereTypeName}): FluentWithoutListOperators<${this.fluentClassName}> {
+                whereUnique(args: ${loadOneWhereTypeName}): FluentWithoutListOperators<${this.fluentClassName}> {
                     // additive where like knex
                     // this.traversal.
+                    const filters = this.unNestFilters(args);
+
                     return this;
                 }
 
@@ -367,7 +375,6 @@ export class TableClientBuilder {
                 // }
             
                 ${this.getFluentChainables()}
-                
               
             }
             `;

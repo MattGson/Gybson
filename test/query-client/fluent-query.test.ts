@@ -59,7 +59,7 @@ describe('Loaders', () => {
                     },
                 })
                 // TODO:- should ideally retain filtered options, since unique filter is applied, there will only be at most one row still
-                // at the moment this adds back the list operators
+                // at the moment this adds back the list operators - this applies to all narrowing but maybe easier said than done.
                 .where({
                     member_post_id: 4,
                 })
