@@ -1,38 +1,70 @@
 import { Knex } from 'knex';
 import _ from 'lodash';
-import { OrderBy, RecordAny, Logger } from '../../types';
+import { OrderBy, RecordAny, Logger, SoftDeleteQueryFilter, OrderQueryFilter, LoadOptions } from '../../types';
 import { Loader } from './loader';
 import { QueryTable } from './query-table';
 
-export class BatchQuery<
-    TblRow extends RecordAny,
-    // TblColumnMap,
-    // TblWhere,
-    // TblUniqueWhere,
-    // TblNonUniqueWhere,
-    TblOrderBy extends OrderBy,
-    // TblPaginate extends Paginate<TblRow>,
-    // RequiredTblRow,
-    PartialTblRow = Partial<TblRow>,
-> {
-    constructor(private queryTable: QueryTable, private knex: Knex<any, unknown>, private logger: Logger) {}
+export class BatchQuery {
+    // <
+    // TblRow extends RecordAny,
+    // // TblColumnMap,
+    // // TblWhere,
+    // // TblUniqueWhere,
+    // TblOrderBy extends OrderBy,
+    // // TblPaginate extends Paginate<TblRow>,
+    // // RequiredTblRow,
+    // PartialTblRow = Partial<TblRow>,
+    // >
 
-    private readonly loader = new Loader<TblRow, PartialTblRow, TblOrderBy>({
-        getMultis: (args) => this.stableGetMany(args),
-        // getOnes: (args) => this.stableGetSingles(args),
-    });
+    private loaders: Map<string, Loader<any, any, any>> = new Map();
+
+    constructor(private knex: Knex<any, unknown>, private logger: Logger) {}
+
+    private lazyGetLoader(table: string) {
+        let loader = this.loaders.get(table);
+        if (loader) return loader;
+        loader = new Loader<any, any, any>({
+            getMultis: (args) => this.stableGetMany(args),
+            // getOnes: (args) => this.stableGetSingles(args),
+        });
+        this.loaders.set(table, loader);
+        return loader;
+    }
+
+    /**
+     * Batch load many-rows
+     * @param params
+     */
+    public async loadMany<TblRow extends RecordAny, TblOrderBy extends OrderBy, PartialTblRow = Partial<TblRow>>(
+        table: QueryTable,
+        params: { where: PartialTblRow } & OrderQueryFilter<TblOrderBy> & LoadOptions,
+    ): Promise<TblRow[]> {
+        const { where, orderBy, includeDeleted, skipCache } = params;
+
+        const filter = where;
+        const rows = await this.lazyGetLoader(table.tableName).loadMany(table, {
+            filter,
+            orderBy,
+            includeDeleted,
+            skipCache,
+        });
+
+        // const result = runMiddleWares(rows, params);
+        return rows || null;
+    }
 
     /**
      * Load multiple rows for each input compound key (stable ordering)
      * make use of the tuple style WHERE IN clause i.e. WHERE (user_id, post_id) IN ((1,2), (2,3))
      * @param params.keys - the load key i.e. { user_id: 3, post_id: 5 }[]
      */
-    private async stableGetMany(params: {
-        keys: readonly PartialTblRow[];
-        orderBy?: TblOrderBy;
+    private async stableGetMany<T extends RecordAny>(params: {
+        table: QueryTable;
+        keys: readonly RecordAny[];
+        orderBy?: OrderBy;
         includeDeleted?: boolean;
-    }): Promise<TblRow[][]> {
-        const { keys, orderBy, includeDeleted } = params;
+    }): Promise<T[][]> {
+        const { table, keys, orderBy, includeDeleted } = params;
 
         // get the key columns to load on
         const columns = Object.keys(keys[0]);
@@ -44,9 +76,9 @@ export class BatchQuery<
         // reduce number of keys sent to DB
         const uniqueLoads = _.uniqBy(loadValues, (value) => value.join(':'));
 
-        const query = this.knex(this.queryTable.aliasedTable).select().whereIn(columns, uniqueLoads);
+        const query = this.knex(table.aliasedTable).select().whereIn(columns, uniqueLoads);
 
-        if (!includeDeleted && this.queryTable.hasSoftDelete) query.where(this.queryTable.softDeleteFilter(true));
+        if (!includeDeleted && table.hasSoftDelete) query.where(table.softDeleteFilter(true));
 
         if (orderBy) {
             for (const [column, direction] of Object.entries(orderBy)) {

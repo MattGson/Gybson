@@ -5,7 +5,7 @@
 module.exports = {
     database: 'tests',
     connection: { host: 'localhost', port: 5432, user: 'postgres' },
-    generatedAt: '2021-05-28T09:52:25.541Z',
+    generatedAt: '2021-06-17T10:00:20.422Z',
     tables: {
         teams: {
             primaryKey: { constraintName: 'teams_pkey', constraintType: 'PRIMARY KEY', columnNames: ['team_id'] },
@@ -132,8 +132,8 @@ module.exports = {
                     toTable: 'team_members_positions',
                     alias: 'team_members_position',
                     joins: [
-                        { fromColumn: 'team_id', toColumn: 'team_id' },
                         { fromColumn: 'user_id', toColumn: 'user_id' },
+                        { fromColumn: 'team_id', toColumn: 'team_id' },
                     ],
                     constraintName: 'team_members_positions_team_id_user_id_foreign',
                     type: 'hasOne',
@@ -209,8 +209,8 @@ module.exports = {
                     toTable: 'team_members',
                     alias: 'team_member',
                     joins: [
-                        { fromColumn: 'team_id', toColumn: 'team_id' },
                         { fromColumn: 'user_id', toColumn: 'user_id' },
+                        { fromColumn: 'team_id', toColumn: 'team_id' },
                     ],
                     constraintName: 'team_members_positions_team_id_user_id_foreign',
                     type: 'hasOne',
@@ -450,11 +450,11 @@ module.exports = {
             },
             enums: {
                 subscription_level: {
-                    id: '16386',
+                    id: '16715',
                     enumName: 'subscription_level',
                     values: ['BRONZE', 'GOLD', 'SILVER'],
                 },
-                permissions: { id: '16394', enumName: 'permissions', values: ['ADMIN', 'USER'] },
+                permissions: { id: '16722', enumName: 'permissions', values: ['ADMIN', 'USER'] },
             },
         },
         posts: {

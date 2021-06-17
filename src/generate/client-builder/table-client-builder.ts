@@ -81,7 +81,9 @@ export class TableClientBuilder {
             requiredRowTypeName,
         } = this.typeNames;
         return `
-            import { ClientEngine, Logger } from '${this.options.gybsonLibPath}';            
+            import { BatchQuery, ClientEngine, Logger } from '${this.options.gybsonLibPath}';
+            
+            // TODO:- rather than import this in each client, should it be copied in during generate?
             import schema from './relational-schema';
             import { Knex } from 'knex';
             import { DatabaseSchema } from 'relational-schema';
@@ -94,19 +96,20 @@ export class TableClientBuilder {
                 ${orderByTypeName}, 
                 ${paginationTypeName}, 
                 ${requiredRowTypeName}> {
-
                 
                 constructor(params: {
                     knex: Knex<any, unknown>;
+                    batchClient: BatchQuery; 
                     logger: Logger;
                     engine: ClientEngine;
                 }) {
-                    const { knex, logger, engine } = params;
+                    const { knex, batchClient, logger, engine } = params;
                     super(
                         {
                             tableName: '${this.tableName}',
                             schema: schema as any,
                             knex,
+                            batchClient,
                             logger,
                             engine,
                         }
@@ -128,7 +131,7 @@ export class TableClientBuilder {
                  * @param args - configure load behvaiour
                  */
                 find(args?: LoadOptions): ${this.fluentClassName} {
-                    const traversal = new FluentTraversal();
+                    const traversal = new FluentTraversal(this.batchClient, schema as any);
                     traversal.pushLink({
                         rootLoad: 'many',
                         table: 'users',
@@ -146,7 +149,7 @@ export class TableClientBuilder {
                 from(data: ${this.entityName} | null):  FluentWithoutListOperators<FluentWithoutFilters<${
             this.fluentClassName
         }>> {
-                    const traversal = new FluentTraversal();
+                    const traversal = new FluentTraversal(this.batchClient, schema as any);
                     traversal.pushLink({
                         resolveData: data, // avoid re-loading same data?
                         table: 'users',
@@ -297,7 +300,8 @@ export class TableClientBuilder {
                  */
                 where(args: ${loadManyWhereTypeName}): ${this.fluentClassName} {
                     // additive where like knex
-                    // this.traversal.
+
+                    this.traversal.addWhere(args);
 
                     return this;
                 }
@@ -310,8 +314,8 @@ export class TableClientBuilder {
                  */
                 whereUnique(args: ${loadOneWhereTypeName}): FluentWithoutListOperators<${this.fluentClassName}> {
                     // additive where like knex
-                    // this.traversal.
                     const filters = this.unNestFilters(args);
+                    this.traversal.addWhere(filters);
 
                     return this;
                 }
@@ -322,6 +326,8 @@ export class TableClientBuilder {
                  */
                 orderBy(args: ${orderByTypeName}): FluentWithoutOrderBy<${this.fluentClassName}> {
                     //
+                    this.traversal.addOrder(args);
+
                     return this;
                 }
 
@@ -331,6 +337,8 @@ export class TableClientBuilder {
                  */
                 paginate(args: Paginate<Partial<${rowTypeName}>>): FluentWithoutPaginate<${this.fluentClassName}> {
                     //
+                    this.traversal.addPaginate(args);
+
                     return this;
                 }
             

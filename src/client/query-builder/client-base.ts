@@ -2,11 +2,13 @@ import type { Knex } from 'knex';
 import type { Connection, GybsonConfig, Logger } from '..';
 import { ClientEngine, LogLevel } from '../../types';
 import { buildLogger, logger } from '../lib/logging';
+import { BatchQuery } from './batch-client';
 
 export abstract class GybsonBase {
     protected readonly logger: Logger;
     protected readonly engine: ClientEngine;
     protected clients: Map<string, any> = new Map();
+    protected batchClient: BatchQuery;
 
     constructor(protected readonly knex: Knex<any, unknown>, protected readonly config?: GybsonConfig) {
         this.logger = config?.logger ? config.logger : buildLogger({ logLevel: config?.logLevel ?? LogLevel.debug });
@@ -17,6 +19,7 @@ export abstract class GybsonBase {
             );
             throw new Error('Failed to initialise');
         }
+        this.batchClient = new BatchQuery(knex, this.logger);
         this.logger.info('Initialising Gybson...');
     }
 
@@ -31,6 +34,14 @@ export abstract class GybsonBase {
     //     return null;
     // }
 
+    // public __lazyBatchClient<T>(tableName: string): T {
+    //     let client = this.clients.get(name);
+    //     if (client) return client;
+    //     client = new ClientClass(this.clientConfig);
+    //     this.clients.set(name, client);
+    //     return client;
+    // }
+
     protected lazyClient<T>(name: string, ClientClass: any): T {
         let client = this.clients.get(name);
         if (client) return client;
@@ -39,8 +50,13 @@ export abstract class GybsonBase {
         return client;
     }
 
-    protected get clientConfig(): { knex: Knex<any, unknown>; logger: Logger; engine: ClientEngine } {
-        return { knex: this.knex, logger: this.logger, engine: this.engine };
+    protected get clientConfig(): {
+        knex: Knex<any, unknown>;
+        batchClient: BatchQuery;
+        logger: Logger;
+        engine: ClientEngine;
+    } {
+        return { knex: this.knex, batchClient: this.batchClient, logger: this.logger, engine: this.engine };
     }
 
     /**

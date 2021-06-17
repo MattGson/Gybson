@@ -15,6 +15,7 @@ import type {
     OrderQueryFilter,
     Logger,
 } from '../../types';
+import { BatchQuery } from './batch-client';
 // import { Loader } from './loader';
 import { QueryTable } from './query-table';
 // import { runMiddleWares } from './row-middleware';
@@ -39,6 +40,7 @@ export class QueryClient<
     private readonly engine: ClientEngine;
     protected readonly whereResolver: WhereResolver;
     protected readonly queryTable: QueryTable;
+    protected readonly batchClient: BatchQuery;
 
     // private readonly loader = new Loader<TblRow, PartialTblRow, TblOrderBy>({
     //     getMultis: (args) => this.stableGetMany(args),
@@ -49,12 +51,14 @@ export class QueryClient<
         tableName: string;
         schema: DatabaseSchema;
         knex: Knex<any, unknown>;
+        batchClient: BatchQuery;
         logger: Logger;
         engine: ClientEngine;
     }) {
-        const { tableName, schema, knex, logger, engine } = params;
+        const { tableName, schema, knex, batchClient, logger, engine } = params;
         this.engine = engine;
         this.knex = knex;
+        this.batchClient = batchClient;
         this.logger = logger;
         // this.queryTable.tableName = tableName;
         // this.schema = schema;

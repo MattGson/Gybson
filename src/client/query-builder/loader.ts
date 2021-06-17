@@ -1,10 +1,12 @@
 import DataLoader from 'dataloader';
-import type { OrderBy, OrderQueryFilter, RecordAny, SoftDeleteQueryFilter } from '../../types';
+import type { LoadOptions, OrderBy, OrderQueryFilter, RecordAny, SoftDeleteQueryFilter } from '../../types';
 import { logger } from '../lib/logging';
+import { QueryTable } from './query-table';
 
 interface LoaderDataSource<RowType, KeyType = Partial<RowType>, Order = OrderBy> {
     // getOnes: (params: { keys: readonly KeyType[]; includeDeleted?: boolean }) => Promise<(RowType | null)[]>;
     getMultis: (params: {
+        table: QueryTable;
         keys: readonly KeyType[];
         orderBy?: Order;
         includeDeleted?: boolean;
@@ -33,9 +35,12 @@ const keyify = (obj: RecordAny, prefix = ''): string[] =>
  */
 export class Loader<RowType extends Record<string, unknown>, Filter = Partial<RowType>, Order = OrderBy> {
     private loaders: {
-        oneLoaders: Record<string, DataLoader<LoaderKey, RowType | null>>;
+        // oneLoaders: Record<string, DataLoader<LoaderKey, RowType | null>>;
         manyLoaders: Record<string, DataLoader<LoaderKey, RowType[]>>;
-    } = { oneLoaders: {}, manyLoaders: {} };
+    } = {
+        // oneLoaders: {},
+        manyLoaders: {},
+    };
 
     public constructor(private dataSource: LoaderDataSource<RowType, Filter, Order>) {}
 
@@ -78,7 +83,7 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
     public async purge(): Promise<void> {
         return new Promise<void>((res) => {
             Object.values(this.loaders.manyLoaders).forEach((l) => l.clearAll());
-            Object.values(this.loaders.oneLoaders).forEach((l) => l.clearAll());
+            // Object.values(this.loaders.oneLoaders).forEach((l) => l.clearAll());
             res();
         });
     }
@@ -88,9 +93,10 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
      * @param params
      */
     public async loadMany(
-        params: { filter: Filter } & OrderQueryFilter<Order> & SoftDeleteQueryFilter,
+        table: QueryTable,
+        params: { filter: Filter } & OrderQueryFilter<Order> & LoadOptions,
     ): Promise<RowType[]> {
-        const { filter, orderBy, includeDeleted } = params;
+        const { filter, orderBy, includeDeleted, skipCache } = params;
 
         // different loader for each param combination
         const loadAngle = this.filterHashKey({ filter }, { includeDeleted, orderBy });
@@ -100,8 +106,9 @@ export class Loader<RowType extends Record<string, unknown>, Filter = Partial<Ro
             logger().debug(`No many-loader for key ${loadAngle}. Creating loader.`);
             loader = this.loaders.manyLoaders[loadAngle] = new DataLoader<Filter, RowType[], string>(
                 // TODO:- check if this scope capture has memory implications?
-                (keys) => this.dataSource.getMultis({ keys, orderBy, includeDeleted }),
+                (keys) => this.dataSource.getMultis({ table, keys, orderBy, includeDeleted }),
                 {
+                    // TODO:
                     // disable cache on multi-loads to reduce memory consumption, not usually that useful anyway
                     cache: false,
                 },

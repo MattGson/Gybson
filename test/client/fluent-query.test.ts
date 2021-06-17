@@ -19,19 +19,21 @@ describe('Loaders', () => {
     describe('fluent loads', () => {
         it('can load fluent chains', async () => {
             // multi-load to debug batching
-            const [user] = await Promise.all([
-                gybson.user.loadOne({ where: { user_id: ids.user1Id } }),
-                gybson.user.loadOne({ where: { user_id: 12 } }),
-            ]);
+            // const [user] = await Promise.all([
+            //     gybson.user.loadOne({ where: { user_id: ids.user1Id } }),
+            //     gybson.user.loadOne({ where: { user_id: 12 } }),
+            // ]);
+
+            const user = await gybson.user.find().whereUnique({ user_id: ids.user1Id }).first();
 
             const nonUnique = await gybson.user
                 .from(user)
                 .bestFriend()
                 .where({
                     first_name: 'joe',
-                    author_posts: {
-                        exists: true,
-                    },
+                    // author_posts: {
+                    //     exists: true,
+                    // },
                 })
                 .authorPosts()
                 .orderBy({ rating_average: 'desc' })
@@ -65,9 +67,10 @@ describe('Loaders', () => {
                 })
                 .memberPost()
                 .where({
-                    rating_average: {
-                        gt: 2,
-                    },
+                    // rating_average: {
+                    //     gt: 2,
+                    // },
+                    rating_average: 3,
                 })
                 .first();
         });

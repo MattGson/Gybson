@@ -1,7 +1,8 @@
 import { flatten } from 'lodash';
 import { DatabaseSchema, RelationDefinition, TransitiveRelationDefinition } from 'relational-schema';
 import { LoadOptions, Paginate, RecordAny } from '../../types';
-import { QueryClient } from './query-client';
+import { BatchQuery } from './batch-client';
+import { QueryTable } from './query-table';
 
 export interface TraveralLink<T = any> {
     rootLoad?: 'uniq' | 'many';
@@ -63,21 +64,33 @@ export abstract class FluentInterface<T> {
 }
 
 export class FluentTraversal {
-    constructor(private clientFactory: (type: string) => QueryClient<any, any, any, any, any, any> | null) {}
+    // save tables as a minor memory improvement
+    private tables: Map<string, QueryTable> = new Map();
+
+    constructor(private batchClient: BatchQuery, private schema: DatabaseSchema) {}
 
     private taversalChain: TraveralLink[] = [];
     // maintain a pointer to current link for ease of use
     private currentLink: TraveralLink | undefined;
 
-    /**
-     * Get a tableClient
-     * @param type
-     */
-    private getTableClient(type: string): QueryClient<any, any, any, any, any, any> {
-        const tblClient = this.clientFactory(type);
-        if (!tblClient) throw new Error('[Gybson] unexpected error. No client found for ' + type);
-        return tblClient;
+    private getQueryTable(table: string): QueryTable {
+        let queryTable = this.tables.get(table);
+        if (!queryTable) {
+            queryTable = new QueryTable(table, this.schema);
+            this.tables.set(table, queryTable);
+        }
+        return queryTable;
     }
+
+    // /**
+    //  * Get a tableClient
+    //  * @param type
+    //  */
+    // private getTableClient(type: string): QueryClient<any, any, any, any, any, any> {
+    //     const tblClient = this.clientFactory(type);
+    //     if (!tblClient) throw new Error('[Gybson] unexpected error. No client found for ' + type);
+    //     return tblClient;
+    // }
     // private getClient(type: string) {
     //     // return new UserClient({});
     //     return {
@@ -95,6 +108,22 @@ export class FluentTraversal {
     public pushLink(link: TraveralLink): void {
         this.taversalChain.push(link);
         this.currentLink = link;
+    }
+
+    public addWhere(whereClause: RecordAny): void {
+        if (!this.currentLink) throw new Error('No links in traversal yet, cannot add where clause');
+        this.currentLink.options.where = {
+            ...this.currentLink.options.where,
+            ...whereClause,
+        };
+    }
+
+    public addOrder(_order: any): void {
+        return;
+    }
+
+    public addPaginate(_order: any): void {
+        return;
     }
 
     public addWith(withClause: TraveralLink): void {
@@ -127,14 +156,21 @@ export class FluentTraversal {
             console.log('Load link ', link);
 
             let result: RecordAny[] = [];
-            const client = this.getTableClient(link.table);
 
-            if (parentLink == null) {
+            // link is already resolved
+            if (link.resolveData) {
+                result = [link.resolveData];
+
                 // loading the root of the tree
+            } else if (parentLink == null) {
+                const table = this.getQueryTable(link.table);
 
-                result = await client.batchFind({
-                    where: link.options?.where,
-                    loadOptions: link.options?.loadOptions ?? undefined,
+                const { where, orderBy, loadOptions } = link.options;
+
+                result = await this.batchClient.loadMany(table, {
+                    where,
+                    orderBy,
+                    ...loadOptions,
                 });
 
                 // if (link.rootLoad === 'uniq') {
@@ -155,7 +191,7 @@ export class FluentTraversal {
             } else {
                 // traversing an edge
 
-                if (parentLink == null) throw new Error('Impossible'); // keeping the type checker happy
+                // if (parentLink == null) throw new Error('Impossible'); // keeping the type checker happy
 
                 let loads: any = [];
 
@@ -184,51 +220,54 @@ export class FluentTraversal {
                     relationship.type === 'hasMany' ||
                     relationship.type === 'hasOne'
                 ) {
-                    // alternative 1 - global batching
-                    // TODO:- note the problem here,  would require in mem sort to guarantee global order...
+                    const table = this.getQueryTable(link.table);
 
-                    // load relations for each previous node (fan out graph traversal)
-                    loads = await Promise.all(
-                        prevResult.map(async (ent) => {
-                            let filters = link.options.where ?? {};
+                    const { where, orderBy, loadOptions } = link.options;
 
-                            // build the join key filters
+                    const batchable = true;
 
-                            relationship.joins.map((j) => {
-                                filters[j.toColumn] = ent[j.fromColumn];
-                            });
+                    if (batchable) {
+                        // alternative 1 - global batching
+                        // TODO:- note the problem here,  would require in mem sort to guarantee global order...
 
-                            return client.batchFind({
-                                // how to handle filters that are not batchable?
-                                where: filters,
-                                loadOptions: link.options?.loadOptions,
-                                // how to handle global ordering?
-                                // maybe should batch these loads internally?
+                        // load relations for each previous node (fan out graph traversal)
+                        loads = await Promise.all(
+                            prevResult.map(async (ent) => {
+                                const filters = where ?? {};
 
-                                orderBy: link.options.orderBy,
-                            });
-                        }),
-                    );
-                    result = flatten(await Promise.all(loads));
+                                // build the join key filters
 
-                    // alternative 2 - within chain batching
-                    // can be applied to more complex filters like gt, like etc
-                    // works because we can guarantee all filters other than joins are the same constants within all nodes in chain
+                                relationship.joins.map((j) => {
+                                    filters[j.toColumn] = ent[j.fromColumn];
+                                });
 
-                    const sharedFilters = link.options.where ?? {};
-
-                    // build the join key filters
-
-                    const inFilters = prevResult.map((ent) => {
-                        const filters: any = {};
-                        relationship.joins.map((j) => {
-                            filters[j.toColumn] = ent[j.fromColumn];
-                        });
-                        return filters;
-                    });
-
-                    // need the stable multi-column where-in logic here
-                    result = await client.findMany({ whereIn: inFilters, where: sharedFilters });
+                                return this.batchClient.loadMany(table, {
+                                    // how to handle filters that are not batchable?
+                                    where: filters,
+                                    // how to handle global ordering?
+                                    // maybe should batch these loads internally? After depth 2?
+                                    orderBy,
+                                    ...loadOptions,
+                                });
+                            }),
+                        );
+                        result = flatten(await Promise.all(loads));
+                    } else {
+                        // alternative 2 - within chain batching
+                        // can be applied to more complex filters like gt, like etc
+                        // works because we can guarantee all filters other than joins are the same constants within all nodes in chain
+                        // const sharedFilters = link.options.where ?? {};
+                        // build the join key filters
+                        // const inFilters = prevResult.map((ent) => {
+                        //     const filters: any = {};
+                        //     relationship.joins.map((j) => {
+                        //         filters[j.toColumn] = ent[j.fromColumn];
+                        //     });
+                        //     return filters;
+                        // });
+                        // need the stable multi-column where-in logic here
+                        // result = await client.findMany({ whereIn: inFilters, where: sharedFilters });
+                    }
                 }
             }
             parentLink = link;
