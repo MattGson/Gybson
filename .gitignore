@@ -346,3 +346,4 @@ coverage/
 *.map
 .DS_Store
 /test/tmp/*.ts
+/test/tmp/*.js

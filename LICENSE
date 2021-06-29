@@ -1,39 +1,9 @@
-Safety Switch License
+MIT License
 
-Copyright (c) 2021 Matt Goodson (the "Author").
+Copyright (c) 2021 Matt Goodson
 
-Any person (the "User") obtaining a copy of this software and/or associated 
-documentation files (the "Software"), to deal
-in the Software, including using, copying, modifying, merging or
-publishing copies of the Software as a part of any product, 
-business, website, software (the "Usage")
-hereby agrees to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-Copyright inclusion:
-- The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-Transfer of ownership:
-- Upon request of the Author by verbal or written notice, 
-the intellectual property pertaining to the Usage, including but not limited to:
- - copyright
- - patents
- - trade secrets
- - source code
- will immediately become the legal property of the Author.
-- The transfer of ownership of the Usage will be without limitation and
-will immediately revoke any permission for the User to access, distribute, 
-copy or use the Usage.
-- The User will be required to provide a digital copy of the Usage to the Author within 
-24 hours of receiving written or verbal notice.
-- Upon providing the copy to the Author, the User will be required to permanently
- remove any copies of the Usage that they have access to and provide proof of this removal.
-
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
