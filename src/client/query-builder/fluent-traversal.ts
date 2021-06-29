@@ -20,17 +20,18 @@ export interface TraveralLink<T = any> {
     paginate?: Paginate;
 }
 
-export type FluentExecutors = 'first' | 'get';
+export type FluentExecutors = 'first' | 'all';
 export type FluentFilters = 'where' | 'whereUnique';
 export type FluentListOperators = 'orderBy' | 'paginate' | 'all';
+export type FluentPlaceholder = '__';
 
-export type FluentMethods = FluentExecutors | FluentFilters | FluentListOperators;
+export type FluentMethods = FluentExecutors | FluentFilters | FluentListOperators | FluentPlaceholder;
 
-export type FluentWithoutFilters<T> = Omit<T, FluentFilters>;
-export type FluentWithoutExecutors<T> = Omit<T, FluentExecutors>;
-export type FluentWithoutListOperators<T> = Omit<T, FluentListOperators>;
-export type FluentWithoutOrderBy<T> = Omit<T, 'orderBy'>;
-export type FluentWithoutPaginate<T> = Omit<T, 'paginate'>;
+// export type FluentWithoutFilters<T> = Omit<T, FluentFilters>;
+// export type FluentWithoutExecutors<T> = Omit<T, FluentExecutors>;
+// export type FluentWithoutListOperators<T> = Omit<T, FluentListOperators>;
+// export type FluentWithoutOrderBy<T> = Omit<T, 'orderBy'>;
+// export type FluentWithoutPaginate<T> = Omit<T, 'paginate'>;
 
 export abstract class FluentInterface<T> {
     protected relationMap = new Map<string, RelationDefinition | TransitiveRelationDefinition>();
@@ -126,7 +127,7 @@ export class FluentTraversal {
         return;
     }
 
-    public addWith(withClause: TraveralLink): void {
+    public addWith(withClause: TraveralLink, chain?: any): void {
         if (!this.currentLink) throw new Error('No links in traversal yet, cannot add nested relation');
         this.currentLink.with ? this.currentLink.with.push(withClause) : (this.currentLink.with = [withClause]);
     }

@@ -22,6 +22,8 @@ export type TableTypeNames = {
     hasManyRelationFilterTypeName: string;
     hasOneRequiredRelationFilterTypeName: string;
     chainableRelationsTypeName: string;
+    eagerRelationsTypeName: string;
+    fluentMethodsTypeName: string;
 };
 
 export class TableTypeBuilder {
@@ -56,6 +58,8 @@ export class TableTypeBuilder {
             hasManyRelationFilterTypeName: `${tableName}HasManyRelationFilter`,
             hasOneRequiredRelationFilterTypeName: `${tableName}HasOneRequiredRelationFilter`,
             chainableRelationsTypeName: `${tableName}Chainables`,
+            eagerRelationsTypeName: `${tableName}Eagerables`,
+            fluentMethodsTypeName: `${tableName}FluentMethods`,
         };
     }
 
@@ -73,6 +77,7 @@ export class TableTypeBuilder {
         return `
              import { 
                 QueryClient,
+                BatchQuery,
                 LoadOptions,
                 Order,
                 Paginate,
@@ -90,12 +95,10 @@ export class TableTypeBuilder {
                 OrderQueryFilter,
                 FluentInterface,
                 FluentTraversal,
-                FluentWithoutFilters,
-                FluentWithoutExecutors,
-                FluentWithoutListOperators,
-                FluentWithoutOrderBy,
-                FluentWithoutPaginate,
-                FluentMethods
+                FluentMethods,
+                FluentPlaceholder,
+                FluentExecutors,
+                FluentListOperators,
             } from '${gybsonLibPath}';
             
             ${_.uniqBy(relations, (r) => r.toTable)
@@ -105,9 +108,11 @@ export class TableTypeBuilder {
                     const names = this.typeNamesForTable({ tableName: tbl.toTable });
 
                     return `import { 
+                                ${names.rowTypeName},
                                 ${names.hasOneRelationFilterTypeName}, 
                                 ${names.hasManyRelationFilterTypeName}, 
                                 ${names.hasOneRequiredRelationFilterTypeName},
+                                ${names.chainableRelationsTypeName},
                                 ${this.tableNameAlias(tbl.toTable)}Fluent
                             } from "./${names.rowTypeName}"`;
                 })
@@ -228,11 +233,17 @@ export class TableTypeBuilder {
      */
     public static buildChainableRelations(params: {
         chainableRelationsTypeName: string;
+        fluentMethodsTypeName: string;
+        eagerRelationsTypeName: string;
         relations: RelationDefinition[];
     }): string {
-        const { chainableRelationsTypeName, relations } = params;
+        const { chainableRelationsTypeName, eagerRelationsTypeName, fluentMethodsTypeName, relations } = params;
         return `
         export type ${chainableRelationsTypeName} = ${relations.map((r) => `'${camelCase(r.alias)}'`).join(' | ')};
+        export type ${eagerRelationsTypeName} = ${relations
+            .map((r) => `'${camelCase('with_' + r.alias)}'`)
+            .join(' | ')};
+        export type ${fluentMethodsTypeName} = FluentMethods | ${chainableRelationsTypeName} | ${eagerRelationsTypeName};
         `;
     }
 

@@ -49,22 +49,80 @@ export class TableClientBuilder {
             .map((r) => {
                 const relatedEnt = TableTypeBuilder.tableNameAlias(r.toTable);
                 const chainableMethod = camelCase(r.alias);
-                return `
 
-             /**
-              * Load the ${chainableMethod} for the ${this.humanDocName}
-              */
-            ${chainableMethod}(args?: LoadOptions): ${relatedEnt}Fluent {
-                this.traversal.pushLink({
-                    table: '${r.toTable}',
-                    relation: this.relationMap.get('${r.toTable}'),
-                    options: {
-                        loadOptions: args,
-                    }, 
-                });
-                return new ${relatedEnt}Fluent(this.traversal, this.schema);
-            }
+                const returnType = `${relatedEnt}Fluent<${relatedEnt}, FluentPlaceholder>`;
+
+                return `
+                /**
+                 * Load the ${chainableMethod} for the ${this.humanDocName}
+                 */
+                ${chainableMethod}(args?: LoadOptions): ${returnType} {
+                    this.traversal.pushLink({
+                        table: '${r.toTable}',
+                        relation: this.relationMap.get('${r.alias}'),
+                        options: {
+                            loadOptions: args,
+                        }, 
+                    });
+                    return new ${relatedEnt}Fluent(this.traversal, this.schema);
+                }
             `;
+            })
+            .join('');
+    }
+
+    private getEagerRelations() {
+        const { chainableRelationsTypeName } = this.typeNames;
+
+        // TODO:- ignore many to many for now
+        return this.schema.relations
+            .filter((r) => r.type !== 'manyToMany')
+            .map((r) => {
+                const relatedEnt = TableTypeBuilder.tableNameAlias(r.toTable);
+                const rTypes = TableTypeBuilder.typeNamesForTable({ tableName: r.toTable });
+                const withMethod = camelCase(`with_${r.alias}`);
+
+                const relatedFluent = `${relatedEnt}Fluent`;
+
+                const nestedType =
+                    r.type === 'hasMany'
+                        ? `{ ${camelCase(r.alias)}: ${relatedEnt}[] }`
+                        : `{ ${camelCase(r.alias)}: ${relatedEnt} }`;
+
+                // Cannot execut
+                const omitSubChain =
+                    r.type === 'hasMany'
+                        ? `FluentExecutors | ${rTypes.chainableRelationsTypeName}`
+                        : `FluentExecutors | FluentListOperators | ${rTypes.chainableRelationsTypeName}`;
+
+                const subChainBuilderType = ` (c: Omit<${relatedFluent}<${rTypes.rowTypeName}, ${omitSubChain}>, ${omitSubChain}>
+                    ) => FluentInterface<any>`;
+
+                const omitMainChain = `'${withMethod}' | ${chainableRelationsTypeName}`;
+                // TODO:- how to include the nested type properly?
+                const returnType = `Omit<${this.fluentClassName}<${this.entityName} & ${nestedType}, ${omitMainChain}>, ${omitMainChain}>`;
+
+                return `
+                // long return type but basically just helping the user out.
+                // - It makes no sense to add a withX clause other than at the end of chain
+                // - makes no sense to use same with twice
+                // so we remove all chainables and this method
+                // TODO:- should we remove nested chainables? Or is that a feature? Enrich with arbritrary data?
+                // TODO:- how to chain the Omit?
+                /**
+                 * Eager load the ${camelCase(r.alias)} for the ${this.humanDocName}
+                 */
+                ${withMethod}(
+                     chain?: ${subChainBuilderType}
+                ): ${returnType} {
+                     this.traversal.addWith({
+                         table: '${r.toTable}',
+                         relation: this.relationMap.get('${r.toTable}'),
+                         options: {}
+                     }, chain);
+                     return this as any;
+                }
+                `;
             })
             .join('');
     }
@@ -79,9 +137,13 @@ export class TableClientBuilder {
             orderByTypeName,
             paginationTypeName,
             requiredRowTypeName,
+            fluentMethodsTypeName,
         } = this.typeNames;
+
+        const baseFluentReturn = `Omit<${this.fluentClassName}<T, O>, O>`;
+
         return `
-            import { BatchQuery, ClientEngine, Logger } from '${this.options.gybsonLibPath}';
+            import { ClientEngine, Logger } from '${this.options.gybsonLibPath}';
             
             // TODO:- rather than import this in each client, should it be copied in during generate?
             import schema from './relational-schema';
@@ -114,14 +176,6 @@ export class TableClientBuilder {
                             engine,
                         }
                     )
-                
-                    // this.queryClient = new QueryClient({
-                    //     tableName: '${this.tableName}',
-                    //     schema: schema as any,
-                    //     knex,
-                    //     logger,
-                    //     engine,
-                    // });
                 }
                 
                 // Overwrite method signatures to improve IDE type inference speed and helpfulness over generics
@@ -130,7 +184,7 @@ export class TableClientBuilder {
                  * Begin query for ${this.humanDocName}
                  * @param args - configure load behvaiour
                  */
-                find(args?: LoadOptions): ${this.fluentClassName} {
+                find(args?: LoadOptions): ${this.fluentClassName}<${this.entityName}, FluentPlaceholder> {
                     const traversal = new FluentTraversal(this.batchClient, schema as any);
                     traversal.pushLink({
                         rootLoad: 'many',
@@ -146,9 +200,12 @@ export class TableClientBuilder {
                  * Continue a query chain from a ${this.entityName} object
                  * @param data - the object to start the chain
                  */
-                from(data: ${this.entityName} | null):  FluentWithoutListOperators<FluentWithoutFilters<${
-            this.fluentClassName
-        }>> {
+
+                 // this type is clever
+                 // omits the methods and passes the omits in as generic param
+                 // so that future fluent links can additively omit
+                from(data: ${this.entityName} | null):  
+                 Omit<${this.fluentClassName}<${this.entityName}, FluentMethods>, FluentMethods> {
                     const traversal = new FluentTraversal(this.batchClient, schema as any);
                     traversal.pushLink({
                         resolveData: data, // avoid re-loading same data?
@@ -273,7 +330,9 @@ export class TableClientBuilder {
             }
 
 
-            export class ${this.fluentClassName} extends FluentInterface<${rowTypeName}> {
+            export class ${this.fluentClassName}
+            <T extends ${this.entityName}, O extends ${fluentMethodsTypeName}> 
+            extends FluentInterface<${rowTypeName}> {
 
                 constructor(traversal: FluentTraversal, schema: DatabaseSchema) {
                     super(traversal, schema, '${this.tableName}');
@@ -296,9 +355,10 @@ export class TableClientBuilder {
 
                 /**
                  * Filter which ${this.humanDocName} are returned
+                 * Additive
                  * @param args - the where filter
                  */
-                where(args: ${loadManyWhereTypeName}): ${this.fluentClassName} {
+                where(args: ${loadManyWhereTypeName}): ${baseFluentReturn} {
                     // additive where like knex
 
                     this.traversal.addWhere(args);
@@ -309,22 +369,26 @@ export class TableClientBuilder {
 
                 /**
                  * Filter for a single ${this.entityName}
+                 * Additive
                  * This is just a convenience method to provide typings for unique filters
                  * @param args - the where filter
                  */
-                whereUnique(args: ${loadOneWhereTypeName}): FluentWithoutListOperators<${this.fluentClassName}> {
+                // TODO:- Question: What if unique is used deep in the chain? Leads to a question of de-duplication? .distinct() maybe?
+                whereUnique(args: ${loadOneWhereTypeName}): 
+                 Omit<${this.fluentClassName}<T, O | FluentListOperators>, O | FluentListOperators> {
                     // additive where like knex
                     const filters = this.unNestFilters(args);
                     this.traversal.addWhere(filters);
 
-                    return this;
+                    return this as any;
                 }
 
                 /**
                  * Order results
+                 * Additive
                  * @param args - ordering
                  */
-                orderBy(args: ${orderByTypeName}): FluentWithoutOrderBy<${this.fluentClassName}> {
+                orderBy(args: ${orderByTypeName}): ${baseFluentReturn} {
                     //
                     this.traversal.addOrder(args);
 
@@ -335,53 +399,17 @@ export class TableClientBuilder {
                  * Paginate the results
                  * @param args - paginate options
                  */
-                paginate(args: Paginate<Partial<${rowTypeName}>>): FluentWithoutPaginate<${this.fluentClassName}> {
+                paginate(args: Paginate<Partial<${rowTypeName}>>): 
+                 Omit<${this.fluentClassName}<T, O | 'paginate'>, O | 'paginate'> {
                     //
                     this.traversal.addPaginate(args);
 
-                    return this;
+                    return this as any;
                 }
             
 
-                // long return type but basically just helping the user out.
-                // - It makes no sense to add a withX clause other than at the end of chain
-                // - makes no sense to use same with twice
-                // so we remove all chainables and this method
-                // TODO:- should we remove nested chainables? Or is that a feature? Enrich with arbritrary data?
-                // TODO:- how to chain the Omit?
-                // withComments(
-                //     chain?: (c: Omit<FluentWithoutFilters<CommentFluent>, CommentChainables>) => FluentInterface<any>,
-                // ): Omit<PostFluent<T & { comments: Comment[] }>, 'withComments' | PostChainables> {
-                //     this.traversal.addWith({
-                //         table: 'comments',
-                //         // need to use the correct relation in case there are multiple relations to the same table
-                //         // TODO:- should do this for where filters as well?
-                //         relation: this.relationMap.get('comments'),
-                //         options: {
-                //             where: args?.where,
-                //         },
-                //         mixin: chain,
-                //         paginate,
-                //     });
-                //     // no point recreating it
-                //     return this as unknown as PostFluent<T & { comments: Comment[] }>;
-                // }
-            
-                // // Note:- small interface improvement - remove methods that can't sensibly be used more than once
-                // withAuthor(args?: { where?: { name?: string } }): Omit<PostFluent<T & { author: User }>, 'withAuthor'> {
-                //     this.traversal.addWith({
-                //         table: 'users',
-                //         // need to use the correct relation in case there are multiple relations to the same table
-                //         // TODO:- should do this for where filters as well?
-                //         relation: this.relationMap.get('author'),
-                //         options: {
-                //             where: args?.where,
-                //         },
-                //     });
-                //     // no point recreating it
-                //     return this as unknown as PostFluent<T & { author: User }>;
-                // }
-            
+                ${this.getEagerRelations()}
+
                 ${this.getFluentChainables()}
               
             }
@@ -402,6 +430,8 @@ export class TableClientBuilder {
             hasOneRequiredRelationFilterTypeName,
             requiredRowTypeName,
             chainableRelationsTypeName,
+            eagerRelationsTypeName,
+            fluentMethodsTypeName,
         } = this.typeNames;
 
         const { columns, relations, enums, uniqueKeyCombinations } = this.schema;
@@ -432,6 +462,8 @@ export class TableClientBuilder {
 
                 ${TableTypeBuilder.buildChainableRelations({
                     chainableRelationsTypeName,
+                    fluentMethodsTypeName,
+                    eagerRelationsTypeName,
                     relations: rels as RelationDefinition[],
                 })}
                 

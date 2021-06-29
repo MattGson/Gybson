@@ -62,9 +62,9 @@ describe('Loaders', () => {
                 })
                 // TODO:- should ideally retain filtered options, since unique filter is applied, there will only be at most one row still
                 // at the moment this adds back the list operators - this applies to all narrowing but maybe easier said than done.
-                .where({
-                    member_post_id: 4,
-                })
+                // .where({
+                //     member_post_id: 4,
+                // })
                 .memberPost()
                 .where({
                     // rating_average: {
@@ -73,6 +73,15 @@ describe('Loaders', () => {
                     rating_average: 3,
                 })
                 .first();
+
+            const test = await gybson.post
+                .from(p)
+                .teamMembers()
+                .whereUnique({
+                    team_id__user_id: {},
+                })
+                .withUser((u) => u.where({ best_friend_id: 4 }).withBestFriend((f) => f.withAuthorPosts()))
+                .all();
         });
     });
 });
