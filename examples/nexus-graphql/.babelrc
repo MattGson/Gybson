@@ -1,0 +1,22 @@
+{
+    "compact": false,
+    "retainLines": true,
+    "minified": false,
+    "inputSourceMap": false,
+    "sourceMaps": false,
+    "plugins": [
+        [
+            "module-resolver",
+            {
+                "root": ["./build"],
+                "alias": {
+                    "@demoapp/lib": "./build/src/lib",
+                    "@demoapp/lib/(.+)$": "./build/src/lib/\\1",
+                    "@demoapp/errors": "./build/src/Errors",
+                    "@demoapp/features/(.+)$": "./build/src/\\1",
+                    "@demoapp/legacy/(.+)$": "./build/src/api/v1/\\1"
+                }
+            }
+        ]
+    ]
+}

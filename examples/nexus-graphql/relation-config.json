@@ -1,4 +1,5 @@
 {
+    "schema": "public",
     "outdir": "test/tmp",
     "format": "cjs",
     "transitiveRelations": true

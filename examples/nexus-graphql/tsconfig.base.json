@@ -1,0 +1,40 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "allowJs": true,
+        "checkJs": false,
+        "declaration": false,
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "rootDir": "./",
+        "outDir": "./build",
+        "baseUrl": ".",
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "removeComments": true,
+        "incremental": true,
+        "noEmitOnError": true,
+
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+
+        "noUnusedLocals": false,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "experimentalDecorators": true,
+
+        "paths": {
+            "@demoapp/libs": ["./src/libs/index.ts"],
+            "@demoapp/libs/*": ["./src/libs/*"],
+            "@demoapp/features/*": ["./src/*"]
+        }
+    }
+}
